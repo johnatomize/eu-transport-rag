@@ -9,7 +9,7 @@ Read [`docs/DESIGN.md`](docs/DESIGN.md) first: what the project is, its checkpoi
 - Secrets live only in `.env` or AWS: never committed, never pasted into chat. The gitleaks pre-commit hook stays enabled; never commit with `--no-verify`.
 - Public data only: EU legislation and Commission guidance. The repo stays private until the owner has checked and approved a public release.
 - `make destroy` after every AWS session, unless the owner decides to keep it running.
-- `docs/plan/` holds the owner's private notes and is git-ignored. Nothing from it goes into committed files, commit messages, issues or pull requests; `docs/DESIGN.md` is the design.
+- `docs/plan/` holds the owner's private notes and learning notes, and is git-ignored. Nothing from it goes into committed files, commit messages, issues or pull requests; `docs/DESIGN.md` is the design.
 
 ## Work tracking
 
@@ -18,7 +18,7 @@ Work items live as GitHub Issues in `johnatomize/eu-transport-rag`, on the [boar
 **Who owns what**
 
 - The board owns status: what is open, in progress or done, and what blocks what. Don't track status in Markdown.
-- The Markdown owns design: `docs/DESIGN.md` for the design, `docs/DECISIONS.md` for choices and their reasons, `docs/PROGRESS.md` for what is built and verified and for the spend log, and `docs/LEARNING.md` for the concepts. When the owner decides something, the decision is written into the design or `DECISIONS.md`; the `decision-needed` issue keeps the question and the answer.
+- The Markdown owns design: `docs/DESIGN.md` for the design, `docs/DECISIONS.md` for choices and their reasons, and `docs/PROGRESS.md` for what is built and verified and for the spend log. The owner's learning notes live in `docs/plan/LEARNING.md`, which is private and git-ignored like the rest of `docs/plan/`. When the owner decides something, the decision is written into the design or `DECISIONS.md`; the `decision-needed` issue keeps the question and the answer.
 - The owner decides scope, spending, model choices and accounts, and reviews every checkpoint. The owner also does everything labelled `owner-only`: accounts, secrets, approvals and checking gold answers. Claude prepares the commands and checklists for these and never asks for secrets in chat.
 - Claude implements issues, keeps the issue and its docs in step, and proposes changes to scope or design instead of making them silently. A needed decision becomes an issue labelled `decision-needed`, not a guess.
 
@@ -30,7 +30,7 @@ Work items live as GitHub Issues in `johnatomize/eu-transport-rag`, on the [boar
 4. Link each issue to the design section it implements, and put acceptance criteria in the issue. Don't copy design text into issues.
 5. If work turns up something new (a bug, a follow-up, a design that is wrong), open a new issue and link it, and don't widen the current one.
 6. Passing tests alone don't close an `owner-only` issue; the owner confirms it.
-7. Each checkpoint ends with its close issue: write the checkpoint's `docs/LEARNING.md` section, check the exit gate on the tracking issue and update `docs/PROGRESS.md`. The owner reviews the section and closes the issue.
+7. Each checkpoint ends with its close issue: write the checkpoint's section in the private `docs/plan/LEARNING.md`, check the exit gate on the tracking issue and update `docs/PROGRESS.md`. The owner reviews the section and closes the issue.
 
 **Review and autonomy**
 

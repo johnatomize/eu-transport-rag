@@ -9,7 +9,7 @@ A question-answering service over public EU road-transport and heavy-vehicle leg
 It is also a learning project. By the end the owner should understand each piece of a RAG system, why it is there, and how to measure whether it works.
 
 Framing:
-- **No deadline**, paced in checkpoints, each reviewed by the owner. Each checkpoint adds a section to `docs/LEARNING.md`.
+- **No deadline**, paced in checkpoints, each reviewed by the owner. Each checkpoint adds a section to the owner's private learning notes (not in the repo).
 - **Measured, not claimed.** The deliverable is a results table that compares retrieval and answer quality across variants, with error bars. A working chatbot alone is not the goal.
 - **Public data only.** EU legislation and Commission guidance; no private or personal data.
 - **Spending is gated.** Checkpoints A–D cost nothing. The first paid call (E), the AWS account setup (I) and any budget increase each need the owner's explicit OK, with a dry-run cost estimate first.
@@ -89,7 +89,7 @@ The Commission site rate-limits scripted downloads (HTTP 429 after about six PDF
 
 ### A. Repo skeleton and safety rails (~1–2 h, free)
 - `uv` (Python 3.12), ruff, pytest, Makefile, `.gitignore`, `.env.example`, gitleaks pre-commit hook from the first commit.
-- `docs/PROGRESS.md` (with a spend log starting at $0), `docs/DECISIONS.md`, `docs/LEARNING.md`, and a `CLAUDE.md` with this project's hard rules.
+- `docs/PROGRESS.md` (with a spend log starting at $0), `docs/DECISIONS.md`, and a `CLAUDE.md` with this project's hard rules.
 - A private GitHub repo, created after the owner's OK.
 - `docker-compose.yml` skeleton with Postgres + pgvector.
 
@@ -202,4 +202,4 @@ The Commission site rate-limits scripted downloads (HTTP 429 after about six PDF
 4. The final test-split table shows retrieval and answer metrics with intervals for at least three variants, and the README explains what won and why.
 5. Every unanswerable test question is refused or flagged, or the failures are listed and explained.
 6. The deployed service answers through its URL, deployed by CI through OIDC. `make destroy` removes everything, and the AWS console shows nothing left.
-7. `docs/LEARNING.md` covers every concept used, and the spend log matches the AWS bill.
+7. The private learning notes cover every concept used, and the spend log matches the AWS bill.

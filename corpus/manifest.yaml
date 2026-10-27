@@ -1,0 +1,199 @@
+# Every document in the corpus, pinned to an exact version (docs/DESIGN.md, "The corpus").
+#
+# id         short document ID; the prefix of every node ID, such as "561/2006:art6(3)"
+# kind       act (legislation) or guidance (Commission guidance and clarification notes)
+# phase      1 or 2; phase 2 joins after checkpoint G (docs/DESIGN.md)
+# celex      for an act: exactly the version that is cited
+# format     xhtml, html or pdf; picks the parser
+# sha256     hash of the raw file; written, with retrieved, by scripts/fetch_corpus.py --pin
+#
+# Language is English for now; the .en in each file name leaves room for Swedish (checkpoint L).
+version: 1
+documents:
+  - id: "561/2006"
+    title: "Regulation (EC) No 561/2006 (driving times, breaks and rest periods)"
+    kind: act
+    phase: 1
+    celex: 02006R0561-20241231
+    format: xhtml
+    url: https://publications.europa.eu/resource/celex/02006R0561-20241231
+    file: corpus/raw/02006R0561-20241231.en.xhtml
+    sha256: "15a52c300f05363a67bdc58e465fa072e7e029442d97269b1399334d5921921a"
+    retrieved: 2026-10-27
+  - id: "165/2014"
+    title: "Regulation (EU) No 165/2014 (tachographs in road transport)"
+    kind: act
+    phase: 1
+    celex: 02014R0165-20241231
+    format: xhtml
+    url: https://publications.europa.eu/resource/celex/02014R0165-20241231
+    file: corpus/raw/02014R0165-20241231.en.xhtml
+    sha256: "159e655244558f1f7589d005ec6df33820f960400289349d6af919703c1de0ee"
+    retrieved: 2026-10-27
+  # Never amended, so the base act is the current text, and it exists only as HTML 4 (#21).
+  - id: "2002/15"
+    title: "Directive 2002/15/EC (working time of persons performing mobile road transport activities)"
+    kind: act
+    phase: 1
+    celex: 32002L0015
+    format: html
+    url: https://publications.europa.eu/resource/celex/32002L0015
+    file: corpus/raw/32002L0015.en.html
+    sha256: "7d4bbec0fcdb070c11a920994e51c2367883a56fb7c8308098ac813dc1f5b0d6"
+    retrieved: 2026-10-27
+  # The Commission's guidance and clarification notes on the driving time and rest period rules,
+  # numbered as on its page (two separate series):
+  # https://transport.ec.europa.eu/transport-modes/road/social-provisions/driving-time-and-rest-periods/guidance-notes-implementation-community-rules-driving-times-and-rest-periods-professional-drivers_en
+  - id: guidance-1
+    title: "Guidance note 1: Exceptional deviation to find a suitable stopping place"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/0e9f4991-1187-4635-8c10-8230924c95cb_en?filename=guidance_1_en.pdf
+    file: corpus/raw/guidance-1.en.pdf
+    sha256: "b29f7959d8e4242e43b36f5d8a92a9deeece125a30fb0296f2362664daf652fb"
+    retrieved: 2026-10-27
+  - id: guidance-2
+    title: "Guidance note 2: Recording driver's travelling time"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/78cc3221-083d-49da-829a-c9b23488b916_en?filename=guidance_2_en.pdf
+    file: corpus/raw/guidance-2.en.pdf
+    sha256: "7b046ea44a4036cf88c3d6e6caac03f7d76e78bf5fcd07cd6e5eb204c2608005"
+    retrieved: 2026-10-27
+  - id: guidance-3
+    title: "Guidance note 3: Interrupting driver's break or rest in emergencies"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/d0f5465c-b85b-4930-9dbe-93d2e105a58d_en?filename=guidance_3_en.pdf
+    file: corpus/raw/guidance-3.en.pdf
+    sha256: "03f227305f6871bf3592aa8b88e43dda1e46af366881260b5ae31a720787f3f8"
+    retrieved: 2026-10-27
+  - id: guidance-4
+    title: "Guidance note 4: Driving time recorded in frequent-stop multi-drop operations"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/5613a31e-9eda-41c9-bac5-13fb931c303c_en?filename=guidance_4_en.pdf
+    file: corpus/raw/guidance-4.en.pdf
+    sha256: "dadd752caefbdb448f6ddc307c6917348e56039b8f4a2dfca31c694763f53ac2"
+    retrieved: 2026-10-27
+  - id: guidance-5
+    title: "Guidance note 5: Attestation of activities"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/957dd43f-e588-4550-9a2b-415cc4a88f7e_en?filename=guidance_5_en.pdf
+    file: corpus/raw/guidance-5.en.pdf
+    sha256: "b04c693d3ecf63598e8d345ee568c35c6ed76f37a1b4195dc3faadb0d03473a5"
+    retrieved: 2026-10-27
+  - id: guidance-6
+    title: "Guidance note 6: Recording of time spent on ferry or train"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/0084e7e3-abd9-4e0d-afc1-aa1dcd49621f_en?filename=guidance_6_en.pdf
+    file: corpus/raw/guidance-6.en.pdf
+    sha256: "4102816b73dd10ac0fa2d4b72cea6fa17b64759b3a70c5956c9ee14cd004f08b"
+    retrieved: 2026-10-27
+  - id: guidance-7
+    title: "Guidance note 7: The meaning of \"each period of 24 hours\""
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/9442117f-5a2d-4700-a0b7-ba949dd14a9d_en?filename=guidance_7_en.pdf
+    file: corpus/raw/guidance-7.en.pdf
+    sha256: "2c0def3698a6e30e4efb48bbd90fe445c64972ca6d7c401106a4569fb84c784d"
+    retrieved: 2026-10-27
+  - id: guidance-8
+    title: "Guidance note 8: Exceptional situations when driving without a driver card is allowed"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/cbe934a7-2262-404c-bc82-215af8732d2b_en?filename=guidance_8_en.pdf
+    file: corpus/raw/guidance-8.en.pdf
+    sha256: "583763c4b6e4a852a624f292b0bdfb140148e3a99b71b1f01eefd120b19a0073"
+    retrieved: 2026-10-27
+  - id: guidance-9
+    title: "Guidance note 9: Standard form for the written statement on the removal or breakage of a tachograph seal by a control officer"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/50787781-7627-4f0b-8b57-91fec284c9a6_en?filename=guidance_9_en.pdf
+    file: corpus/raw/guidance-9.en.pdf
+    sha256: "37c0c3168d584c74a420201b93d76501ea950ce69b70ea0525a59911c70544c2"
+    retrieved: 2026-10-27
+  - id: guidance-10
+    title: "Guidance note 10: Border crossing records in analogue tachographs"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/e6053fe5-e2d7-4649-ae82-fe95ec027f8d_en?filename=guidance_10_en.pdf
+    file: corpus/raw/guidance-10.en.pdf
+    sha256: "ffb5d139f3da5fc7fe1245d0931339b8c4d786647ce6844ad34b1976cca03fc7"
+    retrieved: 2026-10-27
+  - id: clarification-1
+    title: "Clarification note 1: National regulations inspired by the European Union rules"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/ce392202-94fe-4799-8935-4e1ab0e6c4f3_en?filename=clarification-1.pdf
+    file: corpus/raw/clarification-1.en.pdf
+    sha256: "3376810c41334443b919200503ce74bb1c14f2659ae00534bf5cde344eb27138"
+    retrieved: 2026-10-27
+  - id: clarification-2
+    title: "Clarification note 2: Vehicles being driven for repair, washing or maintenance purposes"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/db271f2c-89ab-4092-b92d-a1b1eaa40531_en?filename=clarification-2.pdf
+    file: corpus/raw/clarification-2.en.pdf
+    sha256: "5918e098518447aa6fe9afaf6108ee44ec760721bb890e977738b80da422a55b"
+    retrieved: 2026-10-27
+  - id: clarification-3
+    title: "Clarification note 3: Vehicles used as local shops at local markets"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/2ba79d39-b90a-4674-bb78-b8bbb9c77404_en?filename=clarification-3.pdf
+    file: corpus/raw/clarification-3.en.pdf
+    sha256: "96334178e7b8e19ff14a8fed680bc92a46451ab17787351ac5923773c3f238d4"
+    retrieved: 2026-10-27
+  - id: clarification-4
+    title: "Clarification note 4: Application of Article 26 of the Regulation"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/7e818e6d-26b5-4971-8d1a-23c478d897d6_en?filename=clarification-4.pdf
+    file: corpus/raw/clarification-4.en.pdf
+    sha256: "ffaf392ff1dc3078e833680b7c9f1a3e8bcbb7dea1d57a0269e2cfb68d2998d9"
+    retrieved: 2026-10-27
+  - id: clarification-5
+    title: "Clarification note 5: Recording of a mixed activity of 'in' and 'out' of scope driving"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/853f331a-5092-4d8d-9e0f-8b007f81b15e_en?filename=clarification-5.pdf
+    file: corpus/raw/clarification-5.en.pdf
+    sha256: "2c7a43afa0a12f8320044b48c3729ab6b3bc1edd72706e76cc1cf4fe67df195b"
+    retrieved: 2026-10-27
+  - id: clarification-6
+    title: "Clarification note 6: Temporary exceptions in urgent exceptional circumstances"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/fa791d93-e4f6-467f-ae10-6385cb8c45d4_en?filename=clarification-6.pdf
+    file: corpus/raw/clarification-6.en.pdf
+    sha256: "cb9d099abbb67967b797e13e3afcad859e84c29e18e82443675d99df3c1e5a82"
+    retrieved: 2026-10-27
+  - id: clarification-7
+    title: "Clarification note 7: Recording and controlling activities and inactivity periods of drivers when away from a vehicle"
+    kind: guidance
+    phase: 1
+    format: pdf
+    url: https://transport.ec.europa.eu/document/download/2fd91f4a-058e-4020-a85a-438db84f3734_en?filename=clarification-7.pdf
+    file: corpus/raw/clarification-7.en.pdf
+    sha256: "9ee6004bf67c7e6a0397c34482a92744ad50ce078575196ef9956bba264687b4"
+    retrieved: 2026-10-27

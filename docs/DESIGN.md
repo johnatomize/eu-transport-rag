@@ -20,12 +20,12 @@ Framing:
 
 The official source is **EUR-Lex** (`eur-lex.europa.eu`). It is fine for reading in a browser, but it **blocks scripted downloads**: `curl` gets an empty `202` (a bot challenge). Checked 2026-10-27.
 
-Scripts use the **Publications Office CELLAR API** instead. It serves the same documents and works with plain HTTP (checked 2026-10-27):
+Scripts use the **Publications Office CELLAR API** instead. It serves the same documents to plain scripted HTTPS requests (checked 2026-10-27). It redirects to `http://` URLs, which the fetch script follows over HTTPS so that nothing is pinned from an unauthenticated download:
 
 ```sh
 # Consolidated text (base act plus all amendments) as XHTML, English
 curl -L -H "Accept: application/xhtml+xml" -H "Accept-Language: eng" \
-  http://publications.europa.eu/resource/celex/02006R0561-20241231
+  https://publications.europa.eu/resource/celex/02006R0561-20241231
 ```
 
 - **CELEX numbers** identify documents. `32006R0561` is the act as originally published. `02006R0561-20241231` is the consolidated version as of 31 Dec 2024.

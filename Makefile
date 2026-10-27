@@ -1,8 +1,8 @@
 # Developer commands. Needs uv and gitleaks on PATH (brew install uv gitleaks).
 # The db-* targets also need Docker with Compose and a running Colima VM (see CLAUDE.md).
-# Later checkpoints add targets (corpus, tables, deploy, destroy) and extend check.
+# Later checkpoints add targets (tables, deploy, destroy) and extend check.
 
-.PHONY: help install lint format test secrets check db-up db-check db-down gitleaks-present docker-present
+.PHONY: help install lint format test secrets check corpus db-up db-check db-down gitleaks-present docker-present
 
 help: ## List the targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
@@ -26,6 +26,9 @@ secrets: gitleaks-present ## Scan the full git history for secrets
 	gitleaks git --redact --no-banner .
 
 check: lint test secrets ## Everything that must pass before a pull request
+
+corpus: ## Check corpus/raw against the manifest, downloading missing files
+	uv run --locked python scripts/fetch_corpus.py
 
 db-up: docker-present ## Start local Postgres + pgvector and wait until it is healthy
 	docker compose up -d --wait

@@ -1,0 +1,30 @@
+# Local Postgres with the pgvector extension. Start with `make db-up`, check with `make db-check`.
+# No schema yet; tables arrive with checkpoint E. Credentials come from .env (see .env.example).
+services:
+  db:
+    # Pinned by tag and digest, so a re-pushed tag can't change what runs.
+    image: pgvector/pgvector:0.8.7-pg18-trixie@sha256:9d9c930220cb9bf2f956d10a8f909cf9973d9672ca0278aef2c1e6facccad2e0
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      # Defaults for psql and pg_isready inside the container.
+      PGUSER: ${POSTGRES_USER}
+      PGDATABASE: ${POSTGRES_DB}
+    ports:
+      # Reachable from this machine only, not from the network.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # Postgres 18 images keep their data under /var/lib/postgresql, not .../data.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      # Over TCP: on first start the image runs a temporary socket-only server to initialise
+      # the database, and a socket check would report healthy before the real server is up.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1"]
+      start_period: 30s
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  pgdata:

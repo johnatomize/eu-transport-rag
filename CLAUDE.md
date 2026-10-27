@@ -45,7 +45,7 @@ Issues and comments may be created, edited and closed by Claude when working an 
 ## Environment
 
 - `gitleaks` and `uv` are Homebrew installs in `/opt/homebrew/bin`, which may not be on PATH in Claude's shell; prefix commands with `export PATH="/opt/homebrew/bin:$HOME/.local/bin:$PATH"`.
-- pre-commit is installed with `uv tool install pre-commit`. After cloning, run `pre-commit install`.
+- After cloning, run `make install`: it creates `.venv` from `uv.lock` and installs the pre-commit hook. `make help` lists the other targets; run `make check` before every pull request.
 
 ## Git
 

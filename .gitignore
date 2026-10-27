@@ -21,8 +21,8 @@ htmlcov/
 # Local planning notes, kept off GitHub
 docs/plan/
 
-# Corpus downloads, until #9 decides whether they are committed
-corpus/raw/
+# Half-written downloads (scripts/fetch_corpus.py writes via a .part file)
+corpus/raw/*.part
 
 # Local caches (embeddings, run scratch)
 .cache/

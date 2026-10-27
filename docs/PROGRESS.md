@@ -10,6 +10,7 @@ Checkpoint A: every build item is done and the exit gate passes, except the owne
 - **Secret scanning (#4):** a gitleaks pre-commit hook guards every commit since the first. Before the first commit, a staged fake token was refused.
 - **Python tooling (#5):** a `uv` project on Python 3.12 with ruff and pytest, locked in `uv.lock`. `make check` runs lint, tests and a gitleaks scan of the full history, and passes on a fresh clone with only `uv` and gitleaks installed.
 - **Local Postgres + pgvector (#7):** `docker-compose.yml` runs `pgvector/pgvector` 0.8.7 on Postgres 18, pinned by tag and digest, with credentials from `.env` and the port bound to localhost only. `make db-up` waits until it is healthy, `make db-check` runs `CREATE EXTENSION vector` and prints `pgvector 0.8.7`, and data survives `make db-down` / `make db-up`. Docker runs in Colima.
+- **Corpus manifest and fetch (#11):** `corpus/manifest.yaml` pins the 20 phase 1 documents (three acts, ten guidance notes, seven clarification notes) by sha256, and their 2.0 MB of raw files are committed under `corpus/raw/`. `make corpus` checks them without network. `scripts/fetch_corpus.py --refetch` downloaded all 20 again from CELLAR and the Commission site on 27 October 2026, with identical hashes.
 
 ## Spend log
 

@@ -1,14 +1,14 @@
 # Developer commands. Needs uv and gitleaks on PATH (brew install uv gitleaks).
 # Later checkpoints add targets (corpus, tables, deploy, destroy) and extend check.
 
-.PHONY: help install lint format test secrets check
+.PHONY: help install lint format test secrets check gitleaks-present
 
 help: ## List the targets
-	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
 
-install: ## Create .venv from uv.lock and install the pre-commit hook
+install: gitleaks-present ## Create .venv from uv.lock and install the pre-commit hook
 	uv sync --locked
-	uv tool run pre-commit install
+	uv run --locked pre-commit install
 
 lint: ## Ruff lint and format check
 	uv run --locked ruff check .
@@ -21,7 +21,10 @@ format: ## Apply ruff fixes and formatting
 test: ## Run the test suite
 	uv run --locked pytest
 
-secrets: ## Scan the full git history for secrets
+secrets: gitleaks-present ## Scan the full git history for secrets
 	gitleaks git --redact --no-banner .
 
 check: lint test secrets ## Everything that must pass before a pull request
+
+gitleaks-present:
+	@command -v gitleaks >/dev/null || { echo "gitleaks not found on PATH: brew install gitleaks" >&2; exit 1; }

@@ -30,7 +30,7 @@ check: lint test secrets ## Everything that must pass before a pull request
 corpus: ## Check corpus/raw against the manifest, downloading missing files
 	uv run --locked python scripts/fetch_corpus.py
 
-parse: ## Parse the acts into node trees and report counts, references and anything unparsed
+parse: ## Parse the acts and guidance notes into node trees and report counts, references and anything unparsed
 	uv run --locked python scripts/parse_corpus.py --out build/nodes.jsonl
 
 db-up: docker-present ## Start local Postgres + pgvector and wait until it is healthy

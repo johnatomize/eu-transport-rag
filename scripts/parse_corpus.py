@@ -1,4 +1,4 @@
-"""Parse every act in corpus/manifest.yaml into its node tree and print a report.
+"""Parse every document in corpus/manifest.yaml into its node tree and print a report.
 
     parse_corpus.py               print node counts, references and anything unparsed (`make parse`)
     parse_corpus.py --out FILE    also write every node as one JSON line, for inspection
@@ -26,29 +26,36 @@ def _count(n: int, kind: str) -> str:
     return f"{n} {name}" if n == 1 else f"{n} {name}es" if name == "annex" else f"{n} {name}s"
 
 
-def report(tree: Tree, acts: list[str]) -> list[str]:
+def report(tree: Tree, docs: list[str], acts: set[str]) -> list[str]:
+    """Counts and references per document, then everything that needs a look.
+
+    A reference is outside the corpus when it names an act that isn't in it. A guidance note's
+    reference that names no act, in a note that interprets no single act, is unresolved.
+    """
     lines = []
-    for act in acts:
-        nodes = [n for n in tree if n.doc_id == act]
+    for doc in docs:
+        nodes = [n for n in tree if n.doc_id == doc]
         kinds = Counter(n.kind for n in nodes)
         counts = ", ".join(_count(kinds[k], k) for k in KINDS if kinds[k])
         refs = [r for n in nodes for r in n.refs]
         resolved = sum(1 for r in refs if r.target)
-        outside = sum(1 for r in refs if r.act not in acts)
+        outside = sum(1 for r in refs if r.act not in acts and r.act != doc)
         unresolved = len(refs) - resolved - outside
         amending = [n.id for n in nodes if n.amending]
-        lines.append(f"{act:10} {counts}")
+        lines.append(f"{doc:16} {counts}")
         lines.append(
-            f"{'':10} references: {resolved} resolved, {outside} to acts outside the corpus, "
+            f"{'':16} references: {resolved} resolved, {outside} to acts outside the corpus, "
             f"{unresolved} unresolved"
         )
         if amending:
-            lines.append(f"{'':10} amending articles: {', '.join(amending)}")
+            lines.append(f"{'':16} amending articles: {', '.join(amending)}")
+        if nodes and nodes[0].kind == "note":
+            lines.append(f"{'':16} interprets: {nodes[0].interprets or '-'}")
     unresolved = [
         f"  {n.id}: {r.text!r} ({r.act})"
         for n in tree
         for r in n.refs
-        if r.target is None and r.act in acts
+        if r.target is None and (r.act in acts or r.act == n.doc_id)
     ]
     partial = [f"  {n.id}: {r.text!r} → {r.target}" for n in tree for r in n.refs if r.partial]
     for title, items in (
@@ -75,8 +82,8 @@ def main(argv: list[str] | None = None) -> int:
     except (CorpusError, ParseError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
-    acts = [doc.id for doc in docs if doc.kind == "act"]
-    print("\n".join(report(tree, acts)))
+    acts = {doc.id for doc in docs if doc.kind == "act"}
+    print("\n".join(report(tree, [doc.id for doc in docs], acts)))
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         with args.out.open("w", encoding="utf-8") as f:
@@ -88,7 +95,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.snapshot:
         SNAPSHOT.write_text("".join(f"{n.id}\n" for n in tree), encoding="utf-8")
         print(f"wrote {len(tree.nodes)} node IDs to {SNAPSHOT.relative_to(ROOT)}")
-    print(f"all {len(acts)} acts parsed: {len(tree.nodes)} nodes")
+    print(f"all {len(docs)} documents parsed: {len(tree.nodes)} nodes")
     return 0
 
 

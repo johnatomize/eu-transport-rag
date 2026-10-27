@@ -42,10 +42,14 @@ curl -L -H "Accept: application/xhtml+xml" -H "Accept-Language: eng" \
 | --- | --- | --- |
 | Reg. 561/2006, driving times, breaks, rest periods | 32006R0561 | 02006R0561-20241231 |
 | Reg. 165/2014, tachographs | 32014R0165 | 02014R0165-20241231 |
-| Dir. 2002/15/EC, working time of mobile road transport workers | 32002L0015 | 02002L0015-20020323 |
+| Dir. 2002/15/EC, working time of mobile road transport workers | 32002L0015 | none: never amended, so the base act is used (HTML) |
 | Commission guidance and clarification notes on 561/2006 (PDFs) | [transport.ec.europa.eu](https://transport.ec.europa.eu/transport-modes/road/social-provisions/driving-time-and-rest-periods/guidance-notes-implementation-community-rules-driving-times-and-rest-periods-professional-drivers_en) | — |
 
-**Phase 2, vehicle rules** (larger and more technical; tests scaling and cross-act retrieval):
+Dir. 2002/15 is the exception to "consolidated versions only". CELLAR lists one consolidated version, `02002L0015-20020323`, dated the act's own publication day, but serves no content for it. The directive has never been amended, so the base act `32002L0015` is the current text. It exists only as old-style HTML 4, not XHTML, so the parser has a small second reader for it. Citations name the original act (OJ L 80, 23.3.2002). Checked 2026-10-27 (#21).
+
+The Commission site rate-limits scripted downloads (HTTP 429 after about six PDFs in a row), so the fetch script waits between requests and checks that each file really is a PDF.
+
+**Phase 2, vehicle rules** (larger and more technical; tests scaling and cross-act retrieval). Phase 2 joins **after checkpoint G** as a scaling step: the corpus, the question set and the G results table are built on phase 1 first; then phase 2 is added and the table re-run to measure what a larger corpus does to retrieval (#10).
 
 | Act | CELEX (base) | Latest consolidated (2026-10-27) |
 | --- | --- | --- |
@@ -90,7 +94,7 @@ curl -L -H "Accept: application/xhtml+xml" -H "Accept-Language: eng" \
 - `docker-compose.yml` skeleton with Postgres + pgvector.
 
 ### B. Corpus ingestion (~3–4 h, free)
-- `scripts/fetch_corpus.py`: downloads every document in the manifest from CELLAR, checks its sha256, and caches it under `corpus/raw/` (raw files are committed or kept as a release asset; decided in `DECISIONS.md`).
+- `scripts/fetch_corpus.py`: downloads every document in the manifest from CELLAR, checks its sha256, and caches it under `corpus/raw/` (raw files are committed to git; see `DECISIONS.md`).
 - `src/rag/parse.py`: turns the XHTML into a tree: act → chapter → article → paragraph → point, plus annexes. Each node gets a stable ID such as `561/2006:art6(3)`, its heading path, its amendment markers, and its outgoing cross-references.
 - Guidance-note PDFs are converted to text, with page numbers kept for citations.
 - Tests run on saved fixture files: a known article parses into the expected structure, IDs stay the same across runs, and markers are removed from the text but kept in metadata.

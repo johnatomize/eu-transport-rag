@@ -2,6 +2,14 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-10-27: Docker runs in Colima
+
+**Decision:** the local Docker engine is Colima, installed with Homebrew (`brew install colima docker docker-compose`), and isn't started at login (`colima start` when needed).
+
+**Why:** it is free, has no GUI, and installs the same way as the rest of the toolchain. Compose (#7) is all this project needs from Docker until checkpoint H.
+
+**Alternatives:** Docker Desktop, the standard GUI app (free for personal use, heavier).
+
 ## 2026-10-27: raw corpus files are committed to git
 
 **Decision:** the documents that `scripts/fetch_corpus.py` downloads are committed under `corpus/raw/` (#9).

@@ -2,7 +2,7 @@
 
 What is built and verified, as of 27 October 2026. The board holds the status of open work; past evidence is in git history and on the closed issues.
 
-Checkpoint A is in progress.
+Checkpoint A: every build item is done and the exit gate passes, except the owner's review of its `LEARNING.md` section (#8). Checkpoint B is next.
 
 ## Built and verified
 

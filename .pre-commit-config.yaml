@@ -1,0 +1,10 @@
+# Hooks that run on every commit. Install once per clone: pre-commit install
+# gitleaks must be on PATH (brew install gitleaks); the hook scans only staged changes.
+repos:
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: gitleaks (secret scan of staged changes)
+        entry: gitleaks git --pre-commit --staged --redact --verbose
+        language: system
+        pass_filenames: false

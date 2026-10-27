@@ -1,0 +1,36 @@
+# Secrets: only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Local planning notes, kept off GitHub
+docs/plan/
+
+# Corpus downloads, until #9 decides whether they are committed
+corpus/raw/
+
+# Local caches (embeddings, run scratch)
+.cache/
+
+# AWS CDK output
+cdk.out/
+
+# OS and editors
+.DS_Store
+.idea/
+.vscode/

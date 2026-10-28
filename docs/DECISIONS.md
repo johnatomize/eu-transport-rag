@@ -11,7 +11,7 @@ Choices made along the way, with the reason and the alternatives considered. New
 **Where the dates come from:** no note prints its own publication date, so each date names its source.
 - `letter`: clarification notes 1, 3, 4 and 5 record a Commission letter whose date is printed on page 1 ("letter of 12 November 2007"). That letter is when the position was taken. Clarification-1 gives only the month (`1993-02`).
 - `pdf`: for the other 13, the creation date in the PDF's metadata. The note existed by then but may be older: clarification notes 2 and 6 carry 2012-10-08, the date the whole series was converted. Guidance-10 cites Reg. 2020/1054, so its date of 2022 is plausible.
-- `commission-page`: for a date checked on the Commission's page, which may give better dates. The page couldn't be reached when the dates were added (2026-10-28), so no date uses it yet.
+- `commission-page`: for a publication date found on the Commission's page. No note uses it. The page, checked on 2026-10-28, gives only the date each file was uploaded: 20 July 2021 for 15 notes, even clarification-1 from 1993, which looks like the day the notes moved to the site, and 8 March 2022 for guidance-9 and guidance-10. Those dates would put every note after the Mobility Package. The page's links are the URLs in the manifest.
 
 Only guidance-9 and guidance-10 (2022) are newer than the Mobility Package, and a test checks that.
 

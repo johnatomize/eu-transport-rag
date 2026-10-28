@@ -11,7 +11,10 @@
 # published_source
 #            where that date comes from: letter (the Commission letter a clarification note
 #            records, dated on page 1), pdf (the file's creation date in its metadata, so the
-#            note existed by then but may be older) or commission-page (the Commission's page)
+#            note existed by then but may be older) or commission-page (a publication date
+#            on the Commission's page). The page checked on 2026-10-28 gives only upload
+#            dates (20 July 2021 for 15 notes, the day they moved to the site), so no note
+#            uses commission-page
 #
 # Language is English for now; the .en in each file name leaves room for Swedish (checkpoint L).
 version: 1

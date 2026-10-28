@@ -1,8 +1,10 @@
 import json
+from itertools import product
+from pathlib import Path
 
 import pytest
 
-from rag.questions import Question, validate
+from rag.questions import SPLITS, TYPES, Question, coverage, validate
 
 GOOD = {
     "id": "q001",
@@ -18,6 +20,9 @@ GOOD = {
 }
 UNANSWERABLE = {**GOOD, "type": "unanswerable", "answer": "", "key_facts": [], "gold_node_ids": []}
 DROP = object()
+ROOT = Path(__file__).parents[1]
+TEST_SPLIT = ROOT / "tests" / "snapshots" / "test_split.txt"
+LAST_SPLIT_ID = "q100"  # the last question present when the split was frozen
 
 
 def row(base: dict = GOOD, **changes) -> str:
@@ -177,3 +182,24 @@ def test_a_version_trap_records_the_old_answer_in_its_notes(tree):
         "line 1 (q001): notes: a version_trap question needs what changed and the old answer"
     ]
     assert errors(tree, row(type="version_trap", notes="Before 2020/1054: …")) == []
+
+
+def test_every_type_must_appear_in_both_splits():
+    every = [
+        Question(f"q{i:03d}", "?", "", (), (), kind, "paraphrased", split, False)
+        for i, (kind, split) in enumerate(product(TYPES, SPLITS))
+    ]
+    assert coverage(every) == []
+    without = [q for q in every if not (q.type == "version_trap" and q.split == "test")]
+    assert coverage(without) == ["type 'version_trap' has no test questions"]
+
+
+def test_the_test_split_is_frozen():
+    # The split was assigned once and frozen (docs/DECISIONS.md): later questions go to dev,
+    # and a test question is corrected in place, never moved. A failure means a test question
+    # was moved, deleted or added.
+    text = (ROOT / "data" / "questions.v1.jsonl").read_text(encoding="utf-8")
+    rows = [json.loads(line) for line in text.split("\n") if line.strip()]
+    test = [r["id"] for r in rows if r["split"] == "test"]
+    assert test == TEST_SPLIT.read_text(encoding="utf-8").splitlines()
+    assert all(r["split"] == "dev" for r in rows if r["id"] > LAST_SPLIT_ID)

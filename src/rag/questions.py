@@ -98,6 +98,21 @@ def validate(text: str, tree: Tree) -> tuple[list[Question], list[str]]:
     return questions, errors
 
 
+def coverage(questions: list[Question]) -> list[str]:
+    """Problems with the set as a whole: every type must appear in both splits.
+
+    Results are reported per type and split, so a type missing from one split would leave a
+    hole in every table.
+    """
+    present = {(q.type, q.split) for q in questions}
+    return [
+        f"type {kind!r} has no {split} questions"
+        for kind in TYPES
+        for split in SPLITS
+        if (kind, split) not in present
+    ]
+
+
 def _check(line: str, tree: Tree) -> tuple[dict | None, list[str]]:
     """The row as read, and its problems, each starting with the field it is about."""
     try:

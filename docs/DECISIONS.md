@@ -2,6 +2,55 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-10-28: the question set and its dev/test split
+
+**Decision:** `data/questions.v1.jsonl` holds 100 questions, split 60 dev and 40 test by a stratified seeded shuffle, and the split is frozen from the commit that adds them (#16, plan approved by the owner on the issue).
+
+- **Mix:**
+
+  | Type | Questions |
+  | --- | ---: |
+  | `single_fact` | 20 |
+  | `definition` | 10 |
+  | `exception` | 16 |
+  | `multi_article` | 14 |
+  | `cross_act` | 10 |
+  | `unanswerable` | 16 |
+  | `version_trap` | 14 |
+
+  75 are paraphrased, in a driver's or fleet manager's words, and 25 are verbatim, in the act's wording. Every type has both.
+- **How it was assigned:** the questions were grouped into strata by type and phrasing, in the order of `TYPES` and `PHRASINGS` in `src/rag/questions.py`. Each stratum was sorted by ID and shuffled with one generator, `rng = random.Random(16)`, shared by all strata in that order (`rng.shuffle(stratum)` for each), and the shuffled strata were laid end to end. Of every five positions, the second and fourth went to test. This gives exactly 60/40 overall and close to 60/40 within each type, and nobody chose which question went where. The three samples from #15 were included; their earlier `dev` was a placeholder.
+- **Frozen:** questions added later go to dev. A test question found wrong in the owner's check (#17) is corrected in place, not moved. The validator fails if any type has no questions in either split, and a test checks the test split against `tests/snapshots/test_split.txt` and that every question after q100 is in dev.
+- **Key facts** are written with digits, a decimal point and the unit: `9 hours`, `4.5 hours`, `7.5 tonnes`, `100 km`, even where the act writes "nine hours" or "7,5 tonnes". The only exceptions are `twice` and the times of day `00.00 on Monday` and `24.00 on Sunday`. One form for every fact keeps exact match predictable. Answers will still write numbers in other ways ("nine hours", "45-minute break"), so answer evaluation in G will have to normalise numbers before matching.
+- **Why 60/40:** the test split is used once, for checkpoint G's final table. With 40 questions the 95% interval on a proportion is about ±15 points, against ±14 with 50, so the extra dev questions for tuning in D–G and for calibrating the judge cost little.
+- **Version traps** cite the current text as gold and give the old answer in `notes`. Each old answer was checked against an earlier text fetched from CELLAR, outside the corpus, and the note names it:
+
+  | Old text | Changes it was checked for |
+  | --- | --- |
+  | `02006R0561-20150302` | the 2020 changes to 561/2006 |
+  | `02006R0561-20200820` | the 2024 changes |
+  | `32014R0165`, the original act | the 2020 changes to 165/2014 |
+  | `32006R0561`, the original act | the one change made by 165/2014 in 2014 |
+
+  The traps come from:
+  - **Reg. 2020/1054:** eleven traps.
+  - **Reg. 165/2014:** one trap. The tradesman's exclusion became an exclusion for everyone, with a wider radius, and Reg. 2020/1054 extended it.
+  - **Reg. 2024/1258:** two traps, coach drivers' split break and the 12-day derogation. Five have a guidance note in the corpus that gives the old answer:
+
+  | Note | Old answer |
+  | --- | --- |
+  | guidance-1 (2007) | Art. 12 |
+  | guidance-6 (2017) | rest on a ferry, two traps |
+  | clarification-3 (2007) | 50 km where the act now says 100 km |
+  | clarification-7 (2016) and guidance-5 (2013) | 28 days of records where 165/2014 now says 56 |
+
+  These are the questions that test whether old notes cause wrong answers (see "guidance notes that predate the Mobility Package" below).
+- **Unanswerable questions** are plausible questions from three groups: details the acts leave to Member States, neighbouring EU rules outside the corpus, and near misses, where the corpus touches the topic without answering it. Each was confirmed absent by a keyword search over the parsed text, and its `notes` gives the terms searched, any near misses found and, when known, where the answer actually lives. Phase 2 subjects (weights and dimensions, emissions, CO2, vehicle safety) were avoided, so the questions stay unanswerable when phase 2 joins.
+
+**Why:** a split nobody chose by hand can't drift easier or harder, and freezing it before D has seen any result keeps the test split unseen until G.
+
+**Alternatives:** 50/50, which narrows the test interval by about one point but leaves less for tuning; assigning by a hash of the ID, which is stable when questions are added but isn't stratified, so a small type could end up all in one split.
+
 ## 2026-10-28: the question schema
 
 **Decision:** each line of `data/questions.v1.jsonl` is one question with the fields `id`, `question`, `answer`, `key_facts`, `gold_node_ids`, `type`, `phrasing`, `split`, `checked` and an optional `notes` (#15, plan approved by the owner). `src/rag/questions.py` validates it against the parsed corpus, and `make check` runs the validator.

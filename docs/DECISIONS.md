@@ -2,6 +2,22 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-10-28: the question schema
+
+**Decision:** each line of `data/questions.v1.jsonl` is one question with the fields `id`, `question`, `answer`, `key_facts`, `gold_node_ids`, `type`, `phrasing`, `split`, `checked` and an optional `notes` (#15, plan approved by the owner). `src/rag/questions.py` validates it against the parsed corpus, and `make check` runs the validator.
+
+- **IDs** are `q` and three digits, and are never reused or renumbered: a deleted question leaves a gap, so run logs stay comparable.
+- **`key_facts`** lists the values that answer evaluation checks by exact match, written as an answer should give them (`"90 hours"`, `"45 minutes"`), and each must appear word for word in the gold answer. Without it, G would have to pull the numbers out of the gold answer sentence, which is fragile (design problem 4). It can be empty when the answer has no number or duration, as for most definitions and conditions, which G checks by normalised match.
+- **`gold_node_ids`** are the most specific nodes that hold the answer. The validator rejects a whole act, chapter or note, and a node listed together with one of its ancestors. How a retrieved chunk matches them, for example through an ancestor, is for retrieval evaluation in D to decide.
+- **Gold nodes may not lie in an amending article** (561/2006 Art. 26 and 27, 165/2014 Art. 45). Their wording has since been replaced, so it can't be the evidence for a current answer (design problem 1). The validator rejects them and doesn't just warn.
+- **Rules per type:** an `unanswerable` question has no answer, key facts or gold nodes, and every other type has an answer and at least one gold node. A `multi_article` question has gold nodes in two articles or annexes or more; a guidance page counts as neither. A `cross_act` question has gold nodes in two acts or more; a guidance note doesn't count as an act. A `version_trap` question has non-empty `notes`.
+- **Version traps** cite the current node as gold and put what changed and the old answer in `notes`, as free text. There is no field such as `trap_node_ids` for the old evidence.
+- **No `lang` field** until checkpoint L. L can add one that defaults to `en`, without changing any existing row. Node IDs carry no language (see "document IDs" below), so a Swedish question can cite the same gold nodes.
+
+**Why:** the schema fixes what retrieval and answer evaluation measure against, so the validator checks it against the current parser on every `make check`, not against a saved list of IDs.
+
+**Alternatives:** pydantic for the schema, which adds a dependency for ten fields; a warning instead of an error for amending articles; a machine-readable field for a version trap's old evidence.
+
 ## 2026-10-28: guidance notes that predate the Mobility Package stay in, with their date
 
 **Decision:** all 17 guidance and clarification notes stay in the corpus. Each has a `published` date and a `published_source` in `corpus/manifest.yaml`, and the parser puts the date on the note node (#26, option 1, chosen by the owner).

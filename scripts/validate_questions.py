@@ -1,7 +1,8 @@
 """Validate data/questions.v1.jsonl against the question schema and the parsed corpus.
 
 Prints every problem, then the number of questions by type, split and phrasing. Exits with
-status 1 if the file is missing or any line is invalid. `make questions` and `make check` run it.
+status 1 if the file is missing, any line is invalid or a type is missing from a split.
+`make questions` and `make check` run it.
 """
 
 import sys
@@ -10,7 +11,7 @@ from pathlib import Path
 
 from rag.corpus import CorpusError, load_manifest
 from rag.parse import ParseError, parse_corpus
-from rag.questions import PHRASINGS, SPLITS, TYPES, Question, validate
+from rag.questions import PHRASINGS, SPLITS, TYPES, Question, coverage, validate
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "corpus" / "manifest.yaml"
@@ -48,6 +49,8 @@ def main() -> int:
         print("\n".join(f"error: {e}" for e in tree.errors), file=sys.stderr)
         return 1
     questions, errors = validate(QUESTIONS.read_text(encoding="utf-8"), tree)
+    if not errors:  # an invalid row would show up again as a type missing from its split
+        errors = coverage(questions)
     for error in errors:
         print(f"{path}: {error}", file=sys.stderr)
     print("\n".join(counts(questions)))

@@ -2,7 +2,7 @@
 
 What is built and verified, as of 28 October 2026. The board holds the status of open work; past evidence is in git history and on the closed issues.
 
-Checkpoint A is done. Checkpoint B: every build item is done and the exit gate passes, except the owner's review (#14). Checkpoint C is next.
+Checkpoints A and B are done.
 
 ## Built and verified
 
@@ -14,7 +14,23 @@ Checkpoint A is done. Checkpoint B: every build item is done and the exit gate p
 - **Parsing the acts (#12):** `make parse` turns the three acts into 716 nodes, each with a stable ID such as `561/2006:art6(3)`, its heading path, its amendment markers as metadata and its cross-references (ID scheme in `DECISIONS.md`). The counts are 561/2006: 33 articles, 76 paragraphs and 93 points; 165/2014: 48 articles, 148 paragraphs, 212 points and two annexes in 35 parts; 2002/15: 16 articles, rebuilt from flat HTML. Of 318 cross-references, 260 resolve to a node and 55 point to acts outside the corpus. The other 3 are listed: relative references inside 165/2014 Art. 45 that point into 561/2006. The only unparsed content is 9 images, mostly the tachograph pictograms, which stay as `[image]` in the text. A committed snapshot of every ID guards against ID changes.
 - **Guidance notes (#13):** `make parse` also turns the 17 guidance and clarification notes into 47 nodes: one per note and one per page (30 pages, such as `guidance-7:p3`), with about 56,000 characters of text (library and cleaning in `DECISIONS.md`). Footnote markers and running headers are removed. 14 notes interpret a single act in the corpus (561/2006 or 165/2014), and their references without an act point into it; guidance-4, guidance-5 and clarification-7 cite either acts outside the corpus or more than one act. The notes' 88 references resolve as follows: 68 to a node, 9 to acts outside the corpus, and 11 left unresolved, each checked by hand and listed in the tests. Images (guidance-4, guidance-7, guidance-10) and pages drawn as a diagram, table or form (guidance-7 pp. 5–6, guidance-9 p. 3, guidance-10 p. 5) are listed as not understood. On guidance-10 p. 5 the pairing of nation codes and countries is lost.
 - **Dates of the guidance notes (#26):** every note in the manifest has a publication date with its source (a Commission letter dated in the note, or the PDF's creation date), and `make parse` puts it on the note node. Only guidance-9 and guidance-10 are newer than the 2020 Mobility Package (sources and reasons in `DECISIONS.md`).
-- **Question schema and validator (#15):** `data/questions.v1.jsonl` holds the evaluation questions, one JSON object per line, with the fields and rules in `DECISIONS.md`. `make questions`, which `make check` runs, checks every row against the schema and the parsed corpus, and fails if the file is missing. It rejects malformed rows, unknown or repeated fields, key facts missing from the answer, gold node IDs that are not in the corpus, are too broad or sit in an amending article, and rows that break the rule for their question type. Each message names the line, the question ID and the field. It prints a table of question types against split and phrasing. The file starts with 3 sample questions, not yet checked by the owner.
+- **Question schema and validator (#15):** `data/questions.v1.jsonl` holds the evaluation questions, one JSON object per line, with the fields and rules in `DECISIONS.md`. `make questions`, which `make check` runs, checks every row against the schema and the parsed corpus, and fails if the file is missing. It rejects malformed rows, unknown or repeated fields, key facts missing from the answer, gold node IDs that are not in the corpus, are too broad or sit in an amending article, and rows that break the rule for their question type. Each message names the line, the question ID and the field. It prints a table of question types against split and phrasing.
+- **Question set (#16):** 100 questions, none yet checked by the owner (#17). They are split 60 dev and 40 test by a seeded shuffle within each type and phrasing, frozen from now on (method in `DECISIONS.md`). The validator also fails if a type has no questions in either split, and a test pins the 40 test questions. Key facts are written with digits, such as `9 hours` and `7.5 tonnes`.
+
+  | Type | Paraphrased | Verbatim | Total | Dev / test |
+  | --- | ---: | ---: | ---: | ---: |
+  | single fact | 15 | 5 | 20 | 12 / 8 |
+  | definition | 5 | 5 | 10 | 6 / 4 |
+  | exception | 12 | 4 | 16 | 10 / 6 |
+  | multi-article | 11 | 3 | 14 | 8 / 6 |
+  | cross-act | 8 | 2 | 10 | 6 / 4 |
+  | unanswerable | 13 | 3 | 16 | 10 / 6 |
+  | version trap | 11 | 3 | 14 | 8 / 6 |
+  | **total** | **75** | **25** | **100** | **60 / 40** |
+
+  - **Gold nodes:** 55 questions have gold nodes in 561/2006, 17 in 165/2014 and 14 in 2002/15. 13 cite a guidance note, and for 8 of them the note is the only evidence.
+  - **Version traps:** 11 come from the 2020 Mobility Package, 1 from Reg. 165/2014 and 2 from Reg. 2024/1258. Each old answer was checked against an earlier text of the act. Five traps have a pre-2020 guidance note in the corpus that gives the old answer, including guidance-1 on Art. 12 and guidance-6 on rest on a ferry.
+  - **Unanswerable questions:** each was confirmed absent by a keyword search over the parsed text, and its notes record the search terms.
 
 ## Spend log
 

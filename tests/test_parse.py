@@ -67,11 +67,6 @@ M3 = Amendment("M3", "32020R1054", "REPLACED")
 M4_INSERTED = Amendment("M4", "32024R1258", "INSERTED")
 
 
-@pytest.fixture(scope="module")
-def tree() -> Tree:
-    return parse_corpus(load_manifest(ROOT / "corpus" / "manifest.yaml"), ROOT)
-
-
 def children(tree: Tree, node_id: str) -> list[str]:
     return [c.removeprefix(node_id) for c in tree[node_id].children]
 

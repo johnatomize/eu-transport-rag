@@ -292,6 +292,16 @@ def test_a_notes_legal_basis_is_read_whatever_its_form(tree):
     assert interprets["clarification-7"] is None  # two acts in the corpus
 
 
+def test_notes_carry_their_publication_date_and_pages_do_not(tree):
+    published = {n.id: n.published for n in tree if n.kind == "note"}
+    assert published["guidance-1"] == "2007-12-18"
+    assert published["clarification-1"] == "1993-02"  # the letter gives only the month
+    assert tree["guidance-1:p1"].published is None
+    # Only two notes are newer than the Mobility Package (Reg. 2020/1054, 31 July 2020) (#26).
+    newer = sorted(d for d, p in published.items() if p > "2020-07-31")
+    assert newer == ["guidance-10", "guidance-9"]
+
+
 def test_note_references_resolve_into_the_acts(tree):
     def targets(node_id: str) -> set[str | None]:
         return {r.target for r in tree[node_id].refs}

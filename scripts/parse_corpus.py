@@ -50,7 +50,10 @@ def report(tree: Tree, docs: list[str], acts: set[str]) -> list[str]:
         if amending:
             lines.append(f"{'':16} amending articles: {', '.join(amending)}")
         if nodes and nodes[0].kind == "note":
-            lines.append(f"{'':16} interprets: {nodes[0].interprets or '-'}")
+            note = nodes[0]
+            lines.append(
+                f"{'':16} interprets: {note.interprets or '-'}, published: {note.published}"
+            )
     unresolved = [
         f"  {n.id}: {r.text!r} ({r.act})"
         for n in tree

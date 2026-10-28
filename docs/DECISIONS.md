@@ -2,6 +2,25 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-10-28: guidance notes that predate the Mobility Package stay in, with their date
+
+**Decision:** all 17 guidance and clarification notes stay in the corpus. Each has a `published` date and a `published_source` in `corpus/manifest.yaml`, and the parser puts the date on the note node (#26, option 1, chosen by the owner).
+
+**The problem:** the acts are pinned to their consolidated versions of 31.12.2024, but 15 of the 17 notes are older than the Mobility Package (Reg. 2020/1054, 31 July 2020). Some may have been overtaken. Guidance-1 interprets 561/2006 Art. 12 without the second subparagraph that 2020/1054 added (driving up to one or two hours longer to reach home), and 11 of the notes cite Reg. 3821/85, which 165/2014 replaced. Like amending acts (design problem 1), an old note can bring outdated wording into retrieval.
+
+**Where the dates come from:** no note prints its own publication date, so each date names its source.
+- `letter`: clarification notes 1, 3, 4 and 5 record a Commission letter whose date is printed on page 1 ("letter of 12 November 2007"). That letter is when the position was taken. Clarification-1 gives only the month (`1993-02`).
+- `pdf`: for the other 13, the creation date in the PDF's metadata. The note existed by then but may be older: clarification notes 2 and 6 carry 2012-10-08, the date the whole series was converted. Guidance-10 cites Reg. 2020/1054, so its date of 2022 is plausible.
+- `commission-page`: for a publication date found on the Commission's page. No note uses it. The page, checked on 2026-10-28, gives only the date each file was uploaded: 20 July 2021 for 15 notes, even clarification-1 from 1993, which looks like the day the notes moved to the site, and 8 March 2022 for guidance-9 and guidance-10. Those dates would put every note after the Mobility Package. The page's links are the URLs in the manifest.
+
+Only guidance-9 and guidance-10 (2022) are newer than the Mobility Package, and a test checks that.
+
+**Why:** the dates are cheap, nothing still valid is lost (such as guidance-7 on "each period of 24 hours"), and answers can say how old the guidance is. Version-trap questions in the evaluation set (#16) then measure whether old notes actually cause wrong answers. If they do, the next step is option 2: a hand-checked note on each note that has been overtaken, which chunking (checkpoint D) can use to leave it out or rank it lower.
+
+**When to check:** no issue tracks this yet. When checkpoint G's issues are created, one of them gets a criterion: look at the version-trap results and, if a pre-2020 note led to a wrong answer, open an issue for option 2. D's retrieval results give an earlier hint (whether an old note ranks above the act), but only G shows whether it changes the answer.
+
+**Alternatives:** option 2 now, which means reading every note against the current text (a legal judgement for the owner to check) before knowing whether old notes cause wrong answers, and most notes are incomplete rather than wrong; leaving the pre-2020 notes out (option 3), which drops 15 of 17 notes, all the guidance on driving and rest times, and the material for version-trap questions.
+
 ## 2026-10-28: guidance notes are read with pdfminer.six, one node per page
 
 **Decision:** each guidance or clarification note becomes a note node (`guidance-7`) with one node per page under it (`guidance-7:p3`), so that an answer can cite the page. The page number is the page's position in the PDF, counted from 1; where a note prints page numbers (guidance-10), they agree. `src/rag/pdftext.py` extracts the text with **pdfminer.six** (#13, plan approved by the owner on the issue).

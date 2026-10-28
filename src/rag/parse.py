@@ -10,8 +10,13 @@ Subparagraphs and indents (`—`) are not nodes; they stay in their parent's tex
 Two readers produce the same `Node`s: one for consolidated XHTML (561/2006, 165/2014) and one
 for the HTML 4 of 2002/15, which is a flat run of paragraphs whose structure has to be rebuilt
 from the labels. Amendment markers (`▼M3`, `►M4 … ◄`) are removed from the text and kept as
-`Node.amendments`. Cross-references are resolved after every document has been parsed, since
-they can point into another act.
+`Node.amendments`.
+
+A Commission guidance note (PDF) becomes a note with one node per page, `guidance-7:p3`, so
+that answers can cite a page; its text comes from `rag.pdftext`.
+
+Cross-references are resolved after every document has been parsed, since they can point into
+another act.
 
 Anything the readers don't understand goes into `Tree.unparsed`, and a duplicate node ID goes
 into `Tree.errors`; nothing is dropped silently. See docs/DECISIONS.md for the ID scheme.
@@ -26,11 +31,14 @@ from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from pathlib import Path
 
+from pdfminer.psexceptions import PSException
+
 from rag.corpus import Document
+from rag.pdftext import read_pdf
 
 _NS = "{http://www.w3.org/1999/xhtml}"
 
-KINDS = ("act", "chapter", "article", "paragraph", "point", "annex", "annex_part")
+KINDS = ("act", "chapter", "article", "paragraph", "point", "annex", "annex_part", "note", "page")
 
 
 class ParseError(Exception):
@@ -59,8 +67,9 @@ class Node:
     id: str
     doc_id: str
     kind: str
-    label: str | None  # "6", "(2a)", "(a)", "III"; part of the ID, not repeated in the text
-    heading: str | None  # "Article 2 — Definitions"; only acts, chapters, articles and annexes
+    label: str | None  # "6", "(2a)", "(a)", "III", "p3"; part of the ID, not repeated in the text
+    # "Article 2 — Definitions"; only acts, chapters, articles, annexes, notes and pages
+    heading: str | None
     heading_path: tuple[str, ...]
     parent: str | None
     children: list[str] = field(default_factory=list)
@@ -75,6 +84,12 @@ class Node:
     amending: bool = False
     # The act an amending article amends, which its references point into by default.
     amends: str | None = None
+    # For a guidance note: the provisions it says it interprets, rewritten into the form the
+    # reference scanner reads ("Article 8(2) and (5) of Regulation (EC) No 561/2006").
+    legal_basis: str | None = None
+    # For a guidance note: the act in the corpus it interprets, which its references without an
+    # act point into; None if its legal basis names no act in the corpus, or more than one.
+    interprets: str | None = None
     # Where the node starts in the document, in the same numbering as its segments.
     position: int = 0
 
@@ -97,6 +112,8 @@ class Node:
             "refs": [vars(r) for r in self.refs],
             "amending": self.amending,
             "amends": self.amends,
+            "legal_basis": self.legal_basis,
+            "interprets": self.interprets,
         }
 
 
@@ -160,13 +177,15 @@ def _printed_label(node: Node) -> str:
 
 
 def parse_document(doc: Document, root: Path, tree: Tree | None = None) -> Tree:
-    """Parse one act into `tree` (a new tree if none). References are resolved separately."""
+    """Parse one document into `tree` (a new tree if none). References are resolved separately."""
     tree = tree if tree is not None else Tree()
     data = (root / doc.file).read_bytes()
     if doc.format == "xhtml":
         _XhtmlReader(doc, tree).read(data)
     elif doc.format == "html":
         _HtmlReader(doc, tree).read(data)
+    elif doc.format == "pdf":
+        _read_note(doc, tree, data)
     else:
         raise ParseError(f"{doc.id}: no parser for format {doc.format}")
     _propagate_amendments(tree, doc.id)
@@ -174,12 +193,14 @@ def parse_document(doc: Document, root: Path, tree: Tree | None = None) -> Tree:
 
 
 def parse_corpus(docs: list[Document], root: Path) -> Tree:
-    """Parse every act in the manifest and resolve the cross-references between them."""
+    """Parse every document in the manifest and resolve the cross-references between them.
+
+    References can point only into acts; guidance notes cite acts, not each other.
+    """
     tree = Tree()
-    acts = [doc for doc in docs if doc.kind == "act"]
-    for doc in acts:
+    for doc in docs:
         parse_document(doc, root, tree)
-    resolve_refs(tree, {doc.id for doc in acts})
+    resolve_refs(tree, {doc.id for doc in docs if doc.kind == "act"})
     return tree
 
 
@@ -287,7 +308,8 @@ _ACT = re.compile(
     r"(?:(?:Council\s+|Commission\s+)?(?:Implementing\s+|Delegated\s+)?"
     r"(?:Regulation|Directive|Decision)\s+(?:\((?:EC|EU|EEC|Euratom)\)\s+)?(?:No\s+)?"
     r"(?P<number>\d{1,4}/\d{2,4})(?:/(?:EC|EEC|EU|Euratom))?"
-    r"|AETR\s+Agreement)"  # the international agreement on drivers' hours (2002/15 Art. 4)
+    # The international agreement on drivers' hours, as 2002/15 Art. 4 and guidance-8 name it.
+    r"|AETR\s+Agreement|European\s+Agreement\s+concerning\s+the\s+Work\s+of\s+Crews\b[^().;]{0,120}\(AETR\))"
 )
 _AMENDED = re.compile(rf"(?P<act>{_ACT.pattern})\s+is\s+(?:hereby\s+)?amended\s+as\s+follows")
 
@@ -918,11 +940,87 @@ class _HtmlReader:
         return None
 
 
+# --- Guidance notes (PDF) -------------------------------------------------------------------
+
+# The field that names the provisions a note interprets, and the fields that can follow it.
+_BASIS = re.compile(r"(?:^|(?<=\s))(?:Articles?|Legal basis)\s*:\s*")
+_NEXT_FIELD = re.compile(
+    r"(?:Issue(?: raised)?|Approach to be followed|Clarification|Comment|Practical implementation)"
+    r"\s*:"
+)
+
+
+def _read_note(doc: Document, tree: Tree, data: bytes) -> None:
+    """A note node, and under it one node per page holding that page's text."""
+    try:
+        pages = read_pdf(data)
+    except PSException as e:  # pdfminer's errors for a damaged or unreadable file
+        raise ParseError(f"{doc.id}: not a readable PDF: {e}") from e
+    if not pages:
+        raise ParseError(f"{doc.id}: PDF has no pages")
+    b = _Builder(doc, tree)
+    note = b.node(doc.id, "note", None, None, heading=doc.title)
+    for page in pages:
+        label = f"p{page.number}"
+        node = b.node(f"{doc.id}:{label}", "page", label, note, heading=f"Page {page.number}")
+        for text in page.segments:
+            b.text(node, text)
+        for what in page.unparsed:
+            b.unparsed(node, what)
+    note.legal_basis = _legal_basis(pages[0].segments)
+
+
+def _legal_basis(segments: list[str]) -> str | None:
+    """The field naming the provisions a note interprets, rewritten for the reference scanner.
+
+    The notes write it loosely: "Article: 8 (2) and (5) of Regulation (EC) No 561/2006",
+    "Articles: 34(1) and (3) of Regulation (EU) No 165/2014, 15(7) of Regulation (EEC) No
+    3821/85", or "Articles: 1, 2, 4(a), 4(c)" with the act named only in the note's header.
+    These become "Article 8 (2) and (5) of Regulation (EC) No 561/2006", "Article 34(1) and (3)
+    of … 165/2014, Article 15(7) of …" and "Article 1, 2, 4(a), 4(c) of Regulation (EC) No
+    561/2006". The page text itself is not changed, but references found in the legal basis
+    carry this rewritten wording.
+    """
+    for i, segment in enumerate(segments):
+        m = _BASIS.search(segment)
+        if m is None:
+            continue
+        end = _NEXT_FIELD.search(segment, m.end())
+        text = segment[m.end() : end.start() if end else len(segment)].strip()
+        text = re.sub(r"\b(Regulation|Directive)\(", r"\1 (", text)
+        # A bare number after an act ("…/85 and 13 (d)", "…/2014, 15(7)") is another article,
+        # unless it is the number of another act ("… 561/2006 and 2002/15/EC").
+        text = re.sub(
+            r"(/\d{2,4}(?:/EC|/EEC|/EU)?,?\s+(?:and\s+)?)(?=\d+[a-z]?(?![\d/]))",
+            r"\1Article ",
+            text,
+        )
+        if text[:1].isdigit():
+            text = f"Article {text}"
+        if not _ACT.search(text):
+            # Only the header before the field says which act the note is about.
+            header = " ".join([*segments[:i], segment[: m.start()]])
+            named: dict[str, str] = {}  # act number → how it is first written
+            for a in _ACT.finditer(header):
+                named.setdefault(a["number"] or a.group(0), a.group(0))
+            if len(named) == 1:
+                text = f"{text.rstrip('.')} of {re.sub(r'\s+', ' ', *named.values())}"
+        return text
+    return None
+
+
+def _interpreted_act(note: Node, acts: set[str]) -> str | None:
+    named = {_act_of(m, acts) for m in _ACT.finditer(note.legal_basis or "")}
+    in_corpus = named & acts
+    return in_corpus.pop() if len(in_corpus) == 1 else None
+
+
 # --- Cross-references ---------------------------------------------------------------------
 
 # Lower case, or capitalised at the start of a sentence ("Points (a) and (b) shall not apply").
 _ORD = r"(?i:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|last)"
-_BR = r"(?:\([0-9a-z]+\))"
+# A bracketed label; the guidance notes often put a space before it ("Article 13 (1) (d)").
+_BR = r"(?:[ ]?\([0-9a-z]+\))"  # [ ], not a bare space: _ELEMENT is verbose
 _ART_ITEM = rf"(?:\d+[a-z]*{_BR}*|{_BR}+)"
 _PARA_ITEM = rf"(?:\d+[a-z]*{_BR}*)"
 _POINT_ITEM = rf"(?:{_BR}+|\d+(?:\.\d+)*)"  # "(b)(iii)", or "4.1" in an annex
@@ -957,7 +1055,7 @@ _JOINED = re.compile(r"\s*(?:,\s*(?:and\s+|or\s+)?|\s+(?:and|or)\s+)")
 _THERETO = re.compile(r"\s+thereto\b")
 _THIS = re.compile(r"this\s+(?P<this>Regulation|Directive|Article|paragraph|Annex)\b")
 _SUFFIX = re.compile(
-    rf"(?:\s*,\s*respectively\s*,)?\s*,?\s+(?:of|to|in|under)\s+(?:the\s+)?"
+    rf"(?:\s*,\s*respectively\s*,)?\s*,?\s+(?:of|to|in|under)\s+(?:the\s+(?:repealed\s+)?)?"
     rf"(?:{_THIS.pattern}|{_ACT.pattern})"
 )
 
@@ -970,7 +1068,7 @@ def _split(items: str) -> list[tuple[str, bool]]:
 
     The flag marks the end of a range that starts at the item before it.
     """
-    return [(m[2], m[1] is not None) for m in _ITEM.finditer(items)]
+    return [(m[2].replace(" ", ""), m[1] is not None) for m in _ITEM.finditer(items)]
 
 
 def _act_of(match: re.Match, acts: set[str]) -> str:
@@ -979,11 +1077,20 @@ def _act_of(match: re.Match, acts: set[str]) -> str:
 
 
 def resolve_refs(tree: Tree, acts: set[str]) -> None:
-    """Find the cross-references in every node's own text and resolve them to node IDs."""
+    """Find the cross-references in every node's own text and resolve them to node IDs.
+
+    A guidance note's legal basis is scanned as part of its first page.
+    """
+    for note in tree:
+        if note.kind == "note":
+            note.interprets = _interpreted_act(note, acts)
     for node in tree:
         node.refs = []
         context = _Context.of(tree, node, acts)
-        for _, text in node.segments:
+        texts = [text for _, text in node.segments]
+        if node.kind == "page" and node.label == "p1" and tree[node.parent].legal_basis:
+            texts.append(tree[node.parent].legal_basis)
+        for text in texts:
             for ref in _scan(text, context, tree, acts):
                 if ref not in node.refs:
                     node.refs.append(ref)
@@ -1011,6 +1118,9 @@ class _Context:
                 annex = current
             current = tree[current.parent] if current.parent else None
         default = node.doc_id
+        if node.kind in {"note", "page"}:
+            note = node if node.kind == "note" else tree[node.parent]
+            default = note.interprets or node.doc_id
         if article is not None and article.amends:
             m = _ACT.search(article.amends)
             default = _act_of(m, acts) if m else article.amends
@@ -1082,6 +1192,11 @@ def _scan(text: str, ctx: _Context, tree: Tree, acts: set[str]) -> Iterator[Ref]
                 ctx.article is not None and ctx.article.amending
             )
             act = ctx.doc_id if own else ctx.default_act
+            if ctx.node.kind == "page" and _names_other_act(text, chain.end, act, acts):
+                # A guidance note's default act is a guess; "Article 14(4) a of Regulation
+                # (EEC) No 3821/85" means another act, so it stays unresolved rather than wrong.
+                yield Ref(written, ctx.doc_id, None)
+                continue
         if act not in acts:
             yield Ref(written, act, None)
             continue
@@ -1090,6 +1205,16 @@ def _scan(text: str, ctx: _Context, tree: Tree, acts: set[str]) -> Iterator[Ref]
             yield Ref(written, act, None)
         for target, partial in targets:
             yield Ref(written, act, target, partial)
+
+
+_SENTENCE_END = re.compile(r"(?<!\be\.g)(?<!\bi\.e)\.(?:\s|$)|;")
+
+
+def _names_other_act(text: str, start: int, act: str, acts: set[str]) -> bool:
+    """Whether the first act named in the rest of the sentence from `start` isn't `act`."""
+    end = _SENTENCE_END.search(text, start)
+    named = _ACT.search(text, start, end.start() if end else len(text))
+    return named is not None and _act_of(named, acts) != act
 
 
 def _annex_ids(base: str, item: str) -> list[str]:

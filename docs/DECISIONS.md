@@ -2,6 +2,25 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-10-28: guidance notes are read with pdfminer.six, one node per page
+
+**Decision:** each guidance or clarification note becomes a note node (`guidance-7`) with one node per page under it (`guidance-7:p3`), so that an answer can cite the page. The page number is the page's position in the PDF, counted from 1; where a note prints page numbers (guidance-10), they agree. `src/rag/pdftext.py` extracts the text with **pdfminer.six** (#13, plan approved by the owner on the issue).
+
+- **Cleaning:** footnote markers are dropped, because "165/2014¹" would otherwise read `165/20141`. A marker is a digit at most three quarters the size of the other characters on its line: 6.5–8 pt next to 10–12 pt text. The footnote's own number at the foot of the page goes the same way, and its text stays. A text box in the top or bottom 15% of the page that repeats on every page of a note (a running header or footer) is kept only on page 1; in clarification-7 that is the header and the disclaimer. A box in that margin holding only the page number is dropped. Text inside figures, such as the labels of guidance-7's diagrams, is read like any other text. Whitespace is collapsed, and a word split over two lines with a hyphen is joined with the hyphen kept.
+- **Legal basis:** the field naming the provisions a note interprets ("Article: 8 (2) and (5) of Regulation (EC) No 561/2006") is kept on the note in a form the reference scanner reads. Its references are scanned as part of page 1. References are scanned in the page text as written, so each can be found in it (the notes write "Article 13 (1) (d)", with spaces, and the scanner now reads that too). When the field names exactly one act in the corpus, that act is the one the note interprets, and references in the note that name no act point into it. A reference that names no act is left unresolved rather than guessed when the first act named after it in its sentence is a different one, as in "Article 14 (4) a of Regulation (EEC) No 3821/85". The page text itself is never rewritten.
+- **Not extracted, and listed by `make parse`:** images, which are the timeline diagrams of guidance-7 pp. 2–6, the figures of guidance-10 pp. 3–4 and one image on guidance-4; and pages drawn as a diagram, table or form, meaning more than 100 drawn lines and boxes: guidance-7 pp. 5–6, guidance-9 p. 3 and guidance-10 p. 5. On those pages the text may not follow the layout. On guidance-10 p. 5, the table of nation codes comes out as a column of codes followed by a column of countries, so which code belongs to which country is lost. It can be rebuilt with an explicit override, like 2002/15's, if a question needs it.
+
+**Why pages:** paragraph boundaries in a PDF are guesses from the layout and could move with a new library version, which would change IDs. Pages come from the pinned file itself. Chunking (checkpoint D) splits pages further, and each chunk keeps its page's ID for citations.
+
+**Why pdfminer.six:** all 17 notes were extracted with three libraries and compared word by word (2026-10-27).
+- pypdf splits words in the middle ("author ize", "diffi culties"), which would hurt keyword search and the exact-substring check on quotes.
+- pypdfium2 is clean but glues footnote markers to the next word ("2020/10542sets", "codes4to").
+- pdfminer.six gets word boundaries right and reports each character's font size, which is what makes footnote markers detectable.
+
+It is MIT-licensed pure Python, but it depends on `cryptography` (for encrypted PDFs), which brings `cffi` and binary wheels. Every page of every note has a text layer, so no OCR is needed.
+
+**Alternatives:** a node per labelled section (`guidance-1:approach`), which reads well, but the labels differ between notes and a section has no page number. Paragraph nodes (`guidance-7:p1.3`) are less stable for the reason above.
+
 ## 2026-10-27: node IDs, and what the parser leaves out
 
 **Decision:** `src/rag/parse.py` gives every node an ID `<document ID>:<path>` (#12, plan approved by the owner on the issue).

@@ -6,9 +6,11 @@ import pytest
 from rag.corpus import Document, load_manifest
 from rag.parse import (
     Amendment,
+    Node,
     ParseError,
     Ref,
     Tree,
+    _legal_basis,
     parse_corpus,
     parse_document,
     resolve_refs,
@@ -17,6 +19,7 @@ from rag.parse import (
 ROOT = Path(__file__).parents[1]
 SNAPSHOT = ROOT / "tests" / "snapshots" / "node_ids.txt"
 ACTS = {"561/2006", "165/2014", "2002/15"}
+NOTES = {f"guidance-{i}" for i in range(1, 11)} | {f"clarification-{i}" for i in range(1, 8)}
 
 # Everything the parser reports as not understood. A change here must be reviewed by hand.
 UNPARSED = [
@@ -29,6 +32,35 @@ UNPARSED = [
     "165/2014:art34(5)(b)(v): image, left as [image] in the text",
     "165/2014:anxI.III.e.2: image, left as [image] in the text",
     "165/2014:anxII.I.3: image, left as [image] in the text",
+    "guidance-4:p1: 1 image, not extracted",
+    "guidance-7:p2: 15 images, not extracted",
+    "guidance-7:p3: 15 images, not extracted",
+    "guidance-7:p4: 15 images, not extracted",
+    "guidance-7:p5: 29 images, not extracted",
+    "guidance-7:p5: drawn as a diagram, table or form (250 lines and boxes)",
+    "guidance-7:p6: 31 images, not extracted",
+    "guidance-7:p6: drawn as a diagram, table or form (271 lines and boxes)",
+    "guidance-9:p3: drawn as a diagram, table or form (126 lines and boxes)",
+    "guidance-10:p3: 2 images, not extracted",
+    "guidance-10:p4: 3 images, not extracted",
+    "guidance-10:p5: drawn as a diagram, table or form (686 lines and boxes)",
+]
+
+# References in the guidance notes that stay unresolved. Each was checked by hand: annexes of
+# acts outside the corpus, the note's own "Annex C", the AETR, 3821/85, and bare references in
+# notes that interpret more than one act. A change here must be reviewed by hand.
+NOTE_UNRESOLVED = [
+    ("guidance-4:p1", "Annex IB"),
+    ("guidance-8:p1", "Article 13"),
+    ("guidance-8:p1", "paragraph 3"),
+    ("guidance-8:p1", "Article 14 (4)"),
+    ("guidance-9:p4", "Annex IC"),
+    ("guidance-9:p4", "Annex IB"),
+    ("guidance-10:p2", "Annex C"),
+    ("guidance-10:p4", "Annex C"),
+    ("clarification-4:p1", "Article 4"),
+    ("clarification-7:p1", "Article 34(3)"),
+    ("clarification-7:p1", "Second paragraph of Article 34(3)"),
 ]
 
 M3 = Amendment("M3", "32020R1054", "REPLACED")
@@ -47,10 +79,10 @@ def children(tree: Tree, node_id: str) -> list[str]:
 # --- The real corpus ------------------------------------------------------------------------
 
 
-def test_every_act_parses_with_no_duplicates_and_only_known_gaps(tree):
+def test_every_document_parses_with_no_duplicates_and_only_known_gaps(tree):
     assert tree.errors == []
     assert tree.unparsed == UNPARSED
-    assert {n.doc_id for n in tree} == ACTS
+    assert {n.doc_id for n in tree} == ACTS | NOTES
 
 
 def test_ids_match_the_snapshot(tree):
@@ -194,6 +226,107 @@ def test_every_reference_target_exists(tree):
     for node in tree:
         for ref in node.refs:
             assert ref.target is None or ref.target in tree, (node.id, ref)
+
+
+# --- The guidance notes -------------------------------------------------------------------
+
+
+def test_a_note_has_one_node_per_page(tree):
+    note = tree["guidance-7"]
+    assert note.kind == "note"
+    assert note.heading == 'Guidance note 7: The meaning of "each period of 24 hours"'
+    assert note.children == [f"guidance-7:p{i}" for i in range(1, 7)]
+    page = tree["guidance-7:p3"]
+    assert (page.kind, page.label, page.parent) == ("page", "p3", "guidance-7")
+    assert page.heading_path == (note.heading, "Page 3")
+    assert sum(1 for n in tree if n.kind == "page") == 30
+
+
+def test_a_known_passage_is_on_its_page(tree):
+    assert "This article does not authorize a driver to derogate from the Regulation" in (
+        tree["guidance-1:p1"].text
+    )
+    passage = "The time of the border crossing should be written in 24-hour format"
+    assert passage in tree["guidance-10:p2"].text
+    assert passage not in tree["guidance-10:p1"].text
+
+
+def test_footnote_markers_are_dropped_and_footnote_text_kept(tree):
+    text = tree["guidance-10:p1"].text
+    assert "Legal basis: Article 34(6), paragraph (f) of Regulation (EU) No 165/2014." in text
+    assert "165/20141" not in text
+    assert "as amended by Regulation (EU) No 2020/1054 sets out" in text
+    assert "within eight working days after the receipt" in tree["guidance-8:p1"].text
+
+
+def test_running_headers_and_page_numbers_are_removed_after_page_one(tree):
+    header = "SOCIAL LEGISLATION IN ROAD TRANSPORT"
+    assert tree["guidance-7:p1"].text.startswith(header)
+    assert all(header not in tree[f"guidance-7:p{i}"].text for i in range(2, 7))
+    assert tree["guidance-7:p2"].text.startswith("Example 1:")
+    assert not tree["guidance-10:p2"].text.endswith("2")
+
+
+def test_text_inside_figures_is_extracted(tree):
+    # The labels of guidance-7's last diagram are drawn inside a figure.
+    assert "driving time (multi-manning)" in tree["guidance-7:p6"].text
+
+
+def test_words_split_over_lines_are_joined(tree):
+    assert "The form may not be pre-signed nor may it be altered" in tree["guidance-5:p1"].text
+
+
+def test_a_notes_legal_basis_is_read_whatever_its_form(tree):
+    basis = {n.id: n.legal_basis for n in tree if n.kind == "note"}
+    assert basis["guidance-7"] == "Article 8 (2) and (5) of Regulation (EC) No 561/2006"
+    # The act is named only in the header.
+    assert basis["clarification-2"] == "Article 1, 2, 4(a), 4(c) of Regulation (EC) No 561/2006"
+    assert basis["clarification-7"].startswith(
+        "Article 34(1) and (3) of Regulation (EU) No 165/2014, Article 15(7) of Regulation (EEC)"
+    )
+    assert basis["guidance-4"].startswith("Article 1 of Regulation (EEC) No 3821/85")
+    interprets = {n.id: n.interprets for n in tree if n.kind == "note"}
+    assert interprets["guidance-7"] == "561/2006"
+    assert interprets["guidance-10"] == "165/2014"
+    assert interprets["guidance-5"] is None  # Directive 2006/22/EC, outside the corpus
+    assert interprets["clarification-7"] is None  # two acts in the corpus
+
+
+def test_note_references_resolve_into_the_acts(tree):
+    def targets(node_id: str) -> set[str | None]:
+        return {r.target for r in tree[node_id].refs}
+
+    assert {"561/2006:art8(2)", "561/2006:art8(5)"} <= targets("guidance-7:p1")
+    # "Articles 6 to 9" without an act points into the act the note interprets.
+    assert {"561/2006:art6", "561/2006:art8a", "561/2006:art9"} <= targets("guidance-1:p1")
+    # Spaces before brackets, as the notes write them: "Article 13 (1) (d)".
+    assert "561/2006:art13(1)(d)" in targets("clarification-3:p1")
+    # "of the repealed Regulation 3820/85" names an act outside the corpus.
+    assert Ref("Article 13(f) of the repealed Regulation 3820/85", "Regulation 3820/85", None) in (
+        tree["clarification-3:p1"].refs
+    )
+    # A reference followed by another act is not guessed into the note's act.
+    assert "165/2014:art14" not in targets("guidance-8:p1")
+
+
+def test_a_reference_is_written_as_in_its_text(tree):
+    # References are found in the page text as it is, so each can be located in it; those
+    # from a note's legal basis carry the rewritten wording of the basis.
+    for node in tree:
+        basis = tree[node.parent].legal_basis if node.kind == "page" else None
+        for ref in node.refs:
+            assert ref.text in node.text or ref.text in (basis or ""), (node.id, ref.text)
+
+
+def test_only_known_note_references_stay_unresolved(tree):
+    unresolved = [
+        (n.id, r.text)
+        for n in tree
+        if n.kind == "page"
+        for r in n.refs
+        if r.target is None and (r.act in ACTS or r.act == n.doc_id)
+    ]
+    assert unresolved == NOTE_UNRESOLVED
 
 
 # --- Hand-written fixtures for edge cases ---------------------------------------------------
@@ -387,9 +520,19 @@ def test_references_into_annexes_and_ranges_in_the_corpus(tree):
 
 
 def test_only_known_references_fall_back_to_a_parent(tree):
-    # 165/2014 Art. 10 has no numbered paragraphs but cites "paragraph 1" (its first one).
+    # 165/2014 Art. 10 has no numbered paragraphs but cites "paragraph 1" (its first one). Two
+    # clarification notes cite points of 561/2006 Art. 13 without its paragraph ("13(d)" for
+    # Art. 13(1)(d)).
     partial = [(n.id, r.text, r.target) for n in tree for r in n.refs if r.partial]
-    assert partial == [("165/2014:art10", "paragraph 1", "165/2014:art10")]
+    assert partial == [
+        ("165/2014:art10", "paragraph 1", "165/2014:art10"),
+        ("clarification-3:p1", "Article 13 (d)", "561/2006:art13"),
+        (
+            "clarification-5:p1",
+            "Article 3(h), 13(i) of Regulation (EC) No 561/2006",
+            "561/2006:art13",
+        ),
+    ]
 
 
 def annex(content: str) -> str:
@@ -502,3 +645,48 @@ def test_this_regulation_in_amending_text_means_the_amended_act(tmp_path):
     tree = parse_document(document(tmp_path, "xhtml", xhtml(body)), tmp_path)
     resolve_refs(tree, {"1/2000", "2/2000"})
     assert [(r.act, r.target) for r in tree["1/2000:art9(1)"].refs] == [("2/2000", None)]
+
+
+def note(tree: Tree, legal_basis: str, text: str) -> Node:
+    """A guidance note with one page, added to `tree` by hand rather than from a PDF."""
+    tree.add(Node("n-1", "n-1", "note", None, "Note 1", ("Note 1",), None, legal_basis=legal_basis))
+    page = Node("n-1:p1", "n-1", "page", "p1", "Page 1", ("Note 1", "Page 1"), "n-1")
+    page.segments = [(1, text)]
+    return tree.add(page)
+
+
+def test_a_note_reference_without_an_act_is_not_guessed_when_another_act_follows(tmp_path):
+    tree = parse_document(document(tmp_path, "xhtml", xhtml(article("4", ""))), tmp_path)
+    page = note(
+        tree,
+        "Article 4 of Regulation (EU) No 1/2000",
+        "Article 4 applies. Article 4 (1) a of Regulation (EEC) No 9/99 applies. Article 4 of "
+        "Regulation (EU) No 1/2000 as amended by Regulation (EU) No 2/2000 applies.",
+    )
+    resolve_refs(tree, {"1/2000"})
+    assert tree["n-1"].interprets == "1/2000"
+    assert [(r.text, r.act, r.target) for r in page.refs] == [
+        ("Article 4", "1/2000", "1/2000:art4"),
+        ("Article 4 (1)", "n-1", None),
+        ("Article 4 of Regulation (EU) No 1/2000", "1/2000", "1/2000:art4"),
+    ]
+
+
+def test_a_damaged_pdf_is_a_parse_error(tmp_path):
+    with pytest.raises(ParseError, match="not a readable PDF"):
+        parse_document(document(tmp_path, "pdf", "not a PDF"), tmp_path)
+
+
+def test_a_legal_basis_takes_its_act_from_the_header_when_it_names_none():
+    # The header names the act twice, in two forms, and shares a text box with the field.
+    segments = [
+        "Regulation (EC) No 561/2006",
+        "Rules of Regulation 561/2006 apply. Articles: 1, 2",
+        "Issue raised: something.",
+    ]
+    assert _legal_basis(segments) == "Article 1, 2 of Regulation (EC) No 561/2006"
+    # A number after an act is another article, unless it is another act's number.
+    segments = ["Article: 3 of Regulation (EC) No 561/2006 and 2002/15/EC, 7 of Directive 2/2000"]
+    assert _legal_basis(segments) == (
+        "Article 3 of Regulation (EC) No 561/2006 and 2002/15/EC, Article 7 of Directive 2/2000"
+    )

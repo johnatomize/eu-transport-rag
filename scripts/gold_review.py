@@ -1,14 +1,17 @@
 """Build the page the owner uses to check every gold answer against the text (#17).
 
-    gold_review.py    write build/gold-review/gold-answer-review.html
+    gold_review.py              write build/gold-review/gold-answer-review.html, to open as a file
+    gold_review.py --artifact   write the page without <html> and <head>, for a claude.ai artifact
 
 The page shows each question of data/questions.v1.jsonl next to the full text of its gold nodes,
-and the article or guidance page around them. It is published as a private claude.ai artifact,
-where the owner records a verdict per question; the verdicts are read back from there, or
-copied out of the page as JSON, and applied to the questions file by hand. The page template is
+and the article or guidance page around them. The owner records a verdict per question. Opened
+as a file, the page keeps verdicts in the browser and saves them to a JSON file; published as a
+private claude.ai artifact, it keeps them in the artifact. Either way, Claude applies them to the
+questions file, and questions already marked checked there show as correct. The page template is
 scripts/gold_review.html. Rebuild and republish the page after editing the questions file.
 """
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -22,6 +25,13 @@ QUESTIONS = ROOT / "data" / "questions.v1.jsonl"
 TEMPLATE = Path(__file__).with_suffix(".html")
 OUT = ROOT / "build" / "gold-review" / "gold-answer-review.html"
 _CONTEXT = {"article", "annex", "page"}
+# claude.ai wraps an artifact in its own document; a file opened in a browser needs one.
+_DOCUMENT = (
+    '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+    '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
+    "<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>"
+    "</head><body>\n{page}\n</body></html>\n"
+)
 
 
 def link(doc: Document) -> str:
@@ -69,6 +79,9 @@ def page_data(questions: list[dict], tree: Tree, docs: list[Document]) -> dict:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--artifact", action="store_true", help="write the page for claude.ai")
+    args = parser.parse_args()
     try:
         docs = load_manifest(MANIFEST)
         tree = parse_corpus(docs, ROOT)
@@ -87,7 +100,10 @@ def main() -> int:
     # "<" is escaped so that no string in the data can close the page's <script> element.
     data = json.dumps(page_data(questions, tree, docs), ensure_ascii=False).replace("<", "\\u003c")
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(TEMPLATE.read_text(encoding="utf-8").replace("/*__DATA__*/", data), "utf-8")
+    page = TEMPLATE.read_text(encoding="utf-8").replace("/*__DATA__*/", data)
+    if not args.artifact:
+        page = _DOCUMENT.replace("{page}", page)
+    OUT.write_text(page, encoding="utf-8")
     print(f"{OUT.relative_to(ROOT)}: {len(questions)} questions, {len(data) // 1024} KB of data")
     return 0
 

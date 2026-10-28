@@ -197,6 +197,9 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
     </div>
     <span class="sync" id="sync">Connecting to saved reviews…</span>
     <button class="tool" id="export" type="button" title="Copy every verdict and note as JSON, to hand to Claude">Copy verdicts</button>
+    <button class="tool" id="save-file" type="button" hidden>Save verdicts file</button>
+    <button class="tool" id="load-file" type="button" hidden>Load verdicts file</button>
+    <input type="file" id="load-input" accept="application/json,.json" hidden>
     <button class="list-toggle" id="list-toggle" type="button" aria-expanded="false" aria-controls="list">All questions</button>
   </div>
 </header>
@@ -261,6 +264,7 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
     get(k) { try { return JSON.parse(localStorage.getItem("gar:" + k)); } catch { return null; } },
     set(k, v) { try { localStorage.setItem("gar:" + k, JSON.stringify(v)); } catch {} },
   };
+  const firstVisit = !store.get("ui");
   const ui = Object.assign({ status: "todo", type: "", split: "", current: QS[0].id }, store.get("ui") || {});
   if (!QS.some(q => q.id === ui.current)) ui.current = QS[0].id;
   const saveUi = () => store.set("ui", ui);
@@ -275,7 +279,12 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
 
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const verdictOf = id => (reviews.get(id) || {}).verdict || null;
+  // Opened as a plain file, outside claude.ai: verdicts are kept in this browser instead.
+  const LOCAL = !(window.claude && typeof window.claude.use === "function");
+  const LOCAL_KEY = "gar:reviews";
+  // Questions already marked checked in the repo count as correct until a verdict says otherwise.
+  const CHECKED = new Set(QS.filter(q => q.checked).map(q => q.id));
+  const verdictOf = id => reviews.has(id) ? reviews.get(id).verdict || null : CHECKED.has(id) ? "ok" : null;
 
   function setSync(text, warn) {
     const el = $("sync");
@@ -439,6 +448,7 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
     }
     const state = $("note-state");
     if (!canWrite) state.textContent = loaded ? "Read only: only the owner can record verdicts." : "Waiting for saved reviews…";
+    else if (!reviews.has(ui.current) && CHECKED.has(ui.current)) state.textContent = "Marked checked in the questions file";
     else if (r.at) state.textContent = "Saved " + new Date(r.at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
     else state.textContent = "Not reviewed yet";
     state.classList.remove("err");
@@ -451,10 +461,11 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
 
   // ---- writing ----
   function write(qid, patch) {
-    if (!db || !canWrite) return Promise.resolve();
-    const prev = reviews.get(qid) || {};
+    if ((!db && !LOCAL) || !canWrite) return Promise.resolve();
+    const prev = reviews.get(qid) || { verdict: verdictOf(qid) };
     const body = { verdict: prev.verdict || null, note: prev.note || "", ...patch, at: new Date().toISOString() };
     reviews.set(qid, body);                         // optimistic
+    if (LOCAL) { saveLocal(); return Promise.resolve(); }
     const run = () => db.doc("reviews/" + qid).set(body);
     const chain = (chains.get(qid) || Promise.resolve()).then(run, run);
     chains.set(qid, chain.catch(() => {}));
@@ -572,8 +583,8 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
     }
     if (e.key === "ArrowRight" || e.key === "j") { e.preventDefault(); step(1); }
     else if (e.key === "ArrowLeft" || e.key === "k") { e.preventDefault(); step(-1); }
-    else if (e.key === "1") setVerdict("ok");
-    else if (e.key === "2") setVerdict("fix");
+    else if (e.key === "1") { e.preventDefault(); setVerdict("ok"); }
+    else if (e.key === "2") { e.preventDefault(); setVerdict("fix"); }
   });
 
   // ---- export, for handing the verdicts to Claude ----
@@ -604,11 +615,64 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
   const measure = () => document.documentElement.style.setProperty("--top-h", $("top").offsetHeight + "px");
   window.addEventListener("resize", measure);
 
+  // ---- local mode: this browser's storage, plus a file to back up and hand over ----
+  function saveLocal() {
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(Object.fromEntries(reviews))); }
+    catch { setSync("This browser won't keep verdicts. Use Save verdicts file often.", true); }
+  }
+  function loadLocal() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LOCAL_KEY) || "{}");
+      for (const [qid, r] of Object.entries(saved)) if (QS.some(q => q.id === qid)) reviews.set(qid, r);
+    } catch {}
+  }
+  $("save-file").addEventListener("click", () => {
+    for (const qid of [...noteTimers.keys()]) flushNote(qid);
+    const blob = new Blob([exportJson()], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `gold-verdicts-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    setSync(`Saved ${a.download}`);
+  });
+  $("load-file").addEventListener("click", () => $("load-input").click());
+  $("load-input").addEventListener("change", async e => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    let incoming;
+    try { incoming = JSON.parse(await file.text()).reviews; } catch { incoming = null; }
+    if (!incoming || typeof incoming !== "object") {
+      setSync(`${file.name} isn't a verdicts file. Pick a file saved from this page.`, true);
+      return;
+    }
+    let taken = 0, skipped = 0;
+    for (const [qid, r] of Object.entries(incoming)) {
+      if (!QS.some(q => q.id === qid) || !r || typeof r !== "object") { skipped++; continue; }
+      const mine = reviews.get(qid);
+      // Keep whichever verdict is newer, so loading an old file never undoes later work.
+      if (mine && mine.at && (!r.at || r.at <= mine.at)) { skipped++; continue; }
+      reviews.set(qid, { verdict: r.verdict === "ok" || r.verdict === "fix" ? r.verdict : null, note: String(r.note || ""), at: r.at || null });
+      taken++;
+    }
+    saveLocal();
+    setSync(`Loaded ${taken} verdict${taken === 1 ? "" : "s"} from ${file.name}` + (skipped ? `; kept ${skipped} newer here` : ""));
+    renderAll();
+  });
+
   // ---- start ----
+  if (LOCAL) {
+    loadLocal();
+    canWrite = true; loaded = true;
+    $("save-file").hidden = $("load-file").hidden = false;
+    setSync("Verdicts are kept in this browser. Save a verdicts file to back them up.");
+    if (firstVisit) ui.current = (visible()[0] || QS[0]).id;
+  }
   renderAll(); measure();
 
-  const use = window.claude && typeof window.claude.use === "function" ? window.claude.use("db") : Promise.resolve(null);
-  use.then(d => {
+  const use = LOCAL ? null : window.claude && typeof window.claude.use === "function" ? window.claude.use("db") : Promise.resolve(null);
+  if (use) use.then(d => {
     if (!d) { setSync("Reviews can't be loaded in this view.", true); loaded = true; renderVerdict(false); return; }
     db = d;
     db.collection("reviews").onSnapshot(snap => {

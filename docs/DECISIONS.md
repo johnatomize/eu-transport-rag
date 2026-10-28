@@ -17,6 +17,8 @@ Only guidance-9 and guidance-10 (2022) are newer than the Mobility Package, and 
 
 **Why:** the dates are cheap, nothing still valid is lost (such as guidance-7 on "each period of 24 hours"), and answers can say how old the guidance is. Version-trap questions in the evaluation set (#16) then measure whether old notes actually cause wrong answers. If they do, the next step is option 2: a hand-checked note on each note that has been overtaken, which chunking (checkpoint D) can use to leave it out or rank it lower.
 
+**When to check:** no issue tracks this yet. When checkpoint G's issues are created, one of them gets a criterion: look at the version-trap results and, if a pre-2020 note led to a wrong answer, open an issue for option 2. D's retrieval results give an earlier hint (whether an old note ranks above the act), but only G shows whether it changes the answer.
+
 **Alternatives:** option 2 now, which means reading every note against the current text (a legal judgement for the owner to check) before knowing whether old notes cause wrong answers, and most notes are incomplete rather than wrong; leaving the pre-2020 notes out (option 3), which drops 15 of 17 notes, all the guidance on driving and rest times, and the material for version-trap questions.
 
 ## 2026-10-28: guidance notes are read with pdfminer.six, one node per page

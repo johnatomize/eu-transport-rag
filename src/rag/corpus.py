@@ -26,11 +26,14 @@ RAW_DIR = Path("corpus/raw")
 KINDS = {"act", "guidance"}
 FORMATS = {"xhtml", "html", "pdf"}
 REQUIRED = {"id", "title", "kind", "phase", "format", "url", "file", "sha256", "retrieved"}
-OPTIONAL = {"celex"}
+OPTIONAL = {"celex", "published", "published_source"}
+# Where a guidance note's date comes from; see the comment at the top of the manifest.
+DATE_SOURCES = {"letter", "pdf", "commission-page"}
 
 # Document IDs prefix every node ID ("561/2006:art6(3)"), so they may not contain the colon.
 _ID = re.compile(r"[a-z0-9]+(?:[/-][a-z0-9]+)*")
 _SHA256 = re.compile(r"[0-9a-f]{64}")
+_YEAR_MONTH = re.compile(r"\d{4}-(0[1-9]|1[0-2])")
 
 USER_AGENT = "eu-transport-rag/0.1 (corpus fetch)"
 # A longer Retry-After than this stops the run instead of silently waiting.
@@ -60,6 +63,10 @@ class Document:
     sha256: str | None
     retrieved: date | None
     celex: str | None = None
+    # For a guidance note: when its content was written, as "YYYY-MM-DD" or, when only the
+    # month is known, "YYYY-MM"; and where that date comes from (one of DATE_SOURCES).
+    published: str | None = None
+    published_source: str | None = None
 
     @property
     def source(self) -> str:
@@ -121,6 +128,20 @@ def _document(index: int, entry: object) -> Document:
         raise fail("celex must be text")
     if doc.kind == "act" and not doc.celex:
         raise fail("an act needs its celex")
+    if doc.kind == "guidance" and (doc.published is None or doc.published_source is None):
+        raise fail("a guidance note needs published and published_source")
+    if doc.kind == "act" and (doc.published is not None or doc.published_source is not None):
+        raise fail("an act is dated by its celex, not by published")
+    if type(doc.published) is date:  # YAML reads YYYY-MM-DD as a date, and YYYY-MM as text
+        doc = replace(doc, published=doc.published.isoformat())
+    elif doc.published is not None and not (
+        isinstance(doc.published, str) and _YEAR_MONTH.fullmatch(doc.published)
+    ):
+        raise fail("published must be a date (YYYY-MM-DD) or a month (YYYY-MM)")
+    if doc.published_source is not None and not (
+        isinstance(doc.published_source, str) and doc.published_source in DATE_SOURCES
+    ):
+        raise fail(f"published_source must be one of {', '.join(sorted(DATE_SOURCES))}")
     if type(doc.phase) is not int or doc.phase not in (1, 2):
         raise fail("phase must be 1 or 2")
     # A document is pinned by whatever arrives, so it must arrive over an authenticated channel.
@@ -136,6 +157,8 @@ def _document(index: int, entry: object) -> Document:
         raise fail("sha256 must be 64 lowercase hex digits, in quotes")
     if doc.retrieved is not None and not isinstance(doc.retrieved, date):
         raise fail("retrieved must be a date (YYYY-MM-DD)")
+    if doc.published and doc.retrieved and doc.published > doc.retrieved.isoformat():
+        raise fail("published is later than retrieved")
     return doc
 
 

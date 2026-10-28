@@ -41,6 +41,8 @@ documents:
     title: "Guidance note 1"
     kind: guidance
     phase: 1
+    published: 2007-12-18
+    published_source: pdf
     format: pdf
     url: https://commission.test/guidance_1_en.pdf
     file: corpus/raw/guidance-1.en.pdf
@@ -93,6 +95,12 @@ def write_raw(root: Path, name: str, data: bytes) -> Path:
 def test_committed_manifest_is_valid_and_fully_pinned():
     manifest = load_manifest(ROOT / "corpus" / "manifest.yaml")
     assert all(d.sha256 and d.retrieved for d in manifest)
+
+
+def test_publication_dates_are_kept_as_text():
+    assert {d.id: d.published for d in parse_manifest(MANIFEST)}["guidance-1"] == "2007-12-18"
+    manifest = MANIFEST.replace("published: 2007-12-18", "published: 1993-02")
+    assert {d.id: d.published for d in parse_manifest(manifest)}["guidance-1"] == "1993-02"
 
 
 def test_committed_raw_files_match_their_hashes_without_network():
@@ -327,9 +335,25 @@ def pin_in_memory(doc):
         ('sha256: "' + sha256_hex(XHTML) + '"', "sha256: " + "1" * 64, "in quotes"),
         ('title: "Guidance note 1"', "title: 7", "title must be text"),
         ("kind: act", "kind: act: x", "not valid YAML"),
+        ("    published_source: pdf\n", "", "needs published and published_source"),
+        ("kind: act\n", "kind: act\n    published: 2006-03-15\n", "dated by its celex"),
+        ("published: 2007-12-18", "published: 2007", "published must be"),
+        ("published: 2007-12-18", 'published: "2007-13"', "published must be"),
+        ("published: 2007-12-18", "published: 2007-12-18 10:00:00", "published must be"),
+        ("published_source: pdf", "published_source: website", "published_source must be"),
+        ("published_source: pdf", "published_source: [pdf]", "published_source must be"),
     ],
 )
 def test_manifest_validation(old, new, error):
     assert old in MANIFEST
     with pytest.raises(CorpusError, match=error):
         parse_manifest(MANIFEST.replace(old, new, 1))
+
+
+def test_publication_date_later_than_retrieval_is_rejected():
+    pinned = MANIFEST.replace("sha256: null", f'sha256: "{sha256_hex(PDF)}"').replace(
+        "retrieved: null", "retrieved: 2026-10-27"
+    )
+    parse_manifest(pinned)
+    with pytest.raises(CorpusError, match="guidance-1: published is later than retrieved"):
+        parse_manifest(pinned.replace("published: 2007-12-18", "published: 2026-11"))

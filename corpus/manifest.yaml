@@ -6,6 +6,12 @@
 # celex      for an act: exactly the version that is cited
 # format     xhtml, html or pdf; picks the parser
 # sha256     hash of the raw file; written, with retrieved, by scripts/fetch_corpus.py --pin
+# published  for a guidance note: when its content was written, as YYYY-MM-DD, or YYYY-MM when
+#            only the month is known; acts are dated by their celex instead
+# published_source
+#            where that date comes from: letter (the Commission letter a clarification note
+#            records, dated on page 1), pdf (the file's creation date in its metadata, so the
+#            note existed by then but may be older) or commission-page (the Commission's page)
 #
 # Language is English for now; the .en in each file name leaves room for Swedish (checkpoint L).
 version: 1
@@ -48,6 +54,8 @@ documents:
     title: "Guidance note 1: Exceptional deviation to find a suitable stopping place"
     kind: guidance
     phase: 1
+    published: 2007-12-18
+    published_source: pdf
     format: pdf
     url: https://transport.ec.europa.eu/document/download/0e9f4991-1187-4635-8c10-8230924c95cb_en?filename=guidance_1_en.pdf
     file: corpus/raw/guidance-1.en.pdf
@@ -57,6 +65,8 @@ documents:
     title: "Guidance note 2: Recording driver's travelling time"
     kind: guidance
     phase: 1
+    published: 2007-12-18
+    published_source: pdf
     format: pdf
     url: https://transport.ec.europa.eu/document/download/78cc3221-083d-49da-829a-c9b23488b916_en?filename=guidance_2_en.pdf
     file: corpus/raw/guidance-2.en.pdf
@@ -66,6 +76,8 @@ documents:
     title: "Guidance note 3: Interrupting driver's break or rest in emergencies"
     kind: guidance
     phase: 1
+    published: 2007-12-18
+    published_source: pdf
     format: pdf
     url: https://transport.ec.europa.eu/document/download/d0f5465c-b85b-4930-9dbe-93d2e105a58d_en?filename=guidance_3_en.pdf
     file: corpus/raw/guidance-3.en.pdf
@@ -75,6 +87,8 @@ documents:
     title: "Guidance note 4: Driving time recorded in frequent-stop multi-drop operations"
     kind: guidance
     phase: 1
+    published: 2015-03-02
+    published_source: pdf
     format: pdf
     url: https://transport.ec.europa.eu/document/download/5613a31e-9eda-41c9-bac5-13fb931c303c_en?filename=guidance_4_en.pdf
     file: corpus/raw/guidance-4.en.pdf
@@ -84,6 +98,8 @@ documents:
     title: "Guidance note 5: Attestation of activities"
     kind: guidance
     phase: 1
+    published: 2013-10-28
+    published_source: pdf
     format: pdf
     url: https://transport.ec.europa.eu/document/download/957dd43f-e588-4550-9a2b-415cc4a88f7e_en?filename=guidance_5_en.pdf
     file: corpus/raw/guidance-5.en.pdf
@@ -93,6 +109,8 @@ documents:
     title: "Guidance note 6: Recording of time spent on ferry or train"
     kind: guidance
     phase: 1
+    published: 2017-01-23
+    published_source: pdf
     format: pdf
     url: https://transport.ec.europa.eu/document/download/0084e7e3-abd9-4e0d-afc1-aa1dcd49621f_en?filename=guidance_6_en.pdf
     file: corpus/raw/guidance-6.en.pdf
@@ -102,6 +120,8 @@ documents:
     title: "Guidance note 7: The meaning of \"each period of 24 hours\""
     kind: guidance
     phase: 1
+    published: 2015-06-05
+    published_source: pdf
     format: pdf
     url: https://transport.ec.europa.eu/document/download/9442117f-5a2d-4700-a0b7-ba949dd14a9d_en?filename=guidance_7_en.pdf
     file: corpus/raw/guidance-7.en.pdf
@@ -111,6 +131,8 @@ documents:
     title: "Guidance note 8: Exceptional situations when driving without a driver card is allowed"
     kind: guidance
     phase: 1
+    published: 2015-06-05
+    published_source: pdf
     format: pdf
     url: https://transport.ec.europa.eu/document/download/cbe934a7-2262-404c-bc82-215af8732d2b_en?filename=guidance_8_en.pdf
     file: corpus/raw/guidance-8.en.pdf
@@ -120,6 +142,8 @@ documents:
     title: "Guidance note 9: Standard form for the written statement on the removal or breakage of a tachograph seal by a control officer"
     kind: guidance
     phase: 1
+    published: 2022-02-10
+    published_source: pdf
     format: pdf
     url: https://transport.ec.europa.eu/document/download/50787781-7627-4f0b-8b57-91fec284c9a6_en?filename=guidance_9_en.pdf
     file: corpus/raw/guidance-9.en.pdf
@@ -129,6 +153,8 @@ documents:
     title: "Guidance note 10: Border crossing records in analogue tachographs"
     kind: guidance
     phase: 1
+    published: 2022-03-07
+    published_source: pdf
     format: pdf
     url: https://transport.ec.europa.eu/document/download/e6053fe5-e2d7-4649-ae82-fe95ec027f8d_en?filename=guidance_10_en.pdf
     file: corpus/raw/guidance-10.en.pdf
@@ -138,6 +164,8 @@ documents:
     title: "Clarification note 1: National regulations inspired by the European Union rules"
     kind: guidance
     phase: 1
+    published: 1993-02
+    published_source: letter
     format: pdf
     url: https://transport.ec.europa.eu/document/download/ce392202-94fe-4799-8935-4e1ab0e6c4f3_en?filename=clarification-1.pdf
     file: corpus/raw/clarification-1.en.pdf
@@ -147,6 +175,8 @@ documents:
     title: "Clarification note 2: Vehicles being driven for repair, washing or maintenance purposes"
     kind: guidance
     phase: 1
+    published: 2012-10-08
+    published_source: pdf
     format: pdf
     url: https://transport.ec.europa.eu/document/download/db271f2c-89ab-4092-b92d-a1b1eaa40531_en?filename=clarification-2.pdf
     file: corpus/raw/clarification-2.en.pdf
@@ -156,6 +186,8 @@ documents:
     title: "Clarification note 3: Vehicles used as local shops at local markets"
     kind: guidance
     phase: 1
+    published: 2007-11-12
+    published_source: letter
     format: pdf
     url: https://transport.ec.europa.eu/document/download/2ba79d39-b90a-4674-bb78-b8bbb9c77404_en?filename=clarification-3.pdf
     file: corpus/raw/clarification-3.en.pdf
@@ -165,6 +197,8 @@ documents:
     title: "Clarification note 4: Application of Article 26 of the Regulation"
     kind: guidance
     phase: 1
+    published: 2006-06-28
+    published_source: letter
     format: pdf
     url: https://transport.ec.europa.eu/document/download/7e818e6d-26b5-4971-8d1a-23c478d897d6_en?filename=clarification-4.pdf
     file: corpus/raw/clarification-4.en.pdf
@@ -174,6 +208,8 @@ documents:
     title: "Clarification note 5: Recording of a mixed activity of 'in' and 'out' of scope driving"
     kind: guidance
     phase: 1
+    published: 2007-07-23
+    published_source: letter
     format: pdf
     url: https://transport.ec.europa.eu/document/download/853f331a-5092-4d8d-9e0f-8b007f81b15e_en?filename=clarification-5.pdf
     file: corpus/raw/clarification-5.en.pdf
@@ -183,6 +219,8 @@ documents:
     title: "Clarification note 6: Temporary exceptions in urgent exceptional circumstances"
     kind: guidance
     phase: 1
+    published: 2012-10-08
+    published_source: pdf
     format: pdf
     url: https://transport.ec.europa.eu/document/download/fa791d93-e4f6-467f-ae10-6385cb8c45d4_en?filename=clarification-6.pdf
     file: corpus/raw/clarification-6.en.pdf
@@ -192,6 +230,8 @@ documents:
     title: "Clarification note 7: Recording and controlling activities and inactivity periods of drivers when away from a vehicle"
     kind: guidance
     phase: 1
+    published: 2016-06-17
+    published_source: pdf
     format: pdf
     url: https://transport.ec.europa.eu/document/download/2fd91f4a-058e-4020-a85a-438db84f3734_en?filename=clarification-7.pdf
     file: corpus/raw/clarification-7.en.pdf

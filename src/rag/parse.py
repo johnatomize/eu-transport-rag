@@ -90,6 +90,9 @@ class Node:
     # For a guidance note: the act in the corpus it interprets, which its references without an
     # act point into; None if its legal basis names no act in the corpus, or more than one.
     interprets: str | None = None
+    # For a guidance note: when its content was written, from the manifest ("2007-12-18", or
+    # "1993-02" when only the month is known), so that older guidance can be told apart.
+    published: str | None = None
     # Where the node starts in the document, in the same numbering as its segments.
     position: int = 0
 
@@ -114,6 +117,7 @@ class Node:
             "amends": self.amends,
             "legal_basis": self.legal_basis,
             "interprets": self.interprets,
+            "published": self.published,
         }
 
 
@@ -960,6 +964,7 @@ def _read_note(doc: Document, tree: Tree, data: bytes) -> None:
         raise ParseError(f"{doc.id}: PDF has no pages")
     b = _Builder(doc, tree)
     note = b.node(doc.id, "note", None, None, heading=doc.title)
+    note.published = doc.published
     for page in pages:
         label = f"p{page.number}"
         node = b.node(f"{doc.id}:{label}", "page", label, note, heading=f"Page {page.number}")

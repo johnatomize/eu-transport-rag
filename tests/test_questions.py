@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from rag.questions import SPLITS, TYPES, Question, coverage, validate
+from rag.questions import SPLITS, TYPES, Question, coverage, unchecked, validate
 
 GOOD = {
     "id": "q001",
@@ -192,6 +192,15 @@ def test_every_type_must_appear_in_both_splits():
     assert coverage(every) == []
     without = [q for q in every if not (q.type == "version_trap" and q.split == "test")]
     assert coverage(without) == ["type 'version_trap' has no test questions"]
+
+
+def test_every_question_must_be_checked_by_the_owner():
+    questions = [
+        Question("q001", "?", "", (), (), "unanswerable", "paraphrased", "dev", True),
+        Question("q002", "?", "", (), (), "unanswerable", "paraphrased", "dev", False),
+    ]
+    assert unchecked(questions) == ["q002: not checked by the owner yet"]
+    assert unchecked(questions[:1]) == []
 
 
 def test_the_test_split_is_frozen():

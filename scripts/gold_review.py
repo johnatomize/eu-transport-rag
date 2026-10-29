@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 from rag.corpus import CorpusError, Document, load_manifest
-from rag.parse import Node, ParseError, Tree, parse_corpus
+from rag.parse import Node, ParseError, Tree, _printed_label, parse_corpus
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "corpus" / "manifest.yaml"
@@ -51,6 +51,26 @@ def context(tree: Tree, node: Node) -> Node | None:
     return None if current is node else current
 
 
+def lead_in(tree: Tree, node: Node, around: Node | None) -> str:
+    """The text that introduces a node inside its article, annex or page, outermost first.
+
+    A point such as "(ii) loading and unloading;" means little without the text that comes
+    before it in the paragraphs above it and in the article itself (`around`).
+    """
+    if around is None:
+        return ""
+    pieces: list[str] = []
+    current = node
+    while current is not around:
+        parent = tree[current.parent]
+        before = [text for position, text in parent.segments if position < current.position]
+        if before and parent is not around and parent.kind in {"paragraph", "point"}:
+            before[0] = f"{_printed_label(parent)} {before[0]}"
+        pieces[:0] = before
+        current = parent
+    return "\n".join(pieces)
+
+
 def page_data(questions: list[dict], tree: Tree, docs: list[Document]) -> dict:
     by_id = {doc.id: doc for doc in docs}
     nodes, contexts = {}, {}
@@ -68,6 +88,7 @@ def page_data(questions: list[dict], tree: Tree, docs: list[Document]) -> dict:
                 "kind": node.kind,
                 "path": list(node.heading_path),
                 "text": tree.full_text(node_id),
+                "lead_in": lead_in(tree, node, around),
                 "context_id": around.id if around is not None else None,
                 "doc": doc.title,
                 "source": doc.celex or "",

@@ -10,9 +10,9 @@ One JSON object per line, one question each (design §C):
 `key_facts` are the values that answer evaluation checks by exact match (design problem 4).
 `gold_node_ids` are the most specific nodes that hold the answer; how a retrieved chunk matches
 them is for retrieval evaluation to decide. `checked` stays false until the owner has checked
-the gold answer against the text. A version trap's old answer goes in `notes`, the only optional
-field. IDs are never reused or renumbered, so that run logs stay comparable. See
-docs/DECISIONS.md.
+the gold answer against the text, and the set is not valid while any question is unchecked. A
+version trap's old answer goes in `notes`, the only optional field. IDs are never reused or
+renumbered, so that run logs stay comparable. See docs/DECISIONS.md.
 """
 
 import json
@@ -111,6 +111,15 @@ def coverage(questions: list[Question]) -> list[str]:
         for split in SPLITS
         if (kind, split) not in present
     ]
+
+
+def unchecked(questions: list[Question]) -> list[str]:
+    """Problems with the set as a whole: every gold answer must be checked by the owner (#17).
+
+    A new question is added with `checked: false`, and stays a problem until the owner has
+    checked it against the text.
+    """
+    return [f"{q.id}: not checked by the owner yet" for q in questions if not q.checked]
 
 
 def _check(line: str, tree: Tree) -> tuple[dict | None, list[str]]:

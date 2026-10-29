@@ -13,7 +13,7 @@ Read [`docs/DESIGN.md`](docs/DESIGN.md) first: what the project is, its checkpoi
 
 ## Work tracking
 
-Work items live as GitHub Issues in `johnatomize/eu-transport-rag`, on the [board](https://github.com/users/johnatomize/projects/2). Each checkpoint in the design has a GitHub milestone and one tracking issue labelled `milestone` (#1 for A, #2 for B, #3 for C), and its work items are that issue's sub-issues. "Blocked by #n" at the top of an issue body names its dependencies. Labels: `owner-only`, `decision-needed`, `paid`, and the areas `corpus`, `eval`, `retrieval`, `generation`, `service`, `infra`, `documentation`. Only checkpoints A–C have issues so far; create the next checkpoint's issues from its section in the design when the previous checkpoint is nearly done.
+Work items live as GitHub Issues in `johnatomize/eu-transport-rag`, on the [board](https://github.com/users/johnatomize/projects/2). Each checkpoint in the design has a GitHub milestone and one tracking issue labelled `milestone` (#1 for A, #2 for B, #3 for C, #31 for D), and its work items are that issue's sub-issues. "Blocked by #n" at the top of an issue body names its dependencies. Labels: `owner-only`, `decision-needed`, `paid`, and the areas `corpus`, `eval`, `retrieval`, `generation`, `service`, `infra`, `documentation`. Only checkpoints A–D have issues so far; create the next checkpoint's issues from its section in the design when the previous checkpoint is nearly done.
 
 **Who owns what**
 

@@ -2,6 +2,14 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-10-29: gold nodes that are list items keep their lead-in out of the gold
+
+**Decision:** a gold node stays the most specific node that holds the answer, even when it is a point in a list that means little alone, such as 2002/15 Art. 3(a)(1)(ii), "loading and unloading;", or 561/2006 Art. 13(1)(r). The sentences that introduce it come from the text around it instead: the review page shows them above the node, and a chunk that holds a list item without the paragraph it sits in carries them in its prefix (#33). Decided by the owner during the gold answer check (#17).
+
+**Why:** 34 gold nodes in 39 questions are points in a list, and the owner flagged only two of those questions. Fixing the context in chunking treats all of them the same way, and keeps the gold exact for retrieval evaluation in D.
+
+**Alternatives:** citing the parent paragraph as gold, which for 561/2006 Art. 13(1) means points (a) to (r) and blurs which point answers; adding a second node that gives context, such as 165/2014 Art. 34(5)(b)(ii) for loading and unloading, which supports the answer only indirectly.
+
 ## 2026-10-28: the question set and its dev/test split
 
 **Decision:** `data/questions.v1.jsonl` holds 100 questions, split 60 dev and 40 test by a stratified seeded shuffle, and the split is frozen from the commit that adds them (#16, plan approved by the owner on the issue).

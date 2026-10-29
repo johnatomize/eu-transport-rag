@@ -2,7 +2,7 @@
 
 What is built and verified, as of 29 October 2026. The board holds the status of open work; past evidence is in git history and on the closed issues.
 
-Checkpoints A, B and C are built. C awaits the owner's review of its learning notes (#18).
+Checkpoints A, B and C are built and reviewed by the owner. Checkpoint D, the keyword retrieval baseline, is next (#31).
 
 ## Built and verified
 

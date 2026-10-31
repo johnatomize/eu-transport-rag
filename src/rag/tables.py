@@ -12,6 +12,10 @@ from rag.retrieval_eval import CUTOFF, Evaluation, Metric, evaluate
 from rag.runlog import rankings
 
 GROUPS = ("all", "paraphrased", "verbatim")
+# Config entries that describe the run rather than the retriever's parameters.
+_NOT_PARAMETERS = {
+    "retriever", "strategy", "chunks", "mean_chunk_words", "chunks_sha256", "split", "depth"
+}  # fmt: skip
 COLUMNS = (
     ("recall@1", "Recall@1"),
     ("recall@3", "Recall@3"),
@@ -114,11 +118,7 @@ def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree
     lines += _header(["Run", "Retriever", "Strategy", "Chunks", "Depth", "Commit"], 3)
     for run in runs:
         config, meta = run["config"], run["run"]
-        params = ", ".join(
-            f"{k} {v}"
-            for k, v in config.items()
-            if k not in {"retriever", "strategy", "chunks", "mean_chunk_words", "split", "depth"}
-        )
+        params = ", ".join(f"{k} {v}" for k, v in config.items() if k not in _NOT_PARAMETERS)
         retriever = f"{config['retriever']} ({params})" if params else config["retriever"]
         commit = (meta["commit"] or "unknown")[:7] + (" + changes" if meta["dirty"] else "")
         lines.append(

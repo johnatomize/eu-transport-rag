@@ -1,0 +1,11 @@
+{
+  "metric": "recall@5",
+  "split": "dev",
+  "source": "results/retrieval.md",
+  "note": "Checkpoint D baseline, reviewed by the owner with #36. J's quality gate fails a change that lowers any of these.",
+  "runs": {
+    "bm25-article": 0.72,
+    "bm25-paragraph": 0.6,
+    "bm25-window-200-50": 0.6
+  }
+}

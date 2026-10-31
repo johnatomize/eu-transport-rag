@@ -2,7 +2,7 @@
 
 What is built and verified, as of 29 October 2026. The board holds the status of open work; past evidence is in git history and on the closed issues.
 
-Checkpoints A, B and C are built and reviewed by the owner. Checkpoint D, the keyword retrieval baseline, is next (#31).
+Checkpoints A, B and C are built and reviewed by the owner. Checkpoint D, the keyword retrieval baseline (#31), has its first results table; the owner's review and learning notes close it (#37).
 
 ## Built and verified
 
@@ -35,6 +35,19 @@ Checkpoints A, B and C are built and reviewed by the owner. Checkpoint D, the ke
 - **Chunking (#33):** `make chunks` cuts the corpus three ways and writes each to `build/chunks-<strategy>.jsonl`: 133 article chunks (mean 284 words, with 165/2014's annexes split into their parts), 412 paragraph chunks (mean 112) and 246 windows of 200 words overlapping by 50 (mean 216 with the prefix). Every chunk starts with its heading path, and a list item carries the text that introduces it, such as "For the purposes of this Regulation the following definitions shall apply:" above each definition in 561/2006 Art. 4. Tests check that every piece of text is in some chunk apart from the amending articles and the acts' titles, that every gold node of the question set can be found in each strategy, and that IDs are the same across runs (choices in `DECISIONS.md`).
 - **Retrieval metrics (#35):** `src/rag/retrieval_eval.py` scores any ranked list of chunks against the gold nodes, following the rules in `DECISIONS.md` ("how retrieval evaluation scores a ranking"). It gives recall@1, @3, @5 and @10, fractional recall, MRR@10 and nDCG@10, each with a 95% interval, overall, by phrasing and by question type, and the number of unanswerable questions left out. The Wilson interval matches four published values (Newcombe 1998), the bootstrap gives the same interval for the same seed, and scoring the test split fails unless an explicit flag meant for checkpoint G is set.
 - **Keyword search (#34):** BM25 over the chunks of any strategy, with tokens that keep act numbers, article references and decimals whole (choices in `DECISIONS.md`). `make search Q="…"` prints the best five chunks for a typed question. "Can I take my weekly rest in the truck cab?" finds 561/2006 Art. 8(6) first; "How long may I drive in a day?" misses Art. 6(1), because the act says "daily driving time". That vocabulary gap is what E's embeddings have to close.
+- **First results table (#36):** `make retrieval-runs` writes one committed run log per configuration to `runs/retrieval/`, and `make tables` rebuilds `results/retrieval.md` from the logs alone (`make check` fails if they disagree). BM25 on the 50 answerable dev questions, with 95% intervals; 10 unanswerable questions are left out:
+
+  | Chunks | Mean words | Recall@1 | Recall@5 | Recall@10 | MRR@10 | nDCG@10 |
+  | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+  | article | 284 | 0.32 (0.21–0.46) | 0.72 (0.58–0.83) | 0.88 (0.76–0.94) | 0.64 (0.54–0.74) | 0.70 (0.61–0.78) |
+  | paragraph | 112 | 0.32 (0.21–0.46) | 0.60 (0.46–0.72) | 0.68 (0.54–0.79) | 0.67 (0.55–0.78) | 0.65 (0.55–0.75) |
+  | window-200-50 | 216 | 0.30 (0.19–0.44) | 0.60 (0.46–0.72) | 0.76 (0.63–0.86) | 0.61 (0.49–0.72) | 0.63 (0.53–0.72) |
+
+  - **Article chunks find the most**, but they are 2.5 times as long as paragraph chunks, which the lenient matching rule favours. Paragraph chunks put the first right chunk highest (MRR). Every interval overlaps the others: 50 questions can't separate the three yet. G compares them at an equal context budget.
+  - **Wording matters:** recall@5 is 0.66, 0.55 and 0.53 on paraphrased questions against 0.92, 0.75 and 0.83 on verbatim ones.
+  - **Questions that need two places are the weak spot:** recall@5 is 0.00–0.17 on cross-act questions and 0.25–0.50 on multi-article ones, against 0.83–0.92 on single facts. Version traps are all found by article and paragraph chunks.
+  - **Six questions are missed by every run in the top 10**: q023, q048, q050, q051, q062 and q066. Five of them need two or more places. q023, "What is a 'break' under Regulation 561/2006?", is verbatim, but "break" and "561/2006" appear in dozens of chunks, so the short definition in Art. 4(d) never rises.
+  - **Baseline for J's quality gate:** recall@5 of 0.72, 0.60 and 0.60 on the dev split, in `results/baseline.json`.
 
 ## Spend log
 

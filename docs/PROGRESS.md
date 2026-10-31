@@ -1,12 +1,12 @@
 # Progress
 
-What is built and verified, as of 29 October 2026. The board holds the status of open work; past evidence is in git history and on the closed issues.
+What is built and verified, as of 31 October 2026. The board holds the status of open work; past evidence is in git history and on the closed issues.
 
-Checkpoints A, B and C are built and reviewed by the owner. Checkpoint D, the keyword retrieval baseline (#31), has its first results table; the owner's review and learning notes close it (#37).
+Checkpoints A, B and C are built and reviewed by the owner. Checkpoint D, the keyword retrieval baseline (#31), has its first results table, and its section of the learning notes is written; the owner's review of that section closes it (#37).
 
 ## Built and verified
 
-- **Repo and tracking:** private GitHub repo, with milestones, tracking issues and sub-issues for checkpoints A–C on the [board](https://github.com/users/johnatomize/projects/2).
+- **Repo and tracking:** private GitHub repo, with milestones, tracking issues and sub-issues for checkpoints A–D on the [board](https://github.com/users/johnatomize/projects/2).
 - **Secret scanning (#4):** a gitleaks pre-commit hook guards every commit since the first. Before the first commit, a staged fake token was refused.
 - **Python tooling (#5):** a `uv` project on Python 3.12 with ruff and pytest, locked in `uv.lock`. `make check` runs lint, tests and a gitleaks scan of the full history, and passes on a fresh clone with only `uv` and gitleaks installed.
 - **Local Postgres + pgvector (#7):** `docker-compose.yml` runs `pgvector/pgvector` 0.8.7 on Postgres 18, pinned by tag and digest, with credentials from `.env` and the port bound to localhost only. `make db-up` waits until it is healthy, `make db-check` runs `CREATE EXTENSION vector` and prints `pgvector 0.8.7`, and data survives `make db-down` / `make db-up`. Docker runs in Colima.

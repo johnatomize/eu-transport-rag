@@ -117,7 +117,7 @@ The Commission site rate-limits scripted downloads (HTTP 429 after about six PDF
   - paragraph-level with the article heading prepended;
   - fixed token windows with overlap.
 - BM25 keyword retrieval.
-- `src/rag/retrieval_eval.py`: recall@k, MRR and nDCG against the gold node IDs, with Wilson intervals, reusing the stats code from `llm-inference-spike`.
+- `src/rag/retrieval_eval.py`: recall@k, MRR and nDCG against the gold node IDs, with intervals (Wilson for recall, bootstrap for the others) from stats code written in this repo; scoring rules in `DECISIONS.md`.
 - First results table: BM25 × three chunking strategies, dev split, reported separately for paraphrased and verbatim questions.
 
 ### E. Embeddings, vector search, hybrid (~4–5 h, first paid step, gated)

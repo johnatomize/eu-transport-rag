@@ -2,6 +2,39 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-10-31: how retrieval evaluation scores a ranking
+
+**Decision** (#32, answered by the owner): the rules `src/rag/retrieval_eval.py` follows (#35).
+
+- **When a chunk finds a gold node:** when it holds any of that node's text. In terms of the chunk record (next entry), a chunk finds gold node G when its `node_ids` hold G or a descendant of G. An article chunk finds a gold paragraph, a paragraph chunk finds part of a gold article, and a window that touches a gold paragraph finds it, even if the key fact sits in the part it misses. Prefix text never counts.
+- **Chunk length is reported beside the scores**, because this rule favours bigger chunks. Checkpoint G compares strategies at an equal context budget.
+- **recall@k** counts a question as found only when every one of its gold nodes is found in the top k. Fractional recall, the share of gold nodes found, is reported beside it.
+- **MRR@10** uses the rank of the first chunk that finds any gold node; a question with none in the top 10 scores 0.
+- **nDCG@10** uses binary relevance and credits each gold node once, at the first chunk that finds it, so overlapping windows don't count a node twice. The ideal ranking puts every gold node at the top.
+- **Intervals:** 95% Wilson intervals for recall@k, and a seeded percentile bootstrap (10,000 resamples of questions) for MRR, nDCG and fractional recall.
+- **Stats code:** written in this repo and tested against published values, instead of reused from `llm-inference-spike` as the design first said. The owner chose this to keep the project self-contained.
+- **Questions counted:** unanswerable questions have no gold nodes, so they are left out of the retrieval metrics and the table gives their count; refusal is measured in G. Version traps are scored against their current gold nodes.
+- **k values:** recall@1, @3, @5 and @10, MRR@10 and nDCG@10, matching the top-k values G tries.
+
+**Why:** the lenient rule matches what generation needs: the passage with the answer is in front of the model. The strict rule, which needs the whole gold node inside the chunk, would mean a paragraph chunk could never find a gold article. Rescoring under another rule is free as long as run logs keep the full rankings, which the run log plan (#36) has to provide.
+
+## 2026-10-31: chunking strategies
+
+**Decision** (#33, plan approved by the owner on the issue): three strategies in `src/rag/chunk.py`, each a function from the parsed corpus to a list of chunks.
+
+- **The chunk record:** an ID, the strategy, the document, a prefix, a body, the IDs of every node whose own text the body holds at least in part (`node_ids`), and a guidance note's publication date. The indexed text is the prefix, a line break and the body.
+- **Chunk IDs** are the strategy plus the node ID of the unit (`article:561/2006:art6`, `paragraph:561/2006:art4(e)`). Windows are numbered within each document (`window-200-50:561/2006:w12`); the size is part of the strategy name, so two window sizes never share an ID.
+- **article:** one chunk per article. Annexes split into their top-level parts, so that 165/2014 Annex I (about 4,000 words) doesn't match every tachograph question. Guidance notes give one chunk per page.
+- **paragraph:** an article splits into its children (paragraphs, or points where an article lists them directly); an article without children is one chunk, and text after the last child becomes a chunk with the article's ID. Each chunk's prefix carries its lead-in. Guidance notes give one chunk per page.
+- **window-200-50:** windows of 200 words overlapping by 50, over each document's text in reading order. They cross article and page boundaries but never documents. A window carries the lead-in of the node it starts in.
+- **Prefix:** the heading path of the chunk's unit, joined with ` › `, then any lead-in. A guidance note's date goes in its own field, not the prefix.
+- **Left out:** amending articles (561/2006 Art. 26–27, 165/2014 Art. 45) and the act's title text. They stay in the parsed tree.
+- **Words, not tokens,** until E chooses an embedding model; legal English runs at about 1.3 tokens per word.
+
+**Why:** 200 words sits between a mean paragraph (69 words) and a mean article (275 words), so the three strategies differ; 25% overlap is the usual default and keeps most sentences whole in some window.
+
+**Alternatives:** windows of 300 words with an overlap of 75; one chunk per annex.
+
 ## 2026-10-29: gold nodes that are list items keep their lead-in out of the gold
 
 **Decision:** a gold node stays the most specific node that holds the answer, even when it is a point in a list that means little alone, such as 2002/15 Art. 3(a)(1)(ii), "loading and unloading;", or 561/2006 Art. 13(1)(r). The sentences that introduce it come from the text around it instead: the review page shows them above the node, and a chunk that holds a list item without the paragraph it sits in carries them in its prefix (#33). Decided by the owner during the gold answer check (#17).

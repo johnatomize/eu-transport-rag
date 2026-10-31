@@ -24,7 +24,7 @@ docs/plan/
 # Half-written downloads (scripts/fetch_corpus.py writes via a .part file)
 corpus/raw/*.part
 
-# Local caches (embeddings, run scratch)
+# Local scratch caches (embedding vectors are committed, in embeddings/)
 .cache/
 
 # AWS CDK output

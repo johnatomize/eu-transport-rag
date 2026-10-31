@@ -2,6 +2,16 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-10-31: embedding vectors are cached in the repository
+
+**Decision** (#46; where the cache lives was answered by the owner in a working session): every vector Bedrock returns is kept in `embeddings/` and committed. Code in `src/rag/embed.py`.
+
+- **Why committed:** the results tables can then be regenerated from the repository alone, and J's quality gate measures search on every pull request without AWS access from GitHub and without paying. The cost is about 4.5 MB per set of vectors for the current 831 texts, and each new model or chunking adds a set that stays in the history. The vectors come from public EU legislation, so committing them reveals nothing if the repository is made public.
+- **Alternative:** keep the cache on the developer's machine only. The repository stays small, but the tables could only be reproduced by paying for the vectors again, and the quality gate would have to call Bedrock from GitHub.
+- **Key:** sha256 of the model ID, the vector size, the normalisation and the text. The design names model and text; the two settings are added because each changes the vector.
+- **Format:** one JSON Lines file per model setting (`amazon.titan-embed-text-v2_0-1024-normalized.jsonl`), one line per text with its key, the token count Bedrock billed and the vector as base64 of little-endian float32. Float32 is the precision Titan computes in, and base64 is about a quarter of the size of JSON numbers. Lines are sorted by key and the file is rewritten whole through a temporary file, so the same vectors always give the same file and an interrupted write never leaves half a line. The text itself is not stored: it is rebuilt from the corpus, and the key ties each vector to it.
+- **Paying:** nothing is sent without `SEND=1`. A paid run is held to the dry-run's estimate with its 50% margin, and refuses to start if that estimate on top of what has been spent would pass the approved cap, or if the price is more than 7 days old. What has been spent is the spend log plus every paid run whose call log in `runs/embeddings/` no spend-log row names yet, so two runs in a row can't both pass against a log that shows neither; the row is added by hand and names the call log's file. Throttling is retried by botocore, at most 6 tries a call, the first included. A call that still fails caches nothing and stops the run; what was already paid for is kept, also when the run is interrupted, and every call Bedrock answered is logged with its tokens, even if its vector is refused.
+
 ## 2026-10-31: hybrid search merges rankings by reciprocal rank fusion, k = 60, depth 50
 
 **Decision** (#48): hybrid search (`RRF` in `src/rag/retrieve.py`) merges the rankings of BM25 and vector search by reciprocal rank fusion. Each retriever's top 50 chunks get 1 / (60 + rank) from it, and a chunk's score is the sum.

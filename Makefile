@@ -2,7 +2,7 @@
 # The db-* targets also need Docker with Compose and a running Colima VM (see CLAUDE.md).
 # Later checkpoints add targets (tables, deploy, destroy) and extend check.
 
-.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs embed-dry-run tables tables-check db-up db-check db-down gitleaks-present docker-present
+.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs embed-dry-run embed tables tables-check db-up db-check db-down gitleaks-present docker-present
 
 help: ## List the targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
@@ -46,6 +46,9 @@ retrieval-runs: ## Run every retrieval configuration on the dev split and write 
 
 embed-dry-run: ## Print what embedding the corpus and the questions would cost; calls nothing
 	uv run --locked python scripts/embed_dry_run.py
+
+embed: ## Report which chunks and questions lack a cached vector and what sending them would cost; SEND=1 pays
+	uv run --locked python scripts/embed.py $(if $(SEND),--send,)
 
 tables: ## Rebuild results/retrieval.md from the run logs alone
 	uv run --locked python scripts/make_tables.py

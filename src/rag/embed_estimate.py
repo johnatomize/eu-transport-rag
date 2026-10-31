@@ -143,15 +143,19 @@ def report(
             f"warning: the price was read {age} days ago; check it in the AWS Price List API "
             "and update config/embedding.yaml before a paid run"
         )
-    fits = True
-    for b in batches:
-        if math.ceil(b.largest * MARGIN) > config.max_input_tokens:
-            fits = False
-            lines.append(
-                f"error: {b.name} has an input of about {b.largest:,} tokens; with the margin "
-                f"that may be over the model's limit of {config.max_input_tokens:,}"
-            )
-        if b.empty:
-            fits = False
-            lines.append(f"error: {b.name} has {b.empty} empty input(s), which Bedrock refuses")
-    return lines, fits
+    problems = [p for b in batches for p in input_problems(b, config)]
+    lines += [f"error: {p}" for p in problems]
+    return lines, not problems
+
+
+def input_problems(b: Batch, config: EmbeddingConfig) -> list[str]:
+    """Why batch `b` can't be sent, if it can't: Bedrock refuses empty input, and long input."""
+    problems = []
+    if math.ceil(b.largest * MARGIN) > config.max_input_tokens:
+        problems.append(
+            f"{b.name} has an input of about {b.largest:,} tokens; with the margin "
+            f"that may be over the model's limit of {config.max_input_tokens:,}"
+        )
+    if b.empty:
+        problems.append(f"{b.name} has {b.empty} empty input(s), which Bedrock refuses")
+    return problems

@@ -2,6 +2,17 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-10-31: Bedrock runs in Stockholm (eu-north-1), and embedding cost is estimated before it is paid
+
+**Decision** (#44): the project's Bedrock calls go to **eu-north-1 (Stockholm)**, and `make embed-dry-run` estimates the embedding cost before any paid run. Settings in `config/embedding.yaml`.
+
+- **Availability** (AWS Bedrock documentation, read 2026-10-31): Titan Text Embeddings V2 runs in-region in every EU region, Stockholm and Frankfurt included. Claude's current models are not offered in-region in the EU, but through the EU cross-region inference profile, which can be called from Stockholm, Frankfurt, Ireland and Paris and routes requests only to EU regions. So embeddings stay in Stockholm and generation (F) stays in the EU.
+- **Price** (AWS Price List API, offer `AmazonBedrock`, on-demand input tokens, read 2026-10-31): US$0.021 per million tokens in Stockholm, US$0.20 in Frankfurt. Stockholm is ten times cheaper for the same model, and it is the nearest region. Only these two were priced.
+- **Tokens are estimated**, because Titan's tokenizer is not published: the higher of characters / 4 and words × 1.3 per input, plus a 50% margin on the total and on each input checked against the model's limit. A text that appears in more than one chunking is counted once, as the cache will pay for it once. Bedrock returns the real count with each call, and the paid run logs it.
+- **The price is a dated setting**, not fetched on each run, so the dry-run works offline; it warns when the price is more than 7 days old, and the price is read again before a paid run.
+- **First estimate:** 192,327 tokens for the 831 distinct texts of the three chunkings and all 100 questions, US$0.0040; US$0.0061 with the margin. The longest input, an article chunk of 165/2014 Annex I, is about 2,860 tokens, under the model's 8,192 even with the margin. Questions of both splits are counted: G embeds the test questions too, and embedding a question is not scoring it.
+- **Vectors:** 1,024 dimensions, normalised, the model's defaults; cost does not depend on the size.
+
 ## 2026-10-31: embeddings come from Amazon Titan Text Embeddings V2 on Bedrock
 
 **Decision** (answered by the owner in a working session): checkpoint E turns chunks and questions into vectors with Amazon Titan Text Embeddings V2 on AWS Bedrock.

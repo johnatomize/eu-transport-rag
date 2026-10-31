@@ -1,0 +1,13 @@
+# The embedding model checkpoint E uses, and its price (docs/DECISIONS.md, "embeddings come from
+# Amazon Titan Text Embeddings V2 on Bedrock" and "Bedrock runs in Stockholm").
+#
+# The price is the on-demand input price from the AWS Price List API (offer AmazonBedrock, region
+# eu-north-1, usage type EUN1-TitanEmbeddingV2-Text-input-tokens). Read it again before a paid
+# run, and update price_read_on with it.
+model_id: amazon.titan-embed-text-v2:0
+region: eu-north-1
+dimensions: 1024
+normalize: true
+max_input_tokens: 8192
+price_usd_per_million_input_tokens: 0.021
+price_read_on: 2026-10-31

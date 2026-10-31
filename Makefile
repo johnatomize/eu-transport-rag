@@ -2,7 +2,7 @@
 # The db-* targets also need Docker with Compose and a running Colima VM (see CLAUDE.md).
 # Later checkpoints add targets (tables, deploy, destroy) and extend check.
 
-.PHONY: help install lint format test secrets check corpus parse questions db-up db-check db-down gitleaks-present docker-present
+.PHONY: help install lint format test secrets check corpus parse chunks questions db-up db-check db-down gitleaks-present docker-present
 
 help: ## List the targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
@@ -32,6 +32,9 @@ corpus: ## Check corpus/raw against the manifest, downloading missing files
 
 parse: ## Parse the acts and guidance notes into node trees and report counts, references and anything unparsed
 	uv run --locked python scripts/parse_corpus.py --out build/nodes.jsonl
+
+chunks: ## Cut the corpus into chunks with every strategy, report their sizes and write build/chunks-*.jsonl
+	uv run --locked python scripts/chunk_corpus.py --out build
 
 questions: ## Validate data/questions.v1.jsonl against its schema and the parsed corpus, and count it
 	uv run --locked python scripts/validate_questions.py

@@ -55,7 +55,9 @@ Checkpoints A–D are built and reviewed by the owner; D, the keyword retrieval 
 
 Every cost goes here: date, what it paid for, amount and running total. A paid step needs the owner's OK and a dry-run estimate first.
 
-Approved cap: none yet (checkpoint E proposes US$20 for the whole project).
+Approved cap: **US$20 for the whole project** (E, F and G), approved by the owner on 2026-10-31 after the embedding dry-run (#44, #45).
+
+The AWS account is on AWS's Free plan: US$100 of credits until 2027-04-30, and no card charges unless the owner upgrades it to the paid plan. Costs are logged at their price before credits, so the cap applies to usage whether the credits or the card pay for it. Two budgets email the owner: AWS's zero-spend template (spending over US$0.01 in a month), and *eu-transport-rag cap* (US$20 a month, counted before credits, with alerts at 10%, 50% and 100% of actual spend and 100% of forecast spend).
 
 | Date | Item | Cost (US$) | Total (US$) |
 | --- | --- | ---: | ---: |

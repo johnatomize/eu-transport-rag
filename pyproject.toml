@@ -6,6 +6,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "pdfminer-six>=20260107",
     "pyyaml>=6.0.3",
+    "snowballstemmer>=3.1.1",
 ]
 
 [dependency-groups]

@@ -2,7 +2,7 @@
 # The db-* targets also need Docker with Compose and a running Colima VM (see CLAUDE.md).
 # Later checkpoints add targets (tables, deploy, destroy) and extend check.
 
-.PHONY: help install lint format test secrets check corpus parse chunks questions db-up db-check db-down gitleaks-present docker-present
+.PHONY: help install lint format test secrets check corpus parse chunks search questions db-up db-check db-down gitleaks-present docker-present
 
 help: ## List the targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
@@ -35,6 +35,11 @@ parse: ## Parse the acts and guidance notes into node trees and report counts, r
 
 chunks: ## Cut the corpus into chunks with every strategy, report their sizes and write build/chunks-*.jsonl
 	uv run --locked python scripts/chunk_corpus.py --out build
+
+search: export Q := $(Q)
+search: ## Print the best chunks for a question: make search Q="How long may I drive in a day?"
+	@test -n "$$Q" || { echo 'usage: make search Q="your question" [STRATEGY=paragraph] [K=5]' >&2; exit 1; }
+	uv run --locked python scripts/search.py --strategy $(or $(STRATEGY),paragraph) -k $(or $(K),5) "$$Q"
 
 questions: ## Validate data/questions.v1.jsonl against its schema and the parsed corpus, and count it
 	uv run --locked python scripts/validate_questions.py

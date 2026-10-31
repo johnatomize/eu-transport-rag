@@ -18,6 +18,22 @@ Choices made along the way, with the reason and the alternatives considered. New
 
 **Why:** the lenient rule matches what generation needs: the passage with the answer is in front of the model. The strict rule, which needs the whole gold node inside the chunk, would mean a paragraph chunk could never find a gold article. Rescoring under another rule is free as long as run logs keep the full rankings, which the run log plan (#36) has to provide.
 
+## 2026-10-31: BM25, our own code with a stemmer
+
+**Decision** (#34): keyword retrieval is Okapi BM25 written in `src/rag/retrieve.py`, behind a `Retriever` interface (`search(query, k)`) that E's vector and hybrid search will implement too.
+
+- **Parameters:** k1 = 1.5, b = 0.75, and the idf `log(1 + (N − df + 0.5) / (df + 0.5))`, which stays positive (Lucene's). Ties go to the earlier chunk, so two runs rank identically.
+- **Tokens:** lowercased. References and numbers stay whole, because questions hinge on them:
+  - An article reference (`6(3)`, `13(1)(r)`) is one token and adds its parts, so "Article 6(3)" still matches a heading "Article 6" and the label "(3)". A point's printed label, such as `(a)`, is a token too.
+  - An act number (`561/2006`) is one token and adds its numbers. `8a` stays apart from `8`, and "Annex I" gives `annex-i`.
+  - The act's decimal comma becomes a point, so `3,5 tonnes` matches `3.5 tonnes`. Dates and item numbers with three parts (`31.12.2024`, `1.5.2`) are one token.
+- **Words:** English words are stemmed with the Snowball stemmer ("driving" and "drive" both become "drive"), and 45 function words such as "the" and "shall" are dropped. Numbers are never dropped.
+- **What it indexes:** a chunk's prefix and body together, so heading words such as "Definitions" count.
+
+**Why:** about 30 lines of our own keep ties and rounding under control, which a later test needs when it compares two backends' rankings. Stemming is the one piece not worth writing: `snowballstemmer` is small, pure Python and has no dependencies. Without it, paraphrased questions ("drive", "rested") would miss the act's wording ("driving", "rest") even more often, and the baseline would look weaker than keyword search really is.
+
+**Alternatives:** `bm25s` or `rank-bm25`, which bring their own tokenisers and, for `bm25s`, numpy; no stemming.
+
 ## 2026-10-31: chunking strategies
 
 **Decision** (#33, plan approved by the owner on the issue): three strategies in `src/rag/chunk.py`, each a function from the parsed corpus to a list of chunks.

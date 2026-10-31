@@ -10,7 +10,7 @@ Choices made along the way, with the reason and the alternatives considered. New
 - **Chunk length is reported beside the scores**, because this rule favours bigger chunks. Checkpoint G compares strategies at an equal context budget.
 - **recall@k** counts a question as found only when every one of its gold nodes is found in the top k. Fractional recall, the share of gold nodes found, is reported beside it.
 - **MRR@10** uses the rank of the first chunk that finds any gold node; a question with none in the top 10 scores 0.
-- **nDCG@10** uses binary relevance and credits each gold node once, at the first chunk that finds it, so overlapping windows don't count a node twice. The ideal ranking puts every gold node at the top.
+- **nDCG@10** uses binary relevance and credits each gold node once, at the first chunk that finds it, so overlapping windows don't count a node twice. The ideal ranking holds one gold node at each of the first ranks. One chunk can find several gold nodes at once, such as an article chunk for two gold paragraphs, and beat that ideal, so nDCG is capped at 1.
 - **Intervals:** 95% Wilson intervals for recall@k, and a seeded percentile bootstrap (10,000 resamples of questions) for MRR, nDCG and fractional recall.
 - **Stats code:** written in this repo and tested against published values, instead of reused from `llm-inference-spike` as the design first said. The owner chose this to keep the project self-contained.
 - **Questions counted:** unanswerable questions have no gold nodes, so they are left out of the retrieval metrics and the table gives their count; refusal is measured in G. Version traps are scored against their current gold nodes.

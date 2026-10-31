@@ -12,7 +12,7 @@ Framing:
 - **No deadline**, paced in checkpoints, each reviewed by the owner. Each checkpoint adds a section to the owner's private learning notes (not in the repo).
 - **Measured, not claimed.** The deliverable is a results table that compares retrieval and answer quality across variants, with error bars. A working chatbot alone is not the goal.
 - **Public data only.** EU legislation and Commission guidance; no private or personal data.
-- **Spending is gated.** Checkpoints A–D cost nothing. The first paid call (E), the AWS account setup (I) and any budget increase each need the owner's explicit OK, with a dry-run cost estimate first.
+- **Spending is gated.** Checkpoints A–D cost nothing. The first paid call and the AWS account setup (both E) and any budget increase each need the owner's explicit OK, with a dry-run cost estimate first.
 
 ## The corpus
 
@@ -121,9 +121,9 @@ The Commission site rate-limits scripted downloads (HTTP 429 after about six PDF
 - First results table: BM25 × three chunking strategies, dev split, reported separately for paraphrased and verbatim questions.
 
 ### E. Embeddings, vector search, hybrid (~4–5 h, first paid step, gated)
-- **Before this step:** a dry-run prints the token count of the whole corpus and the question set, and the estimated cost at that day's Bedrock embedding prices. The owner approves a spending cap (proposed: US$20 for the whole project), and an AWS budget alarm is set first.
-- Embeddings via **AWS Bedrock** (Amazon Titan Text Embeddings V2, or Cohere Embed Multilingual if the bilingual extension is planned). Model availability in the chosen EU region is checked and recorded.
-  - Zero-cost alternative: a small local embedding model (about 100–500 MB download). That counts as a local model run, so it needs the owner's OK first.
+- **Before this step:** a dry-run prints the token count of the whole corpus and the question set, and the estimated cost at that day's Bedrock embedding prices. The owner sets up a personal AWS account, approves a spending cap (proposed: US$20 for the whole project), and an AWS budget alarm is set before the first paid call. F and I reuse the account.
+- Embeddings via **AWS Bedrock**: Amazon Titan Text Embeddings V2 (decided 2026-10-31, reasons in `DECISIONS.md`; Cohere Embed Multilingual is reconsidered if the bilingual extension is taken up). Model availability in the chosen EU region is checked and recorded.
+  - A small local embedding model stays possible later as an extra row in the table; it counts as a local model run, so it needs the owner's OK first.
 - Embeddings are cached on disk by `sha256(model + text)`, so re-running the evaluation doesn't pay again.
 - pgvector in Docker Compose. The corpus is small, so search is **exact** (no approximate index), which makes local and deployed results identical.
 - Hybrid search: BM25 + vector results merged with reciprocal rank fusion (RRF).
@@ -160,7 +160,7 @@ The Commission site rate-limits scripted downloads (HTTP 429 after about six PDF
 - `docker compose up` runs the whole stack locally, and a smoke test calls `/ask` against it.
 
 ### I. AWS deployment with infrastructure as code (~5–6 h, gated)
-- **Before this step:** the owner sets up or approves a personal AWS account, and the budget alarm from E is confirmed.
+- **Before this step:** the AWS account and budget alarm from E are confirmed, and the owner approves the deployment's cost estimate.
 - **AWS CDK in Python** defines everything:
   - ECR for the image;
   - the service on **Lambda (container image)**, compared in `DECISIONS.md` with ECS Fargate;

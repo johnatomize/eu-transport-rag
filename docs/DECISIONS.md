@@ -2,6 +2,15 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-10-31: embeddings come from Amazon Titan Text Embeddings V2 on Bedrock
+
+**Decision** (answered by the owner in a working session): checkpoint E turns chunks and questions into vectors with Amazon Titan Text Embeddings V2 on AWS Bedrock.
+
+- **Why:** answers are generated with Claude on Bedrock (F) and the service is deployed on AWS (I), so the embedding model measured in E is the one the deployed service uses, and the AWS account F needs anyway is set up now. The account setup therefore moves from I to E.
+- **Cost:** the corpus in all three chunkings plus the 100 questions is about 0.2 million tokens. At the launch price of US$0.02 per million input tokens that is under one cent; the dry-run checks the price on the day before anything is spent.
+- **Alternatives considered:** a small open model run locally (free, a 100–500 MB download; it would have to travel inside the deployed service, or be swapped for Bedrock there, which would leave E's measurements describing a different search), and both side by side (2–3 extra hours). Titan V2 is closed and runs only on Bedrock, so a local model would be a different model, not a cheaper copy. Cached vectors are keyed by model, so a local model can still be added later as one more row in the table.
+- **Bilingual extension:** Cohere Embed Multilingual is reconsidered if checkpoint L is taken up.
+
 ## 2026-10-31: how retrieval evaluation scores a ranking
 
 **Decision** (#32, answered by the owner): the rules `src/rag/retrieval_eval.py` follows (#35).

@@ -2,10 +2,10 @@
 # The db-* targets also need Docker with Compose and a running Colima VM (see CLAUDE.md).
 # Later checkpoints add targets (tables, deploy, destroy) and extend check.
 
-.PHONY: help install lint format test secrets check corpus parse chunks search questions db-up db-check db-down gitleaks-present docker-present
+.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs tables tables-check db-up db-check db-down gitleaks-present docker-present
 
 help: ## List the targets
-	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
 
 install: gitleaks-present ## Create .venv from uv.lock and install the pre-commit hook
 	uv sync --locked
@@ -25,7 +25,7 @@ test: ## Run the test suite
 secrets: gitleaks-present ## Scan the full git history for secrets
 	gitleaks git --redact --no-banner .
 
-check: lint test questions secrets ## Everything that must pass before a pull request
+check: lint test questions tables-check secrets ## Everything that must pass before a pull request
 
 corpus: ## Check corpus/raw against the manifest, downloading missing files
 	uv run --locked python scripts/fetch_corpus.py
@@ -40,6 +40,15 @@ search: export Q := $(Q)
 search: ## Print the best chunks for a question: make search Q="How long may I drive in a day?"
 	@test -n "$$Q" || { echo 'usage: make search Q="your question" [STRATEGY=paragraph] [K=5]' >&2; exit 1; }
 	uv run --locked python scripts/search.py --strategy $(or $(STRATEGY),paragraph) -k $(or $(K),5) "$$Q"
+
+retrieval-runs: ## Run every retrieval configuration on the dev split and write runs/retrieval/*.json
+	uv run --locked python scripts/retrieval_runs.py
+
+tables: ## Rebuild results/retrieval.md from the run logs alone
+	uv run --locked python scripts/make_tables.py
+
+tables-check: ## Fail if results/retrieval.md doesn't match the run logs
+	uv run --locked python scripts/make_tables.py --check
 
 questions: ## Validate data/questions.v1.jsonl against its schema and the parsed corpus, and count it
 	uv run --locked python scripts/validate_questions.py

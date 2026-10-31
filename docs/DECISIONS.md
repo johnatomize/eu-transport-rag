@@ -18,6 +18,20 @@ Choices made along the way, with the reason and the alternatives considered. New
 
 **Why:** the lenient rule matches what generation needs: the passage with the answer is in front of the model. The strict rule, which needs the whole gold node inside the chunk, would mean a paragraph chunk could never find a gold article. Rescoring under another rule is free as long as run logs keep the full rankings, which the run log plan (#36) has to provide.
 
+## 2026-10-31: run logs and results tables are committed
+
+**Decision** (#36, plan approved by the owner on the issue): every retrieval run writes a log to `runs/retrieval/<name>.json`, and `make tables` builds `results/retrieval.md` from the logs alone. Both are committed. Format in `src/rag/runlog.py`.
+
+- **A log holds** the configuration, the git commit, fingerprints of the question file and the corpus manifest, a fingerprint of every chunk searched, and for each dev question, unanswerable ones included, its top 50 chunks with scores rounded to 6 decimals. It also holds the node IDs of every chunk that appears, so a log can be scored again under another rule without chunking the corpus again.
+- **Stale logs are refused:** `make tables` fails if the questions or the manifest changed since the run, or if the parser or a chunking strategy now gives other chunks. Retrieval code itself is not fingerprinted; the commit in each log names it.
+- **Reruns are quiet:** `make retrieval-runs` leaves a log alone when only its time and commit would change.
+- **`make check` fails** when `results/retrieval.md` doesn't match what `make tables` would write.
+- **The recall@5 baseline** for J's quality gate is in `results/baseline.json`, one value per run.
+
+**Why:** the logs are the evidence behind every number in the results, and from E on each run costs money, so it is never paid for twice. 50 chunks leave room for G's reranking of a longer list; three runs take about 450 KB.
+
+**Alternatives:** logs kept out of git and rebuilt when needed; the full ranking (up to 412 chunks per question).
+
 ## 2026-10-31: BM25, our own code with a stemmer
 
 **Decision** (#34): keyword retrieval is Okapi BM25 written in `src/rag/retrieve.py`, behind a `Retriever` interface (`search(query, k)`) that E's vector and hybrid search will implement too.

@@ -36,7 +36,7 @@ Work items live as GitHub Issues in `johnatomize/eu-transport-rag`, on the [boar
 
 - An agent reviews the code; the owner reviews direction. Before opening a pull request, run `/code-review` on the diff and fix what it finds.
 - Every pull request has a short **Direction** section for the owner: which design section it implements, what the change means for the project, and each assumption the design doesn't cover. An assumption that would change direction becomes a `decision-needed` issue instead of shipping.
-- For issues that shape later work (node IDs, the question format, schemas, infrastructure), post the plan as a comment on the issue and wait for the owner's OK before writing code.
+- For issues that shape later work (node IDs, the question format, schemas, infrastructure), go through the plan with the owner in the chat and wait for their OK before writing code. Plans are not posted on issues; once agreed, the choices and their reasons go into `docs/DECISIONS.md` as usual.
 - Board status: set the issue to In Progress when starting and In review when its pull request opens; merging moves it to Done.
 - Merging: the owner merges every pull request until they say otherwise.
 

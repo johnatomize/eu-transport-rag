@@ -159,25 +159,71 @@ class Tree:
         Paragraphs and points start with their label, and the headings of chapters, articles,
         annexes and annex parts below the node are on lines of their own.
         """
-        pieces = []
+        return "\n".join(line.text for line in self.lines(node_id))
+
+    def lines(self, node_id: str, label: bool = False) -> list["Line"]:
+        """`full_text` line by line, each line with the node it belongs to.
+
+        With `label`, the node's own first line starts with its printed label too.
+        """
+        pieces: list[tuple[int, Line]] = []
         for node in self.subtree(node_id):
             below = node.id != node_id
-            if below and node.heading and node.kind != "act":
-                heading = node.heading_path[-1] if node.kind == "annex_part" else node.heading
-                pieces.append((node.position, heading))
-            label = _printed_label(node) if below and node.kind in {"paragraph", "point"} else ""
-            if label and not node.segments:
-                pieces.append((node.position, label))
+            heading = heading_line(node)
+            if below and heading and node.kind != "act":
+                pieces.append((node.position, Line(None, node.id, heading)))
+            printed = ""
+            if (below or label) and node.kind in {"paragraph", "point"}:
+                printed = printed_label(node)
+            if printed and not node.segments:
+                pieces.append((node.position, Line(node.id, node.id, printed)))
             for i, (position, text) in enumerate(node.segments):
-                pieces.append((position, f"{label} {text}" if label and i == 0 else text))
-        return "\n".join(text for _, text in sorted(pieces))
+                text = f"{printed} {text}" if printed and i == 0 else text
+                pieces.append((position, Line(node.id, node.id, text)))
+        return [line for _, line in sorted(pieces, key=lambda piece: piece[0])]
 
 
-def _printed_label(node: Node) -> str:
+@dataclass(frozen=True)
+class Line:
+    """A line of text from `Tree.lines`."""
+
+    owner: str | None  # the node whose own text this is; None for a heading
+    node: str  # the node the line belongs to: the owner, or the node a heading is the heading of
+    text: str
+
+
+def heading_line(node: Node) -> str | None:
+    """A node's heading as printed on its own line: "Article 6", "III. Construction…"."""
+    return node.heading_path[-1] if node.kind == "annex_part" else node.heading
+
+
+def printed_label(node: Node) -> str:
     """The label as printed: "3." for a paragraph and "3.1." for an annex point; else "(a)"."""
     if node.kind == "paragraph":
         return node.label.strip("()") + "."
     return node.label if node.label.startswith("(") else f"{node.label}."
+
+
+def lead_in(tree: Tree, node: Node, around: Node | None) -> str:
+    """The text that introduces a node inside `around`, outermost first.
+
+    `around` is an ancestor such as the node's article, annex part or guidance page. A point
+    such as "(ii) loading and unloading;" means little without the text that comes before it in
+    the paragraphs above it and in the article itself. The review page (#17) shows it above a
+    gold node, and chunking (#33) puts it in a chunk's prefix.
+    """
+    if around is None:
+        return ""
+    pieces: list[str] = []
+    current = node
+    while current is not around:
+        parent = tree[current.parent]
+        before = [text for position, text in parent.segments if position < current.position]
+        if before and parent is not around and parent.kind in {"paragraph", "point"}:
+            before[0] = f"{printed_label(parent)} {before[0]}"
+        pieces[:0] = before
+        current = parent
+    return "\n".join(pieces)
 
 
 def parse_document(doc: Document, root: Path, tree: Tree | None = None) -> Tree:

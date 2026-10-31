@@ -2,7 +2,8 @@
 
 Every retriever implements `Retriever`, so that the evaluation, the service and the comparison
 of backends don't care which one they get. This module has the keyword baseline, BM25 (design
-§D); E adds vector and hybrid search behind the same interface.
+§D), and hybrid search, which merges the rankings of other retrievers by reciprocal rank fusion
+(design §E). Vector search, also from E, lives with the database.
 
 BM25 is the Okapi variant with the usual defaults, k1 = 1.5 and b = 0.75, and the idf that
 stays positive, log(1 + (N - df + 0.5) / (df + 0.5)), as in Lucene. It is written here rather
@@ -10,6 +11,7 @@ than taken from a library: it is about 30 lines, and owning it keeps ties and ro
 control, so that two runs give identical rankings.
 """
 
+import itertools
 import math
 import re
 from collections import Counter
@@ -30,8 +32,17 @@ class Hit:
 
 class Retriever(Protocol):
     def search(self, query: str, k: int) -> list[Hit]:
-        """The `k` best chunks for `query`, best first; ties in chunk order."""
+        """The `k` best chunks for `query`, best first; ties in chunk order.
+
+        A score of exactly 0 means the chunk matched nothing: BM25 fills its top k with such
+        chunks when fewer than k hold a query term.
+        """
         ...
+
+
+def check_k(k: int) -> None:
+    if k < 1:
+        raise ValueError(f"k must be at least 1, not {k}")
 
 
 # --- Tokens --------------------------------------------------------------------------------
@@ -129,8 +140,69 @@ class BM25:
         return scores
 
     def search(self, query: str, k: int) -> list[Hit]:
-        if k < 1:
-            raise ValueError(f"k must be at least 1, not {k}")
+        check_k(k)
         scores = self.scores(query)
         order = sorted(range(len(scores)), key=lambda i: (-scores[i], i))
         return [Hit(self.chunks[i], scores[i]) for i in order[:k]]
+
+
+# --- Hybrid: reciprocal rank fusion -------------------------------------------------------
+
+RRF_K = 60  # the constant from Cormack, Clarke and Büttcher (2009), the usual default
+RRF_DEPTH = 50  # how far down each ranking is read, when k is smaller
+
+
+class RRF:
+    """Merge the rankings of several retrievers over the same chunks by reciprocal rank fusion.
+
+    Each retriever's top `depth` chunks get 1 / (`rrf_k` + rank) from it, ranks counting from 1,
+    and a chunk's score is the sum over the rankings that hold it. Only ranks count, not scores,
+    so BM25 scores and cosine similarities need no common scale. A chunk ranked well by both
+    beats one ranked first by only one: 2 / 62 against 1 / 61. A chunk found by only one still
+    takes part. A hit with a score of 0 matched nothing and gets no credit, and a chunk that a
+    retriever returns twice counts once. Ties are broken by chunk order, as in BM25; when fewer
+    than k chunks get any credit, the rest of the top k follows in chunk order with score 0, as
+    BM25 does.
+    """
+
+    def __init__(
+        self,
+        chunks: Sequence[Chunk],
+        retrievers: Sequence[Retriever],
+        rrf_k: int = RRF_K,
+        depth: int = RRF_DEPTH,
+    ):
+        if not chunks:
+            raise ValueError("no chunks to fuse")
+        if not retrievers:
+            raise ValueError("no retrievers to fuse")
+        if rrf_k < 0 or depth < 1:
+            raise ValueError(f"rrf_k must be at least 0 and depth at least 1, not {rrf_k}, {depth}")
+        self.chunks = list(chunks)
+        self.retrievers = list(retrievers)
+        self.rrf_k, self.depth = rrf_k, depth
+        self._position = {chunk.id: i for i, chunk in enumerate(self.chunks)}
+        if len(self._position) != len(self.chunks):
+            raise ValueError("two chunks share an ID")
+
+    def search(self, query: str, k: int) -> list[Hit]:
+        check_k(k)
+        depth = max(self.depth, k)
+        parts: dict[str, list[float]] = {}
+        for retriever in self.retrievers:
+            seen = set()
+            for rank, hit in enumerate(retriever.search(query, depth), 1):
+                chunk_id = hit.chunk.id
+                if chunk_id not in self._position:
+                    raise ValueError(f"a retriever returned {chunk_id}, not one of the chunks")
+                if hit.score == 0 or chunk_id in seen:
+                    continue
+                seen.add(chunk_id)
+                parts.setdefault(chunk_id, []).append(1 / (self.rrf_k + rank))
+        # fsum, so that the same ranks give exactly the same score whatever their order.
+        scores = {chunk_id: math.fsum(p) for chunk_id, p in parts.items()}
+        order = sorted(scores, key=lambda c: (-scores[c], self._position[c]))[:k]
+        hits = [Hit(self.chunks[self._position[c]], scores[c]) for c in order]
+        rest = (Hit(chunk, 0.0) for chunk in self.chunks if chunk.id not in scores)
+        hits += itertools.islice(rest, k - len(hits))
+        return hits

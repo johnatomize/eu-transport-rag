@@ -48,6 +48,7 @@ Checkpoints A–D are built and reviewed by the owner; D, the keyword retrieval 
   - **Questions that need two places are the weak spot:** recall@5 is 0.00–0.17 on cross-act questions and 0.25–0.50 on multi-article ones, against 0.83–0.92 on single facts. Version traps are all found by article and paragraph chunks.
   - **Six questions are missed by every run in the top 10**: q023, q048, q050, q051, q062 and q066. Five of them need two or more places. q023, "What is a 'break' under Regulation 561/2006?", is verbatim, but "break" and "561/2006" appear in dozens of chunks, so the short definition in Art. 4(d) never rises.
   - **Baseline for J's quality gate:** recall@5 of 0.72, 0.60 and 0.60 on the dev split, in `results/baseline.json`.
+- **Hybrid search (#48):** `RRF` in `src/rag/retrieve.py` merges the rankings of any retrievers over the same chunks by reciprocal rank fusion (constant 60, each ranking read 50 deep; choices in `DECISIONS.md`). Tests with fixed rankings show that a chunk ranked second by both methods beats one ranked first by only one, that a chunk found by only one still appears, that ties fall in chunk order, and that chunks BM25 pads its top k with, because they hold no query word, get no credit.
 
 ## Spend log
 

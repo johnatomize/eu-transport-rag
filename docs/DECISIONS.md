@@ -2,6 +2,17 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-10-31: hybrid search merges rankings by reciprocal rank fusion, k = 60, depth 50
+
+**Decision** (#48): hybrid search (`RRF` in `src/rag/retrieve.py`) merges the rankings of BM25 and vector search by reciprocal rank fusion. Each retriever's top 50 chunks get 1 / (60 + rank) from it, and a chunk's score is the sum.
+
+- **Why ranks, not scores:** BM25 scores (0 to about 30) and cosine similarities (−1 to 1) have no common scale, and weighting them would add a setting to tune on the dev split. RRF needs none, and is the method the design names.
+- **The constant 60** comes from Cormack, Clarke and Büttcher (2009), who introduced RRF, and is the usual default. A smaller constant gives the top ranks more weight.
+- **Depth 50**, or k if larger: deep enough that a chunk ranked 30th by one method and 1st by the other is still found, and deeper than any k the evaluation scores (10). Reading every chunk's rank would let a vector ranking, which ranks all chunks, give every chunk credit.
+- **Only matches count.** BM25 fills its top k with chunks that hold no query word, score 0, in chunk order; those get no credit, or they would favour chunks early in the corpus. A chunk returned twice by one retriever counts once.
+- **Ties** are broken by chunk order, as in BM25, so two runs give identical rankings. When fewer than k chunks get any credit, the rest of the top k follows in chunk order with score 0, as BM25 does.
+- **Alternatives:** a weighted sum of normalised scores (one more setting to tune, and normalisation depends on the query); fusing more than two retrievers is supported but not planned.
+
 ## 2026-10-31: Bedrock runs in Stockholm (eu-north-1), and embedding cost is estimated before it is paid
 
 **Decision** (#44): the project's Bedrock calls go to **eu-north-1 (Stockholm)**, and `make embed-dry-run` estimates the embedding cost before any paid run. Settings in `config/embedding.yaml`.

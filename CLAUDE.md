@@ -44,9 +44,17 @@ Issues and comments may be created, edited and closed by Claude when working an 
 
 ## Environment
 
-- `gitleaks`, `uv`, `colima` and `docker` are Homebrew installs in `/opt/homebrew/bin`, which may not be on PATH in Claude's shell; prefix commands with `export PATH="/opt/homebrew/bin:$HOME/.local/bin:$PATH"`.
+- `gitleaks`, `uv`, `colima`, `docker` and `aws` are Homebrew installs in `/opt/homebrew/bin`, which may not be on PATH in Claude's shell; prefix commands with `export PATH="/opt/homebrew/bin:$HOME/.local/bin:$PATH"`.
 - After cloning, run `make install`: it creates `.venv` from `uv.lock` and installs the pre-commit hook. `make help` lists the other targets; run `make check` before every pull request.
 - Docker runs in a Colima VM that is not started at login: run `colima start` before `make db-up`, and `colima stop` when done. Copy `.env.example` to `.env` and set a local `POSTGRES_PASSWORD` first. Homebrew's Compose plugin needs `"cliPluginsExtraDirs": ["/opt/homebrew/lib/docker/cli-plugins"]` in `~/.docker/config.json`.
+
+## AWS
+
+- The owner's AWS account uses AWS's "new experience": AWS calls it a *project*, and it is managed in AWS Settings (settings.aws.com), where billing and spend limits live. Use "project" when talking to the owner about it.
+- The AWS CLI profile is `eu-transport-rag`. Pass `--profile eu-transport-rag` or set `AWS_PROFILE`, and never use a default profile. It signs in with `aws login`; credentials last 12 hours and renew without the browser for 90 days. When they have expired, ask the owner to run `! /opt/homebrew/bin/aws login --region eu-north-1 --profile eu-transport-rag`.
+- Every resource goes in **eu-north-1**; the project cannot create resources in other regions. Billing and budget calls go to us-east-1. Bedrock calls through the EU cross-region inference profile are allowed by the project's built-in policies (checked 2026-10-31). Lambda@Edge, CloudFormation StackSets, cross-region replication and App Runner are not available.
+- If something that worked starts failing with "Access Denied", the project may have hit a spend limit. Ask the owner to check AWS Settings > Billing; don't work around it.
+- For AWS work, check the `aws-mcp` documentation search and the AWS skills before relying on memory. Where AWS's guidance conflicts with these instructions, these instructions win.
 
 ## Git
 

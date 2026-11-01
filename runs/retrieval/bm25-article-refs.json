@@ -1,5 +1,5 @@
 {
- "run": {"name": "bm25-article-refs", "created": "2026-11-01T14:30:10+00:00", "commit": "f0291a220ef884e2e058c5ac62e298aa9d3d61cf", "dirty": true},
+ "run": {"name": "bm25-article-refs", "created": "2026-11-01T14:36:11+00:00", "commit": "a4c1a855a88322ff50a545fae8b117df50f075f3", "dirty": false},
  "config": {"retriever": "bm25", "k1": 1.5, "b": 0.75, "expansion": "references", "strategy": "article", "chunks": 133, "mean_chunk_words": 283.8, "chunks_sha256": "7b508bda476ea7129f36d39cc42e8b9f30dd07e7ea5676421ff3daec500c7d71", "split": "dev", "depth": 50},
  "inputs": {"data/questions.v1.jsonl": "95539de6deb858546dfdae8eb74f1bd65986264ed076ea976d7eead5e1b0008b", "corpus/manifest.yaml": "f7244ece723051cefa688849cdd95a0e18fdf9ae4d0ad5633fc5df56b8b34b95"},
  "questions": [

@@ -2,9 +2,10 @@
 
 Every retriever implements `Retriever`, so that the evaluation, the service and the comparison
 of backends don't care which one they get. This module has the keyword baseline, BM25 (design
-§D), and hybrid search, which merges the rankings of other retrievers by reciprocal rank fusion
-(design §E). Vector search, also from E, is in
-`rag.vector`, beside its database backend.
+§D); hybrid search, which merges the rankings of other retrievers by reciprocal rank fusion
+(design §E); and cross-reference expansion, which wraps any retriever and brings in the chunks
+that its hits refer to (design §E, problem 2). Vector search, also from E, is in `rag.vector`,
+beside its database backend.
 
 BM25 is the Okapi variant with the usual defaults, k1 = 1.5 and b = 0.75, and the idf that
 stays positive, log(1 + (N - df + 0.5) / (df + 0.5)), as in Lucene. It is written here rather
@@ -23,12 +24,15 @@ from typing import Protocol
 from snowballstemmer import stemmer
 
 from rag.chunk import Chunk
+from rag.parse import Tree
 
 
 @dataclass(frozen=True)
 class Hit:
     chunk: Chunk
     score: float
+    # The ID of the chunk whose cross-reference brought this one in, for expansion's hits.
+    via: str | None = None
 
 
 class Retriever(Protocol):
@@ -207,3 +211,97 @@ class RRF:
         rest = (Hit(chunk, 0.0) for chunk in self.chunks if chunk.id not in scores)
         hits += itertools.islice(rest, k - len(hits))
         return hits
+
+
+# --- Cross-reference expansion -----------------------------------------------------------
+
+
+def _too_broad(node_id: str, tree: Tree) -> bool:
+    """Whether a reference target is too broad to stand for one passage: a chapter, or an
+    annex made of parts (165/2014 Annex I alone is about 4,000 words)."""
+    node = tree[node_id]
+    if node.kind == "chapter":
+        return True
+    return node.kind == "annex" and any(tree[c].kind == "annex_part" for c in node.children)
+
+
+def reference_targets(chunks: Sequence[Chunk], tree: Tree) -> dict[str, tuple[str, ...]]:
+    """For each chunk, the chunks its cross-references point to, in the order its text cites them.
+
+    The references of a chunk are those of every node in its `node_ids`; a window holds part of
+    a node, so it may cite something from the part it doesn't hold. Each reference becomes the
+    one chunk that holds the most of the cited node, counted in nodes of its subtree, the
+    earliest on a tie: the article's chunk, the paragraph's chunk, or the window that covers
+    most of it. Skipped: references outside the corpus or unresolved (no target), targets too
+    broad for one passage, targets in no chunk (such as amending articles), and targets the
+    chunk already holds. A reference resolved to the nearest ancestor of a node the parser
+    lacks (`Ref.partial`) is followed to that ancestor.
+    """
+    # held[node][i]: how many of chunk i's node IDs lie in the node's subtree.
+    held: dict[str, Counter[int]] = {}
+    for i, chunk in enumerate(chunks):
+        for node_id in chunk.node_ids:
+            current: str | None = node_id
+            while current is not None:
+                held.setdefault(current, Counter())[i] += 1
+                current = tree[current].parent
+    targets: dict[str, tuple[str, ...]] = {}
+    for i, chunk in enumerate(chunks):
+        found: list[str] = []
+        for node_id in chunk.node_ids:
+            for ref in tree[node_id].refs:
+                target = ref.target
+                if target is None or target not in held or _too_broad(target, tree):
+                    continue
+                if held[target][i]:
+                    continue  # the chunk holds (part of) it already
+                best = min(held[target].items(), key=lambda item: (-item[1], item[0]))[0]
+                if chunks[best].id not in found:
+                    found.append(chunks[best].id)
+        targets[chunk.id] = tuple(found)
+    return targets
+
+
+class Expansion:
+    """Wrap a retriever so that the chunks its hits refer to come right after them, inside k.
+
+    The owner's choice (#49, docs/DECISIONS.md): a referenced chunk takes one of the k places,
+    so an expanded top 5 is still 5 chunks, and the extra context is only what longer chunks
+    add. Going down the wrapped retriever's ranking, each hit is followed by the chunks its
+    cross-references point to (`reference_targets`), unless they are in the list already,
+    until k chunks are in it. References are followed one step: an added chunk's own references
+    are not. A hit with a score of 0 matched nothing, so its references are not followed either.
+
+    An added chunk takes the score of the chunk that cites it, so scores never rise down the
+    list, and `Hit.via` names that chunk. The first k of a longer list are the list for k.
+    """
+
+    def __init__(self, retriever: Retriever, chunks: Sequence[Chunk], tree: Tree):
+        self.retriever = retriever
+        self._by_id = {chunk.id: chunk for chunk in chunks}
+        if len(self._by_id) != len(chunks):
+            raise ValueError("two chunks share an ID")
+        self.references = reference_targets(chunks, tree)
+
+    def search(self, query: str, k: int) -> list[Hit]:
+        check_k(k)
+        hits: list[Hit] = []
+        seen: set[str] = set()
+        # The wrapped retriever's top k are enough: each of them ends up in the list, unless k
+        # chunks are in it first.
+        for hit in self.retriever.search(query, k):
+            chunk_id = hit.chunk.id
+            if chunk_id not in self._by_id:
+                raise ValueError(f"the retriever returned {chunk_id}, not one of the chunks")
+            if chunk_id in seen:
+                continue
+            hits.append(hit)
+            seen.add(chunk_id)
+            if hit.score != 0:
+                for target in self.references[chunk_id]:
+                    if target not in seen:
+                        hits.append(Hit(self._by_id[target], hit.score, via=chunk_id))
+                        seen.add(target)
+            if len(hits) >= k:
+                break
+        return hits[:k]

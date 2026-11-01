@@ -1,6 +1,6 @@
 # Progress
 
-What is built and verified, as of 31 October 2026. The board holds the status of open work; past evidence is in git history and on the closed issues.
+What is built and verified, as of 1 November 2026. The board holds the status of open work; past evidence is in git history and on the closed issues.
 
 Checkpoints A–D are built and reviewed by the owner; D, the keyword retrieval baseline (#31), closed with its first results table. Checkpoint E, embeddings and hybrid search, is next.
 
@@ -52,6 +52,17 @@ Checkpoints A–D are built and reviewed by the owner; D, the keyword retrieval 
 - **Hybrid search (#48):** `RRF` in `src/rag/retrieve.py` merges the rankings of any retrievers over the same chunks by reciprocal rank fusion (constant 60, each ranking read 50 deep; choices in `DECISIONS.md`). Tests with fixed rankings show that a chunk ranked second by both methods beats one ranked first by only one, that a chunk found by only one still appears, that ties fall in chunk order, and that chunks BM25 pads its top k with, because they hold no query word, get no credit.
 - **Embedding client and cache (#46):** `make embed` reports how many of the 831 distinct chunk and question texts already have a vector, and what sending the rest would cost; it sends nothing. `make embed SEND=1` pays, but refuses to start if a text may be over the model's limit, if the price is more than a week old, or if the estimate, margin included, would take spending past the approved cap, counting paid runs not yet in the spend log. Vectors are cached in `embeddings/`, which is committed, keyed by model, vector size, normalisation and text, so a text is paid for once and a changed setting never reuses an old vector. A paid run logs the token count Bedrock returns for each call in `runs/embeddings/`, for checking the spend log against the bill. Tests use a stand-in for Bedrock: a cached text makes no call, a changed setting misses the cache, a failed call caches nothing, and a run over the cap refuses to start. The real Bedrock call is first made in #50.
 - **Vector search (#47):** search by cosine similarity, in memory from the embedding cache or in the local pgvector database, behind the same interface as BM25 (choices in `DECISIONS.md`). `make vector-index` loads each chunking's cached vectors into one table, replacing that chunking's rows in one step; until #50 pays for the vectors it refuses and leaves the database as it was. Search is exact: no approximate index is used, or can be built on the table. `make test-db` runs the tests that need the database. They show that both backends give identical hits and scores on vectors whose sums are exact, ties in chunk order, and agree to float32 precision on 300 random vectors of Titan's size. They also show that loading again gives the same rows, a load that fails partway changes nothing, an index whose chunks or vectors no longer match is refused and the query plan uses no approximate index. `make check` stays offline.
+- **Cross-reference expansion (#49):** `Expansion` in `src/rag/retrieve.py` wraps any retriever and puts the chunks a hit refers to right after it, inside the top k (choices in `DECISIONS.md`). `make search Q="…" REFS=1` shows it: for "What counts as other work for a driver who also works for another employer?" the definition of "other work" in 561/2006 Art. 4(e) brings in the definition of working time in Directive 2002/15 Art. 3(a). Tests on a hand-built corpus show that a referenced chunk comes in right after the chunk that cites it, that references outside the corpus, unresolved ones and chapters bring in nothing, and that nothing is added twice. On the corpus, 561/2006 Art. 6(5) brings in the definition of periods of availability in 2002/15 Art. 3(b). The results table now reports the text the top 5 hold beside the scores, and BM25 with expansion, on the dev split:
+
+  | Chunks | Words in top 5 | Recall@5 | Recall@10 | Top-5 places from references |
+  | --- | ---: | ---: | ---: | ---: |
+  | article | 2348 → 2440 | 0.72 → 0.68 | 0.88 → 0.78 | 48% |
+  | paragraph | 842 → 770 | 0.60 → 0.64 | 0.68 → 0.68 | 32% |
+  | window-200-50 | 1077 → 1087 | 0.60 → 0.60 | 0.76 → 0.66 | 45% |
+
+  - **With keyword search, expansion doesn't help overall.** Recall@5 moves by two questions at most, inside every interval. Recall@10 drops by five questions with article chunks and windows, because references fill about half the top places and push retrieved chunks out.
+  - **It helps where a passage cites what the question asks:** definition questions rise from 0.67 to 0.83 with article chunks and from 0.50 to 0.67 with windows. Two of the six questions every BM25 run missed are now found. In q051, a clarification note's first page brings in the two articles of 561/2006 it interprets; in q023, the meaning of "break" comes in with article chunks and windows. Cross-act questions still score 0.00–0.17: their second place is seldom cited by the first.
+  - **Vector and hybrid search with expansion** come with the embeddings (#50).
 
 ## Spend log
 

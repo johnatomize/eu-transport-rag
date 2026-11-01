@@ -6,7 +6,7 @@ import pytest
 from rag.chunk import Chunk
 from rag.parse import Node, Tree
 from rag.questions import Question
-from rag.retrieve import BM25
+from rag.retrieve import BM25, Hit
 from rag.runlog import (
     INPUTS,
     StaleRunError,
@@ -68,6 +68,7 @@ def test_a_run_holds_every_dev_question_and_the_chunks_it_ranked(root):
     assert [q["id"] for q in log["questions"]] == ["q001", "q002", "q003"]
     assert log["questions"][0]["ranking"][0][0] == "t:a:art1"
     assert log["chunks"] == {"t:a:art1": ["a:art1"], "t:a:art2": ["a:art2"]}
+    assert log["words"] == {"t:a:art1": 9, "t:a:art2": 9}
     assert log["config"] == {
         "retriever": "bm25", "k1": 1.5, "b": 0.75, "strategy": "t", "chunks": 2,
         "mean_chunk_words": 9.0, "chunks_sha256": chunks_fingerprint(CHUNKS), "split": "dev",
@@ -140,8 +141,10 @@ def test_the_table_scores_each_run_and_lists_what_every_run_misses(root):
         q["ranking"].reverse()
     table = retrieval([good, bad], QUESTIONS, TREE)
     assert "2 questions with gold nodes, and 1 unanswerable questions left out" in table
-    assert "| good | 9 | 1.00 (0.34–1.00) |" in table
-    assert "| bad | 9 | 0.00 (0.00–0.66) |" in table
+    # Both chunks are 9 words long and both are in every top 5: 18 words.
+    assert "| good | 9 | 18 | 1.00 (0.34–1.00) |" in table
+    assert "| bad | 9 | 18 | 0.00 (0.00–0.66) |" in table
+    assert "| good | bm25 (k1 1.5, b 0.75) | t | 2 | 50 | – | unknown |" in table
     assert "## Questions no run finds in the top 10 (0)" in table
     assert retrieval([good, bad], QUESTIONS, TREE) == table
 
@@ -162,3 +165,21 @@ def test_the_table_needs_runs_from_one_split(root):
         retrieval([run(root), other], QUESTIONS, TREE)
     with pytest.raises(ValueError, match="no run logs"):
         retrieval([], QUESTIONS, TREE)
+
+
+class Expanded:
+    """A retriever whose second hit was brought in by a cross-reference from the first."""
+
+    def search(self, query: str, k: int) -> list[Hit]:
+        return [Hit(CHUNKS[0], 2.0), Hit(CHUNKS[1], 2.0, via=CHUNKS[0].id)][:k]
+
+
+def test_a_log_marks_the_chunks_expansion_added_and_the_table_counts_them(root):
+    config = {"retriever": "bm25", "strategy": "t", "expansion": "references"}
+    log = make_run("bm25-t-refs", config, Expanded(), CHUNKS, QUESTIONS, root)
+    assert log["questions"][0]["ranking"] == [["t:a:art1", 2.0], ["t:a:art2", 2.0, "t:a:art1"]]
+    assert json.loads(dumps(log)) == log
+    assert rankings(log)["q001"] == [("a:art1",), ("a:art2",)]
+    table = retrieval([log], QUESTIONS, TREE)
+    # One of the two places in each top 5 came from a reference.
+    assert "| bm25-t-refs | bm25 (expansion references) | t | 2 | 50 | 50% | unknown |" in table

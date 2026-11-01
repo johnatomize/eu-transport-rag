@@ -45,15 +45,15 @@ def fingerprint(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _git(root: Path) -> tuple[str | None, bool]:
+def git_state(root: Path) -> tuple[str | None, bool]:
     """The commit checked out in `root`, and whether anything differs from it."""
     try:
         commit = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True, check=True
         ).stdout.strip()
         status = subprocess.run(
-            # New files count as changes; the logs and tables this writes don't.
-            ["git", "status", "--porcelain", "--", ".", ":!runs", ":!results"],
+            # New files count as changes; the logs, tables and cached vectors runs write don't.
+            ["git", "status", "--porcelain", "--", ".", ":!runs", ":!results", ":!embeddings"],
             cwd=root,
             capture_output=True,
             text=True,
@@ -101,7 +101,7 @@ def make_run(
         raise ValueError(f"runs are made on the dev split only until checkpoint G, not {split}")
     if not chunks:
         raise ValueError(f"{name}: no chunks")
-    commit, dirty = _git(root)
+    commit, dirty = git_state(root)
     rankings = []
     used: dict[str, list[str]] = {}
     for question in (q for q in questions if q.split == split):

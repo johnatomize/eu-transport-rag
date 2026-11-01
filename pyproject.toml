@@ -6,6 +6,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "boto3[crt]>=1.40",
     "pdfminer-six>=20260107",
+    "psycopg[binary]>=3.2",
     "pyyaml>=6.0.3",
     "snowballstemmer>=3.1.1",
 ]
@@ -37,4 +38,7 @@ select = ["E", "F", "W", "I", "B", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = ["--strict-markers"]
+# Tests marked `db` need the local Postgres and run with `make test-db`; `-m db` there overrides
+# the "not db" here, so `make test` and `make check` stay offline.
+addopts = ["--strict-markers", "-m", "not db"]
+markers = ["db: needs the local Postgres + pgvector from `make db-up`"]

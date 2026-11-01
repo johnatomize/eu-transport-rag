@@ -1,5 +1,6 @@
 # Local Postgres with the pgvector extension. Start with `make db-up`, check with `make db-check`.
-# No schema yet; tables arrive with checkpoint E. Credentials come from .env (see .env.example).
+# `make vector-index` creates the one table, chunk_vectors (src/rag/vector.py). Credentials come
+# from .env (see .env.example).
 services:
   db:
     # Pinned by tag and digest, so a re-pushed tag can't change what runs.

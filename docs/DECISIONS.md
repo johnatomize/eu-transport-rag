@@ -2,6 +2,19 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-01: vector search is exact, in one pgvector table, with an in-memory twin
+
+**Decision** (#47; plan agreed with the owner in a working session): vector search has two backends behind `Retriever`, in `src/rag/vector.py`. `PgVectorSearch` searches one table, `chunk_vectors`, in the local Postgres + pgvector database. `VectorSearch` does the same computation in memory from the embedding cache.
+
+- **One table** for every model setting and chunking strategy, one row per chunk: model setting (the cache file's name), strategy, position in document order, chunk ID, the embedded text and the vector. `make vector-index` replaces one strategy's rows in a single transaction, from cached vectors only, so running it again gives the same rows and a strategy with any vector missing is left as it was. A search refuses to start if the rows don't match the current chunks (ID, order, text and cached vector), so a stale index can't rank chunks or vectors that have changed, and each search checks the IDs it returns in case the table was reloaded since. The table is looked up in the first schema of the search path only, where it is created.
+- **Exact search.** The database compares the question with every chunk and sorts; about 400 chunks take milliseconds. The vector column has no fixed size, so an approximate index (HNSW or IVFFlat) cannot even be built on it, and a test checks the query plan uses none. This is what the design asks for: local and deployed results are identical.
+- **Same numbers in both backends.** Both use pgvector's cosine distance, 1 minus the similarity clamped to [−1, 1], and break ties in chunk order. The score is the similarity. pgvector adds up float32 products in an order its compiler picks, and the in-memory search adds in float64, so on real vectors the two agree to about 1e-6 and chunks closer than that may swap places. Vectors are stored as float32, so a gap that small carries no meaning. A test on 300 random 1,024-dimension vectors checks that only such swaps occur; a test on small whole-number vectors, where every sum is exact, checks that hits and scores are identical bit for bit, ties included. I's "both backends give identical rankings" check starts from these tests.
+- **A similarity of exactly 0** reads as "matched nothing" in hybrid search, as BM25's 0 does, and gets no credit. A chunk at right angles to the question means as little, and RRF reads only the top 50 of about 400 chunks, where real embeddings of related legal text score well above 0.
+- **Questions need a cached vector too**, like chunks; searching a question that has none raises an error naming `make embed`. Typed questions (`make search`) need a paid call per question, which is left for later.
+- **Tests that need the database** are marked `db` and run with `make test-db`, each in a schema of its own that is dropped afterwards; `make test` and `make check` leave them out and stay offline.
+- **Driver:** psycopg 3, sending vectors as pgvector text, which keeps float32 values exact; the `pgvector` Python package would add a dependency for no gain here.
+- **Alternatives:** an HNSW index (approximate: results could differ from the in-memory backend, for no speed gain at this size); a table per strategy or model (more tables to create and drop, same queries); only the in-memory backend (the design asks for pgvector locally, and I compares the two).
+
 ## 2026-10-31: embedding vectors are cached in the repository
 
 **Decision** (#46; where the cache lives was answered by the owner in a working session): every vector Bedrock returns is kept in `embeddings/` and committed. Code in `src/rag/embed.py`.

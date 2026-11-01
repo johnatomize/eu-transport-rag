@@ -3,7 +3,8 @@
 Every retriever implements `Retriever`, so that the evaluation, the service and the comparison
 of backends don't care which one they get. This module has the keyword baseline, BM25 (design
 §D), and hybrid search, which merges the rankings of other retrievers by reciprocal rank fusion
-(design §E). Vector search, also from E, lives with the database.
+(design §E). Vector search, also from E, is in
+`rag.vector`, beside its database backend.
 
 BM25 is the Okapi variant with the usual defaults, k1 = 1.5 and b = 0.75, and the idf that
 stays positive, log(1 + (N - df + 0.5) / (df + 0.5)), as in Lucene. It is written here rather

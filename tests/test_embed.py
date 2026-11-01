@@ -214,6 +214,8 @@ def test_vectors_refuses_to_search_part_of_the_corpus(tmp_path):
         ('{"key": ["x"], "tokens": 1, "vector": "AAAAAA=="}', "not a cache entry"),
         ('{"key": "k", "tokens": 1, "vector": "AAAAAA=="}', "the key is not a sha256"),
         ('{"key": "' + "a" * 64 + '", "tokens": "37", "vector": "AAAAAA=="}', "not a count"),
+        # float32 infinity, which `put` would never have cached
+        ('{"key": "' + "a" * 64 + '", "tokens": 1, "vector": "AACAfw=="}', "not a finite number"),
     ],
 )
 def test_a_damaged_cache_file_is_refused(tmp_path, line, message):

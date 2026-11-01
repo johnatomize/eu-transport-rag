@@ -67,10 +67,15 @@ def cache_key(text: str, config: EmbeddingConfig) -> str:
     return hashlib.sha256(json.dumps(record, sort_keys=True).encode()).hexdigest()
 
 
-def cache_path(directory: Path, config: EmbeddingConfig) -> Path:
+def setting_name(config: EmbeddingConfig) -> str:
+    """The model setting as a name: the cache file's stem, and the vector index's `model`."""
     model = config.model_id.replace(":", "_").replace("/", "_")
     norm = "-normalized" if config.normalize else ""
-    return directory / f"{model}-{config.dimensions}{norm}.jsonl"
+    return f"{model}-{config.dimensions}{norm}"
+
+
+def cache_path(directory: Path, config: EmbeddingConfig) -> Path:
+    return directory / f"{setting_name(config)}.jsonl"
 
 
 @dataclass(frozen=True)
@@ -116,6 +121,8 @@ class EmbeddingCache:
                     raise ValueError("the key is not a sha256")
                 if type(tokens) is not int or tokens < 0:
                     raise ValueError("tokens is not a count")
+                if not all(math.isfinite(v) for v in vector):
+                    raise ValueError("the vector holds a value that is not a finite number")
             except (ValueError, KeyError, TypeError) as e:
                 raise EmbedError(f"{cache.path.name}:{number}: not a cache entry ({e})") from e
             if len(vector) != config.dimensions:

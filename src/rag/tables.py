@@ -150,6 +150,8 @@ def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree
     lines += _header(titles, 3)
     for run in runs:
         config, meta = run["config"], run["run"]
+        everyone = groups[meta["name"]]["all"].question_ids
+        placed = f"{referenced_in_top(run, everyone):.0%}" if "expansion" in config else "–"
         params = ", ".join(f"{k} {v}" for k, v in config.items() if k not in _NOT_PARAMETERS)
         retriever = f"{config['retriever']} ({params})" if params else config["retriever"]
         commit = (meta["commit"] or "unknown")[:7] + (" + changes" if meta["dirty"] else "")
@@ -161,7 +163,7 @@ def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree
                     config["strategy"],
                     config["chunks"],
                     config["depth"],
-                    f"{referenced_in_top(run, groups[run['run']['name']]['all'].question_ids):.0%}" if "expansion" in config else "–",
+                    placed,
                     commit,
                 ]
             )

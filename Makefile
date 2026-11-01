@@ -2,7 +2,7 @@
 # The db-* targets also need Docker with Compose and a running Colima VM (see CLAUDE.md).
 # Later checkpoints add targets (tables, deploy, destroy) and extend check.
 
-.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs embed-dry-run embed tables tables-check db-up db-check db-down gitleaks-present docker-present
+.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs embed-dry-run embed tables tables-check db-up db-check db-down test-db vector-index gitleaks-present docker-present
 
 help: ## List the targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
@@ -19,7 +19,7 @@ format: ## Apply ruff fixes and formatting
 	uv run --locked ruff check --fix .
 	uv run --locked ruff format .
 
-test: ## Run the test suite
+test: ## Run the test suite, without the tests that need the database
 	uv run --locked pytest
 
 secrets: gitleaks-present ## Scan the full git history for secrets
@@ -50,6 +50,9 @@ embed-dry-run: ## Print what embedding the corpus and the questions would cost; 
 embed: ## Report which chunks and questions lack a cached vector and what sending them would cost; SEND=1 pays
 	uv run --locked python scripts/embed.py $(if $(SEND),--send,)
 
+vector-index: db-up ## Load chunks and their cached vectors into local pgvector: make vector-index [STRATEGY=paragraph]
+	uv run --locked python scripts/vector_index.py $(if $(STRATEGY),--strategy $(STRATEGY),)
+
 tables: ## Rebuild results/retrieval.md from the run logs alone
 	uv run --locked python scripts/make_tables.py
 
@@ -67,6 +70,9 @@ db-check: db-up ## Enable pgvector in the local database and print its version
 		-c "SET client_min_messages = warning" \
 		-c "CREATE EXTENSION IF NOT EXISTS vector" \
 		-c "SELECT 'pgvector ' || extversion FROM pg_extension WHERE extname = 'vector'"
+
+test-db: db-up ## Run the tests that need the local database (make test leaves them out)
+	uv run --locked pytest -m db
 
 db-down: docker-present ## Stop local Postgres (data is kept in a volume)
 	docker compose down

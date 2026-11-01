@@ -46,7 +46,7 @@ Issues and comments may be created, edited and closed by Claude when working an 
 
 - `gitleaks`, `uv`, `colima`, `docker` and `aws` are Homebrew installs in `/opt/homebrew/bin`, which may not be on PATH in Claude's shell; prefix commands with `export PATH="/opt/homebrew/bin:$HOME/.local/bin:$PATH"`.
 - After cloning, run `make install`: it creates `.venv` from `uv.lock` and installs the pre-commit hook. `make help` lists the other targets; run `make check` before every pull request.
-- Docker runs in a Colima VM that is not started at login: run `colima start` before `make db-up`, and `colima stop` when done. Copy `.env.example` to `.env` and set a local `POSTGRES_PASSWORD` first. Homebrew's Compose plugin needs `"cliPluginsExtraDirs": ["/opt/homebrew/lib/docker/cli-plugins"]` in `~/.docker/config.json`.
+- Docker runs in a Colima VM that is not started at login: run `colima start` before `make db-up`, and `colima stop` when done. Copy `.env.example` to `.env` and set a local `POSTGRES_PASSWORD` first. `make check` leaves out the tests that need the database; `make test-db` runs them. Homebrew's Compose plugin needs `"cliPluginsExtraDirs": ["/opt/homebrew/lib/docker/cli-plugins"]` in `~/.docker/config.json`.
 
 ## AWS
 

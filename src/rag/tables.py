@@ -54,7 +54,7 @@ def words_in_top(run: Mapping, question_ids: Sequence[str], k: int = TOP) -> flo
 
 
 def referenced_in_top(run: Mapping, question_ids: Sequence[str], k: int = TOP) -> float:
-    """The share of the top `k` places held by chunks that cross-reference expansion added."""
+    """The share of the top `k` places held by chunks that cross-reference expansion placed."""
     entries = [entry for top in _top(run, question_ids, k) for entry in top]
     return sum(len(entry) > 2 for entry in entries) / len(entries)
 
@@ -88,25 +88,21 @@ def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree
         "95% interval: Wilson for recall@k, a bootstrap over questions for the others. A chunk "
         "finds a gold node when it holds any of the node's text, and recall@k counts a question "
         "only when every gold node is in the top k (rules in `docs/DECISIONS.md`). Mean words "
-        f"is the length of an indexed chunk, prefix included; words in top {TOP} is how much "
-        f"text the top {TOP} chunks hold together, the context a model would read.",
+        f"is the length of an indexed chunk, prefix included; words in top {TOP} adds up the "
+        f"top {TOP} chunks the same way, so text two overlapping windows share counts twice, "
+        "as it would in the context a model is given.",
     ]
     for group in GROUPS:
         if group not in groups[names[0]]:
             continue
         n = groups[names[0]][group].n
-        members = [
-            q.id
-            for q in questions
-            if q.split == split and q.gold_node_ids and group in ("all", q.phrasing)
-        ]
         lines += ["", f"## {group.capitalize()} questions (n = {n})", ""]
         titles = ["Run", "Mean words", f"Words in top {TOP}", *(title for _, title in COLUMNS)]
         lines += _header(titles)
         for name, run in zip(names, runs, strict=True):
             metrics = groups[name][group].metrics
             words = f"{run['config']['mean_chunk_words']:.0f}"
-            top = f"{words_in_top(run, members):.0f}"
+            top = f"{words_in_top(run, groups[name][group].question_ids):.0f}"
             lines.append(_row([name, words, top, *(_cell(metrics[key]) for key, _ in COLUMNS)]))
 
     lines += ["", "## Recall@5 by question type", ""]
@@ -141,16 +137,16 @@ def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree
         text = q.question.replace("|", "\\|")
         lines.append(_row([qid, q.type, q.phrasing, ", ".join(q.gold_node_ids), text]))
 
-    answerable = [q.id for q in questions if q.split == split and q.gold_node_ids]
     lines += [
         "",
         "## Runs",
         "",
-        f"From references is the share of the top {TOP} places that cross-reference expansion "
-        "filled, over the questions with gold nodes.",
+        f"Placed by references is the share of the top {TOP} places held by a chunk that "
+        "cross-reference expansion put right after the chunk citing it, over the questions with "
+        "gold nodes. Some of those chunks the search found too, lower down.",
         "",
     ]
-    titles = ["Run", "Retriever", "Strategy", "Chunks", "Depth", "From references", "Commit"]
+    titles = ["Run", "Retriever", "Strategy", "Chunks", "Depth", "Placed by references", "Commit"]
     lines += _header(titles, 3)
     for run in runs:
         config, meta = run["config"], run["run"]
@@ -165,7 +161,7 @@ def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree
                     config["strategy"],
                     config["chunks"],
                     config["depth"],
-                    f"{referenced_in_top(run, answerable):.0%}" if "expansion" in config else "–",
+                    f"{referenced_in_top(run, groups[run['run']['name']]['all'].question_ids):.0%}" if "expansion" in config else "–",
                     commit,
                 ]
             )

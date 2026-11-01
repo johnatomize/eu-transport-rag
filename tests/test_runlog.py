@@ -181,5 +181,5 @@ def test_a_log_marks_the_chunks_expansion_added_and_the_table_counts_them(root):
     assert json.loads(dumps(log)) == log
     assert rankings(log)["q001"] == [("a:art1",), ("a:art2",)]
     table = retrieval([log], QUESTIONS, TREE)
-    # One of the two places in each top 5 came from a reference.
+    # One of the two places in each top 5 was placed by a reference.
     assert "| bm25-t-refs | bm25 (expansion references) | t | 2 | 50 | 50% | unknown |" in table

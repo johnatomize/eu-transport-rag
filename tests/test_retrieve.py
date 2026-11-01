@@ -318,6 +318,18 @@ def test_with_paragraph_chunks_a_reference_points_to_the_paragraph():
     assert targets["par:a:art7"] == ("par:a:art4(e)",)
 
 
+def test_references_in_an_articles_lead_in_count_for_the_chunks_that_carry_it():
+    tree = ref_tree()
+    article = tree["a:art6"]
+    article.segments = [(0, "Subject to Article 7:")]
+    article.refs = [Ref("Article 7", "a", "a:art7")]
+    tree["a:art6(1)"].position, tree["a:art6(2)"].position = 1, 2
+    targets = reference_targets(PARAGRAPHS, tree)
+    assert targets["par:a:art6(1)"] == ("par:a:art4(e)", "par:a:art7")
+    assert targets["par:a:art6(2)"] == ("par:b:art3(b)", "par:a:art6(1)", "par:a:art7")
+    assert reference_targets(PARAGRAPHS, REF_TREE)["par:a:art6(1)"] == ("par:a:art4(e)",)
+
+
 def test_a_reference_points_to_the_chunk_that_holds_most_of_it():
     groups = [
         ("a:art6(2)", "a:art7"),

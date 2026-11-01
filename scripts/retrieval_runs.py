@@ -32,8 +32,12 @@ RUNS = [(f"bm25-{strategy}", strategy, BM25_CONFIG) for strategy in STRATEGIES] 
 ]
 
 
-def retriever_for(config: dict, chunks: list[Chunk], tree: Tree) -> Retriever:
-    retriever: Retriever = BM25(chunks, k1=config["k1"], b=config["b"])
+def retriever_for(config: dict, chunks: list[Chunk], tree: Tree, cache: dict) -> Retriever:
+    """The retriever a configuration describes; BM25 indexes are built once per strategy."""
+    key = (chunks[0].strategy, config["k1"], config["b"])
+    if key not in cache:
+        cache[key] = BM25(chunks, k1=config["k1"], b=config["b"])
+    retriever: Retriever = cache[key]
     if config.get("expansion") == "references":
         retriever = Expansion(retriever, chunks, tree)
     return retriever
@@ -50,9 +54,13 @@ def main() -> int:
         print(f"error: {QUESTIONS.name} is not valid; run `make questions`", file=sys.stderr)
         return 1
     OUT.mkdir(parents=True, exist_ok=True)
+    chunked: dict[str, list[Chunk]] = {}
+    indexes: dict = {}
     for name, strategy, config in RUNS:
-        chunks = STRATEGIES[strategy](tree)
-        retriever = retriever_for(config, chunks, tree)
+        if strategy not in chunked:
+            chunked[strategy] = STRATEGIES[strategy](tree)
+        chunks = chunked[strategy]
+        retriever = retriever_for(config, chunks, tree, indexes)
         run = make_run(name, {**config, "strategy": strategy}, retriever, chunks, questions, ROOT)
         path = OUT / f"{name}.json"
         where = path.relative_to(ROOT)

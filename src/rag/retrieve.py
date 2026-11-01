@@ -225,11 +225,32 @@ def _too_broad(node_id: str, tree: Tree) -> bool:
     return node.kind == "annex" and any(tree[c].kind == "annex_part" for c in node.children)
 
 
+_UNITS = frozenset({"article", "annex_part", "annex", "page"})
+
+
+def _lead_in_nodes(node_id: str, tree: Tree) -> list[str]:
+    """The ancestors, up to the node's unit, whose text before it is its lead-in.
+
+    Chunking puts that text in the prefix of a chunk starting at the node (`rag.parse.lead_in`),
+    so the chunk's references include theirs.
+    """
+    out = []
+    current = tree[node_id]
+    while current.kind not in _UNITS and current.parent is not None:
+        parent = tree[current.parent]
+        if any(position < current.position for position, _ in parent.segments):
+            out.append(parent.id)
+        current = parent
+    return out
+
+
 def reference_targets(chunks: Sequence[Chunk], tree: Tree) -> dict[str, tuple[str, ...]]:
     """For each chunk, the chunks its cross-references point to, in the order its text cites them.
 
-    The references of a chunk are those of every node in its `node_ids`; a window holds part of
-    a node, so it may cite something from the part it doesn't hold. Each reference becomes the
+    The references of a chunk are those of every node in its `node_ids` and of the nodes whose
+    text before its first node is the lead-in in its prefix. References carry no position, so
+    a window, which holds part of a node, may cite something from the part it doesn't hold, and
+    an article's references in its closing text count for every chunk that carries its lead-in. Each reference becomes the
     one chunk that holds the most of the cited node, counted in nodes of its subtree, the
     earliest on a tie: the article's chunk, the paragraph's chunk, or the window that covers
     most of it. Skipped: references outside the corpus or unresolved (no target), targets too
@@ -248,7 +269,8 @@ def reference_targets(chunks: Sequence[Chunk], tree: Tree) -> dict[str, tuple[st
     targets: dict[str, tuple[str, ...]] = {}
     for i, chunk in enumerate(chunks):
         found: list[str] = []
-        for node_id in chunk.node_ids:
+        lead = _lead_in_nodes(chunk.node_ids[0], tree) if chunk.node_ids else []
+        for node_id in [*chunk.node_ids, *lead]:
             for ref in tree[node_id].refs:
                 target = ref.target
                 if target is None or target not in held or _too_broad(target, tree):

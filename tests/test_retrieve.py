@@ -1,7 +1,8 @@
 import pytest
 
 from rag.chunk import STRATEGIES, Chunk
-from rag.retrieve import BM25, RRF, Hit, Retriever, tokens
+from rag.parse import Node, Ref, Tree
+from rag.retrieve import BM25, RRF, Expansion, Hit, Retriever, reference_targets, tokens
 
 
 def chunk(chunk_id: str, body: str) -> Chunk:
@@ -208,3 +209,194 @@ def test_a_chunk_from_another_chunking_is_an_error():
 
     with pytest.raises(ValueError, match="not one of the chunks"):
         RRF(CHUNKS, [Stranger()]).search("q", 1)
+
+
+# --- Cross-reference expansion ---------------------------------------------------------------
+
+
+def ref_tree() -> Tree:
+    """Act a: Chapter I with Articles 4 (points (e), (f)), 6 (paragraphs (1), (2)) and 7; act b:
+    Article 3 with point (b). The references are set by hand, as `resolve_refs` would."""
+    tree = Tree()
+
+    def add(node_id: str, kind: str, parent: str | None, *refs: Ref) -> None:
+        doc = node_id.split(":")[0]
+        node = Node(node_id, doc, kind, None, None, (), parent)
+        node.refs = list(refs)
+        tree.add(node)
+
+    add("a", "act", None)
+    add("a:ch1", "chapter", "a")
+    add("a:art4", "article", "a:ch1")
+    add("a:art4(e)", "point", "a:art4")
+    add("a:art4(f)", "point", "a:art4")
+    add("a:art6", "article", "a:ch1")
+    add(
+        "a:art6(1)",
+        "paragraph",
+        "a:art6",
+        Ref("point (e) of Article 4", "a", "a:art4(e)"),
+        Ref("Article 3 of Directive 2003/59/EC", "Directive 2003/59/EC", None),  # outside
+        Ref("Article 99", "a", None),  # unresolved
+        Ref("Chapter I", "a", "a:ch1"),  # too broad for one passage
+    )
+    add(
+        "a:art6(2)",
+        "paragraph",
+        "a:art6",
+        Ref("point (b) of Article 3 of b", "b", "b:art3(b)"),
+        Ref("paragraph 1", "a", "a:art6(1)"),
+    )
+    add(
+        "a:art7",
+        "article",
+        "a:ch1",
+        Ref("point (e) of Article 4", "a", "a:art4(e)"),
+        Ref("Article 4", "a", "a:art4"),
+    )
+    add("b", "act", None)
+    add("b:art3", "article", "b")
+    add("b:art3(b)", "point", "b:art3", Ref("Article 7 of a", "a", "a:art7"))
+    return tree
+
+
+REF_TREE = ref_tree()
+
+
+def chunks_of(strategy: str, *groups: tuple[str, ...]) -> list[Chunk]:
+    return [Chunk(f"{strategy}:{g[0]}", strategy, g[0][0], "", " ".join(g), g) for g in groups]
+
+
+ARTICLES = chunks_of(
+    "art",
+    ("a:art4", "a:art4(e)", "a:art4(f)"),
+    ("a:art6", "a:art6(1)", "a:art6(2)"),
+    ("a:art7",),
+    ("b:art3", "b:art3(b)"),
+)
+PARAGRAPHS = chunks_of(
+    "par",
+    ("a:art4(e)",),
+    ("a:art4(f)",),
+    ("a:art6(1)",),
+    ("a:art6(2)",),
+    ("a:art7",),
+    ("b:art3(b)",),
+)
+
+
+class Ranked:
+    """A retriever over `chunks` that returns a fixed ranking; scores count down to 1."""
+
+    def __init__(self, chunks: list[Chunk], *ids: str, scores: tuple[float, ...] = ()):
+        self.by_id = {c.id: c for c in chunks}
+        self.ids = ids
+        self.scores = scores or tuple(float(len(ids) - i) for i in range(len(ids)))
+
+    def search(self, query: str, k: int) -> list[Hit]:
+        return [Hit(self.by_id[i], s) for i, s in zip(self.ids[:k], self.scores, strict=False)]
+
+
+def test_a_chunk_refers_to_the_chunks_that_hold_what_it_cites():
+    targets = reference_targets(ARTICLES, REF_TREE)
+    # Article 6 cites point (e) of Article 4 and point (b) of b's Article 3: their article
+    # chunks. The act outside the corpus, the unresolved reference, the chapter and paragraph 1,
+    # which the chunk holds itself, bring in nothing.
+    assert targets["art:a:art6"] == ("art:a:art4", "art:b:art3")
+    # Point (e) and the whole of Article 4 are in the same chunk: it is added once.
+    assert targets["art:a:art7"] == ("art:a:art4",)
+    assert targets["art:b:art3"] == ("art:a:art7",)  # across acts, too
+    assert targets["art:a:art4"] == ()
+
+
+def test_with_paragraph_chunks_a_reference_points_to_the_paragraph():
+    targets = reference_targets(PARAGRAPHS, REF_TREE)
+    assert targets["par:a:art6(1)"] == ("par:a:art4(e)",)
+    assert targets["par:a:art6(2)"] == ("par:b:art3(b)", "par:a:art6(1)")
+    # "Article 4" is held by both its paragraph chunks, one node each; the earlier wins, and
+    # it is the one point (e) already brought in.
+    assert targets["par:a:art7"] == ("par:a:art4(e)",)
+
+
+def test_references_in_an_articles_lead_in_count_for_the_chunks_that_carry_it():
+    tree = ref_tree()
+    article = tree["a:art6"]
+    article.segments = [(0, "Subject to Article 7:")]
+    article.refs = [Ref("Article 7", "a", "a:art7")]
+    tree["a:art6(1)"].position, tree["a:art6(2)"].position = 1, 2
+    targets = reference_targets(PARAGRAPHS, tree)
+    assert targets["par:a:art6(1)"] == ("par:a:art4(e)", "par:a:art7")
+    assert targets["par:a:art6(2)"] == ("par:b:art3(b)", "par:a:art6(1)", "par:a:art7")
+    assert reference_targets(PARAGRAPHS, REF_TREE)["par:a:art6(1)"] == ("par:a:art4(e)",)
+
+
+def test_a_reference_points_to_the_chunk_that_holds_most_of_it():
+    groups = [
+        ("a:art6(2)", "a:art7"),
+        ("a:art7", "a:art4(e)"),
+        ("a:art4(e)", "a:art4(f)", "a:art4"),
+    ]
+    windows = [Chunk(f"w{i}", "win", "a", "", "", g) for i, g in enumerate(groups, 1)]
+    targets = reference_targets(windows, REF_TREE)
+    # Article 7, in w1, cites point (e) of Article 4, held by w2 and w3 equally: the earlier
+    # wins. It cites the whole of Article 4 too: w3 holds three of its nodes, w2 one.
+    assert targets["w1"] == ("w2", "w3")
+    # w2 holds part of Article 4, so what Article 7 cites there brings in nothing.
+    assert targets["w2"] == ()
+
+
+def test_expansion_puts_referenced_chunks_right_after_the_chunk_that_cites_them():
+    base = Ranked(ARTICLES, "art:a:art7", "art:a:art6", "art:b:art3", "art:a:art4")
+    hits = Expansion(base, ARTICLES, REF_TREE).search("q", 3)
+    assert ids(hits) == ["art:a:art7", "art:a:art4", "art:a:art6"]  # inside k: b:art3 drops
+    assert [h.via for h in hits] == [None, "art:a:art7", None]
+    assert [h.score for h in hits] == [4.0, 4.0, 3.0]  # an added chunk takes its citer's score
+
+
+def test_nothing_is_added_twice_and_a_longer_list_starts_with_the_shorter():
+    base = Ranked(ARTICLES, "art:a:art7", "art:a:art6", "art:b:art3", "art:a:art4")
+    expansion = Expansion(base, ARTICLES, REF_TREE)
+    hits = expansion.search("q", 50)
+    # Article 4 is cited by 7 and 6 and retrieved itself, and b:art3 is cited and retrieved,
+    # yet each is in the list once.
+    assert ids(hits) == ["art:a:art7", "art:a:art4", "art:a:art6", "art:b:art3"]
+    assert hits[3].via == "art:a:art6"
+    for k in range(1, 5):
+        assert expansion.search("q", k) == hits[:k]
+
+
+def test_the_references_of_a_chunk_that_matched_nothing_are_not_followed():
+    base = Ranked(ARTICLES, "art:a:art6", "art:a:art7", scores=(2.0, 0.0))
+    hits = Expansion(base, ARTICLES, REF_TREE).search("q", 4)
+    assert ids(hits) == ["art:a:art6", "art:a:art4", "art:b:art3", "art:a:art7"]
+    base = Ranked(ARTICLES, "art:a:art7", "art:a:art6", scores=(0.0, 0.0))
+    assert ids(Expansion(base, ARTICLES, REF_TREE).search("q", 2)) == ["art:a:art7", "art:a:art6"]
+
+
+def test_expansion_wraps_any_retriever_and_refuses_strangers():
+    for inner in (BM25(ARTICLES), RRF(ARTICLES, [BM25(ARTICLES)])):
+        retriever: Retriever = Expansion(inner, ARTICLES, REF_TREE)
+        assert len(retriever.search("a:art7", 3)) == 3
+    with pytest.raises(ValueError, match="k must be at least 1"):
+        Expansion(BM25(ARTICLES), ARTICLES, REF_TREE).search("q", 0)
+    with pytest.raises(ValueError, match="two chunks share an ID"):
+        Expansion(BM25(ARTICLES), [*ARTICLES, ARTICLES[0]], REF_TREE)
+    with pytest.raises(ValueError, match="not one of the chunks"):
+        Expansion(BM25(PARAGRAPHS), ARTICLES, REF_TREE).search("a:art7", 1)
+
+
+@pytest.mark.parametrize("strategy", STRATEGIES)
+def test_in_the_corpus_references_point_to_other_chunks(tree, strategy):
+    chunks = STRATEGIES[strategy](tree)
+    targets = reference_targets(chunks, tree)
+    known = {c.id for c in chunks}
+    assert all(t in known and t != c for c, ts in targets.items() for t in ts)
+    assert sum(map(len, targets.values())) > 100
+
+
+def test_article_6_5_brings_in_the_working_time_directive(tree):
+    # 561/2006 Art. 6(5) says to record "periods of availability, as defined in Article 3(b)
+    # of Directive 2002/15/EC", a cross-act reference, and cites point (e) of its own Art. 4.
+    targets = reference_targets(STRATEGIES["paragraph"](tree), tree)
+    assert "paragraph:2002/15:art3(b)" in targets["paragraph:561/2006:art6(5)"]
+    assert "paragraph:561/2006:art4(e)" in targets["paragraph:561/2006:art6(5)"]

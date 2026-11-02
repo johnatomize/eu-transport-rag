@@ -2,6 +2,7 @@
 
 search.py "How long may I drive in a day?"                     BM25 over paragraph chunks
 search.py --strategy window-200-50 -k 10 "daily rest on a ferry"
+search.py --refs "Who counts as a self-employed driver?"         with cross-reference expansion
 """
 
 import argparse
@@ -11,7 +12,7 @@ from pathlib import Path
 from rag.chunk import STRATEGIES
 from rag.corpus import CorpusError, load_manifest
 from rag.parse import ParseError, parse_corpus
-from rag.retrieve import BM25
+from rag.retrieve import BM25, Expansion, Retriever
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "corpus" / "manifest.yaml"
@@ -22,6 +23,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("question")
     parser.add_argument("--strategy", choices=STRATEGIES, default="paragraph")
     parser.add_argument("-k", type=int, default=5, help="how many chunks to show (default 5)")
+    parser.add_argument("--refs", action="store_true", help="add the chunks that hits refer to")
     args = parser.parse_args(argv)
 
     try:
@@ -29,10 +31,14 @@ def main(argv: list[str] | None = None) -> int:
     except (CorpusError, ParseError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
-    index = BM25(STRATEGIES[args.strategy](tree))
+    chunks = STRATEGIES[args.strategy](tree)
+    index: Retriever = BM25(chunks)
+    if args.refs:
+        index = Expansion(index, chunks, tree)
     for rank, hit in enumerate(index.search(args.question, args.k), 1):
         body = " ".join(hit.chunk.body.split())
-        print(f"{rank}. {hit.score:6.2f}  {hit.chunk.id}")
+        via = f"  (referred to by {hit.via})" if hit.via else ""
+        print(f"{rank}. {hit.score:6.2f}  {hit.chunk.id}{via}")
         print(f"   {(hit.chunk.prefix.splitlines() or [''])[0]}")
         print(f"   {body[:300]}{'…' if len(body) > 300 else ''}\n")
     return 0

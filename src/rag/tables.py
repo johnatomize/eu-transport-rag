@@ -12,6 +12,7 @@ from rag.retrieval_eval import CUTOFF, Evaluation, Metric, evaluate
 from rag.runlog import rankings
 
 GROUPS = ("all", "paraphrased", "verbatim")
+TOP = 5  # the k at which the context the top chunks hold is reported
 # Config entries that describe the run rather than the retriever's parameters.
 _NOT_PARAMETERS = {
     "retriever", "strategy", "chunks", "mean_chunk_words", "chunks_sha256", "split", "depth"
@@ -38,6 +39,24 @@ def _row(values: Sequence[object]) -> str:
 def _header(names: Sequence[str], numeric_from: int = 1) -> list[str]:
     rule = ["---" if i < numeric_from else "---:" for i in range(len(names))]
     return [_row(names), _row(rule)]
+
+
+def _top(run: Mapping, question_ids: Sequence[str], k: int = TOP) -> list[list]:
+    """The top `k` ranking entries of each of `question_ids` in `run`."""
+    by_id = {q["id"]: q["ranking"] for q in run["questions"]}
+    return [by_id[qid][:k] for qid in question_ids]
+
+
+def words_in_top(run: Mapping, question_ids: Sequence[str], k: int = TOP) -> float:
+    """The mean number of words the top `k` chunks hold together, over `question_ids`."""
+    tops = _top(run, question_ids, k)
+    return sum(run["words"][entry[0]] for top in tops for entry in top) / len(tops)
+
+
+def referenced_in_top(run: Mapping, question_ids: Sequence[str], k: int = TOP) -> float:
+    """The share of the top `k` places held by chunks that cross-reference expansion placed."""
+    entries = [entry for top in _top(run, question_ids, k) for entry in top]
+    return sum(len(entry) > 2 for entry in entries) / len(entries)
 
 
 def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree) -> str:
@@ -69,18 +88,22 @@ def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree
         "95% interval: Wilson for recall@k, a bootstrap over questions for the others. A chunk "
         "finds a gold node when it holds any of the node's text, and recall@k counts a question "
         "only when every gold node is in the top k (rules in `docs/DECISIONS.md`). Mean words "
-        "is the length of an indexed chunk, prefix included.",
+        f"is the length of an indexed chunk, prefix included; words in top {TOP} adds up the "
+        f"top {TOP} chunks the same way, so text two overlapping windows share counts twice, "
+        "as it would in the context a model is given.",
     ]
     for group in GROUPS:
         if group not in groups[names[0]]:
             continue
         n = groups[names[0]][group].n
         lines += ["", f"## {group.capitalize()} questions (n = {n})", ""]
-        lines += _header(["Run", "Mean words", *(title for _, title in COLUMNS)])
+        titles = ["Run", "Mean words", f"Words in top {TOP}", *(title for _, title in COLUMNS)]
+        lines += _header(titles)
         for name, run in zip(names, runs, strict=True):
             metrics = groups[name][group].metrics
             words = f"{run['config']['mean_chunk_words']:.0f}"
-            lines.append(_row([name, words, *(_cell(metrics[key]) for key, _ in COLUMNS)]))
+            top = f"{words_in_top(run, groups[name][group].question_ids):.0f}"
+            lines.append(_row([name, words, top, *(_cell(metrics[key]) for key, _ in COLUMNS)]))
 
     lines += ["", "## Recall@5 by question type", ""]
     lines += _header(["Type", "n", *names])
@@ -114,10 +137,21 @@ def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree
         text = q.question.replace("|", "\\|")
         lines.append(_row([qid, q.type, q.phrasing, ", ".join(q.gold_node_ids), text]))
 
-    lines += ["", "## Runs", ""]
-    lines += _header(["Run", "Retriever", "Strategy", "Chunks", "Depth", "Commit"], 3)
+    lines += [
+        "",
+        "## Runs",
+        "",
+        f"Placed by references is the share of the top {TOP} places held by a chunk that "
+        "cross-reference expansion put right after the chunk citing it, over the questions with "
+        "gold nodes. Some of those chunks the search found too, lower down.",
+        "",
+    ]
+    titles = ["Run", "Retriever", "Strategy", "Chunks", "Depth", "Placed by references", "Commit"]
+    lines += _header(titles, 3)
     for run in runs:
         config, meta = run["config"], run["run"]
+        everyone = groups[meta["name"]]["all"].question_ids
+        placed = f"{referenced_in_top(run, everyone):.0%}" if "expansion" in config else "–"
         params = ", ".join(f"{k} {v}" for k, v in config.items() if k not in _NOT_PARAMETERS)
         retriever = f"{config['retriever']} ({params})" if params else config["retriever"]
         commit = (meta["commit"] or "unknown")[:7] + (" + changes" if meta["dirty"] else "")
@@ -129,6 +163,7 @@ def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree
                     config["strategy"],
                     config["chunks"],
                     config["depth"],
+                    placed,
                     commit,
                 ]
             )

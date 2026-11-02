@@ -38,8 +38,8 @@ chunks: ## Cut the corpus into chunks with every strategy, report their sizes an
 
 search: export Q := $(Q)
 search: ## Print the best chunks for a question: make search Q="How long may I drive in a day?"
-	@test -n "$$Q" || { echo 'usage: make search Q="your question" [STRATEGY=paragraph] [K=5]' >&2; exit 1; }
-	uv run --locked python scripts/search.py --strategy $(or $(STRATEGY),paragraph) -k $(or $(K),5) "$$Q"
+	@test -n "$$Q" || { echo 'usage: make search Q="your question" [STRATEGY=paragraph] [K=5] [REFS=1]' >&2; exit 1; }
+	uv run --locked python scripts/search.py --strategy $(or $(STRATEGY),paragraph) -k $(or $(K),5) $(if $(filter 1,$(REFS)),--refs,) "$$Q"
 
 retrieval-runs: ## Run every retrieval configuration on the dev split and write runs/retrieval/*.json
 	uv run --locked python scripts/retrieval_runs.py

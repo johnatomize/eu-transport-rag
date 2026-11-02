@@ -142,6 +142,7 @@ class GroupResult:
     group: str  # "all", a phrasing such as "paraphrased", or a type such as "single_fact"
     n: int
     metrics: Mapping[str, Metric]  # "recall@5", "fractional_recall@5", "mrr@10", "ndcg@10"
+    question_ids: tuple[str, ...] = ()  # the questions scored in this group, in question order
 
 
 @dataclass(frozen=True)
@@ -164,7 +165,7 @@ def _group(name: str, scores: Sequence[QuestionScore], seed: int | str) -> Group
     intervals = _bootstrap(means, RESAMPLES, f"{seed}:{name}")
     for metric, values in means.items():
         metrics[metric] = Metric(sum(values) / n, *intervals[metric])
-    return GroupResult(name, n, metrics)
+    return GroupResult(name, n, metrics, tuple(s.question_id for s in scores))
 
 
 def evaluate(

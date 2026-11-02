@@ -11,11 +11,11 @@ import json
 import sys
 from pathlib import Path
 
-from rag.chunk import STRATEGIES
+from rag.chunk import STRATEGIES, Chunk
 from rag.corpus import CorpusError, load_manifest
-from rag.parse import ParseError, parse_corpus
+from rag.parse import ParseError, Tree, parse_corpus
 from rag.questions import validate
-from rag.retrieve import BM25
+from rag.retrieve import BM25, Expansion, Retriever
 from rag.runlog import dumps, make_run, same_results
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,11 +23,24 @@ MANIFEST = ROOT / "corpus" / "manifest.yaml"
 QUESTIONS = ROOT / "data" / "questions.v1.jsonl"
 OUT = ROOT / "runs" / "retrieval"
 
-# Checkpoint D: BM25 with its defaults over each chunking strategy.
-RUNS = [
-    (f"bm25-{strategy}", strategy, {"retriever": "bm25", "k1": 1.5, "b": 0.75})
+# Checkpoint D: BM25 with its defaults over each chunking strategy. Checkpoint E: the same with
+# cross-reference expansion; vector and hybrid runs come with the embeddings (#50).
+BM25_CONFIG = {"retriever": "bm25", "k1": 1.5, "b": 0.75}
+RUNS = [(f"bm25-{strategy}", strategy, BM25_CONFIG) for strategy in STRATEGIES] + [
+    (f"bm25-{strategy}-refs", strategy, {**BM25_CONFIG, "expansion": "references"})
     for strategy in STRATEGIES
 ]
+
+
+def retriever_for(config: dict, chunks: list[Chunk], tree: Tree, cache: dict) -> Retriever:
+    """The retriever a configuration describes; BM25 indexes are built once per strategy."""
+    key = (chunks[0].strategy, config["k1"], config["b"])
+    if key not in cache:
+        cache[key] = BM25(chunks, k1=config["k1"], b=config["b"])
+    retriever: Retriever = cache[key]
+    if config.get("expansion") == "references":
+        retriever = Expansion(retriever, chunks, tree)
+    return retriever
 
 
 def main() -> int:
@@ -41,17 +54,21 @@ def main() -> int:
         print(f"error: {QUESTIONS.name} is not valid; run `make questions`", file=sys.stderr)
         return 1
     OUT.mkdir(parents=True, exist_ok=True)
+    chunked: dict[str, list[Chunk]] = {}
+    indexes: dict = {}
     for name, strategy, config in RUNS:
-        chunks = STRATEGIES[strategy](tree)
-        retriever = BM25(chunks, k1=config["k1"], b=config["b"])
+        if strategy not in chunked:
+            chunked[strategy] = STRATEGIES[strategy](tree)
+        chunks = chunked[strategy]
+        retriever = retriever_for(config, chunks, tree, indexes)
         run = make_run(name, {**config, "strategy": strategy}, retriever, chunks, questions, ROOT)
         path = OUT / f"{name}.json"
         where = path.relative_to(ROOT)
         if path.exists() and same_results(json.loads(path.read_text(encoding="utf-8")), run):
-            print(f"{name:20} unchanged, {where} kept")
+            print(f"{name:25} unchanged, {where} kept")
             continue
         path.write_text(dumps(run), encoding="utf-8")
-        print(f"{name:20} {len(run['questions'])} questions → {where}")
+        print(f"{name:25} {len(run['questions'])} questions → {where}")
     return 0
 
 

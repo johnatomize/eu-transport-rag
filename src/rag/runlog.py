@@ -9,13 +9,17 @@ One JSON file per run, under `runs/`, committed (plan approved on #36):
                    "split": "dev", "depth": 50},
      "inputs":    {"data/questions.v1.jsonl": "<sha256>", "corpus/manifest.yaml": "<sha256>"},
      "questions": [{"id": "q001", "ranking": [["paragraph:561/2006:art6(3)", 12.345678], …]}, …],
-     "chunks":    {"paragraph:561/2006:art6(3)": ["561/2006:art6(3)"], …}}
+     "chunks":    {"paragraph:561/2006:art6(3)": ["561/2006:art6(3)"], …},
+     "words":     {"paragraph:561/2006:art6(3)": 87, …}}
 
 - `questions` holds every question of the split, unanswerable ones too, each with its top
   `depth` chunks and their scores, best first. Scores are rounded to 6 decimals, so two runs of
-  the same code write the same file apart from `run`.
+  the same code write the same file apart from `run`. A chunk that cross-reference expansion
+  brought in has a third entry, the chunk that cites it (`Hit.via`).
 - `chunks` holds the node IDs of every chunk that appears in a ranking, so a log can be scored
   again, under any rule, without chunking the corpus again.
+- `words` holds the length of every such chunk as indexed, prefix included, so a table can say
+  how much text the top k hold.
 - `inputs` fingerprints the files the run depended on, and `config.chunks_sha256` the chunks it
   searched, so a table can refuse a log made from other questions or by other parse or chunking
   code.
@@ -106,12 +110,12 @@ def make_run(
     used: dict[str, list[str]] = {}
     for question in (q for q in questions if q.split == split):
         hits = retriever.search(question.question, depth)
-        rankings.append(
-            {"id": question.id, "ranking": [[h.chunk.id, round(h.score, 6)] for h in hits]}
-        )
+        ranking = [[h.chunk.id, round(h.score, 6), *([h.via] if h.via else [])] for h in hits]
+        rankings.append({"id": question.id, "ranking": ranking})
         for hit in hits:
             used.setdefault(hit.chunk.id, list(hit.chunk.node_ids))
-    lengths = [len(chunk.text.split()) for chunk in chunks]
+    words = {chunk.id: len(chunk.text.split()) for chunk in chunks}
+    lengths = list(words.values())
     return {
         "run": {
             "name": name,
@@ -130,6 +134,7 @@ def make_run(
         "inputs": {path: fingerprint(root / path) for path in INPUTS},
         "questions": rankings,
         "chunks": {chunk_id: used[chunk_id] for chunk_id in sorted(used)},
+        "words": {chunk_id: words[chunk_id] for chunk_id in sorted(used)},
     }
 
 
@@ -147,6 +152,8 @@ def dumps(run: Mapping) -> str:
     parts.append(' "questions": ' + block(questions, "[", "]"))
     chunks = [f"{line(cid)}: {line(ids)}" for cid, ids in run["chunks"].items()]
     parts.append(' "chunks": ' + block(chunks, "{", "}"))
+    words = [f"{line(cid)}: {n}" for cid, n in run["words"].items()]
+    parts.append(' "words": ' + block(words, "{", "}"))
     return "{\n" + ",\n".join(parts) + "\n}\n"
 
 
@@ -181,6 +188,4 @@ def check_chunks(runs: Sequence[Mapping], tree: Tree) -> None:
 def rankings(run: Mapping) -> dict[str, list[tuple[str, ...]]]:
     """Each question's ranking as the node IDs of its chunks, as `retrieval_eval` takes it."""
     chunks = run["chunks"]
-    return {
-        q["id"]: [tuple(chunks[chunk_id]) for chunk_id, _ in q["ranking"]] for q in run["questions"]
-    }
+    return {q["id"]: [tuple(chunks[entry[0]]) for entry in q["ranking"]] for q in run["questions"]}

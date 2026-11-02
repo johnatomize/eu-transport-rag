@@ -32,7 +32,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         tree = parse_corpus(load_manifest(MANIFEST), ROOT)
-        runs = [load(path, ROOT) for path in sorted(RUNS.glob("*.json"))]
+        runs = [load(path, ROOT) for path in sorted(RUNS.glob("*.json"), key=lambda p: p.stem)]
         check_chunks(runs, tree)
     except (CorpusError, ParseError, StaleRunError) as e:
         print(f"error: {e}", file=sys.stderr)

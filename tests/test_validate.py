@@ -1,10 +1,17 @@
 import json
+import re
+import unicodedata
+from pathlib import Path
 
 import pytest
 
-from rag.chunk import Chunk
-from rag.prompt import Answer, Citation
+from rag.chunk import STRATEGIES, Chunk
+from rag.corpus import load_manifest
+from rag.prompt import Answer, Citation, render_passage
 from rag.validate import check_answer, check_reply, find_quote, normalise, quotable
+
+DOCS = {d.id: d for d in load_manifest(Path(__file__).parents[1] / "corpus" / "manifest.yaml")}
+NODE = re.compile(r'<node id="([^"]*)">\n(.*?)\n</node>', re.DOTALL)
 
 # A hand-built chunk shaped like 561/2006 Art. 6, with paragraph 3's text split over two lines.
 ARTICLE = Chunk(
@@ -75,7 +82,7 @@ def test_a_refusal_without_citations_passes():
 def test_a_refusal_with_citations_fails():
     verdict = check_reply(reply(False, ("561/2006:art6(2)", "shall not exceed 56 hours")), CHUNKS)
     assert not verdict.ok
-    assert verdict.problems == ("says the passages don't answer it, but gives 1 citations",)
+    assert verdict.problems == ("says the passages don't answer it, but gives 1 citation",)
 
 
 def test_an_answer_without_citations_fails():
@@ -174,6 +181,50 @@ def test_extra_spaces_inside_and_around_a_quote_match():
 def test_a_decimal_point_for_the_acts_decimal_comma_fails():
     verdict = check_reply(reply(True, ("561/2006:art4(a)", "more than 3.5 tonnes")), CHUNKS)
     assert not verdict.ok
+
+
+@pytest.mark.parametrize(
+    "quote",
+    [
+        "shall not exceed 5",  # a number cut short: 56 hours
+        "eekly driving time",  # a word cut at its start
+        "The weekly driv",  # a word cut at its end
+    ],
+)
+def test_a_quote_that_cuts_a_word_or_number_fails(quote):
+    verdict = check_reply(reply(True, ("561/2006:art6(2)", quote)), CHUNKS)
+    assert not verdict.ok, quote
+
+
+def test_a_quote_may_end_on_punctuation_or_start_after_it():
+    """Word edges are only checked where the quote itself starts or ends with a letter or digit."""
+    assert find_quote("56 hours.", ["exceed 56 hours."]) == "56 hours."
+    assert find_quote("(a) vehicles", ["(a) vehicles registered"]) == "(a) vehicles"
+    assert find_quote("'carriage by road'", ["— ‘carriage by road’ means"]) == "‘carriage by road’"
+
+
+def test_a_later_whole_word_match_is_found_after_a_cut_one():
+    assert find_quote("at most 10", ["at most 100 or at most 10 hours"]) == "at most 10"
+
+
+def test_invisible_characters_are_ignored_on_both_sides():
+    soft = "the tacho\u00adgraph shall be"
+    assert find_quote("tachograph", [soft]) == "tacho\u00adgraph"
+    assert find_quote("tacho\u200bgraph shall", ["the tachograph shall be"]) == "tachograph shall"
+
+
+def test_a_quote_with_decomposed_accents_matches_the_composed_corpus():
+    composed = "Ministère des Transports"
+    decomposed = unicodedata.normalize("NFD", composed)
+    assert decomposed != composed
+    assert find_quote(decomposed, [composed]) == composed
+
+
+def test_the_same_citation_twice_is_kept_once():
+    citation = ("561/2006:art6(2)", "shall not exceed 56 hours")
+    verdict = check_reply(reply(True, citation, citation), CHUNKS)
+    assert verdict.ok
+    assert len(verdict.citations) == 1
 
 
 def test_normalise_maps_every_character_back_to_the_text():
@@ -296,10 +347,15 @@ def test_a_quote_from_the_real_article_6_passes_against_each_chunking(chunks):
         assert verdict.citations[0].quote == quote
 
 
-def test_every_node_of_the_real_corpus_can_quote_its_own_text(chunks):
-    """Each node's text, as its chunks hold it, is found again: nothing in the corpus trips
-    the normalisation, and the corpus text read back is the text itself."""
-    for strategy, cut in chunks.items():
-        for node_id, pieces in quotable(cut).items():
-            for piece in pieces:
-                assert find_quote(piece, [piece]) == piece.strip(), (strategy, node_id)
+@pytest.mark.parametrize("strategy", STRATEGIES)
+def test_every_node_the_prompt_shows_is_quotable_word_for_word(chunks, strategy):
+    """For every chunk, the text of each <node> element in the prompt is what the check offers
+    for that node, unescaped, and quoting all of it passes and reads back the same text."""
+    for c in chunks[strategy]:
+        shown = NODE.findall(render_passage(c, DOCS))
+        offered = quotable([c])
+        assert sorted({i for i, _ in shown}) == sorted(offered), c.id
+        for node_id, text in shown:
+            assert text in offered[node_id], (c.id, node_id)  # nothing was escaped
+            assert unicodedata.is_normalized("NFC", text), (c.id, node_id)
+            assert find_quote(text, offered[node_id]) == text.strip(), (c.id, node_id)

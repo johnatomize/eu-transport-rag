@@ -26,6 +26,18 @@ Choices made along the way, with the reason and the alternatives considered. New
 - **Deployment (I):** the service holds the key as an AWS secret that only its own role can read, instead of an IAM permission on Bedrock models. GitHub still reaches AWS through OIDC; the Anthropic key is the project's one long-lived secret, kept in `.env` locally.
 - **Bedrock stays possible:** the answer client gets a `provider` setting like the embedding client's, so Claude on Bedrock can come back if AWS raises the quota.
 
+## 2026-11-03: Haiku 5.5 while building, Opus 5.5 for scored answers
+
+**Decision** (#61; chosen by the owner in a working session): answers come from two Claude models, both set in `config/generation.yaml`. **Claude Haiku 5.5** (`claude-haiku-5-5`) answers while F is built and debugged. **Claude Opus 5.5** (`claude-opus-5-5`) writes every answer G scores, so it is the model the results table reports.
+
+- **Prices** (US$ per million tokens, Anthropic's pricing page, read 2026-11-03): Haiku 5.5 0.10 input and 0.50 output, for prompts up to 100,000 tokens; Opus 5.5 4 and 20. The Message Batches API, which answers within hours, halves both. The model's thinking is billed as output.
+- **Rough cost of one pass over the 60 dev questions:** about US$0.05 with Haiku and US$1.60–2.10 with Opus, or about half that as a batch. This assumes the top 5 chunks (842 words with paragraph chunks, 2,348 with article chunks), about 600 tokens of instructions and about 1,000 output tokens per answer, counting thinking. The output is the uncertain part, so #64's dry-run adds a margin and paid runs log the real counts. About 20 batch passes with Opus fit in the US$20 cap.
+- **Why two models:** many debugging runs cost pennies with Haiku, while the scored answers come from the strongest of the three models compared. G can also run Haiku on the same questions and report whether the small model answers as well, as a measured row rather than a guess.
+- **Limits:** the lowest paid tier allows each of the two models 4,000 requests, 2,000,000 input tokens and 400,000 output tokens a minute (Anthropic's rate-limit page, read 2026-11-03); the account's own tier is on the Console's Limits page.
+- **Guard:** no prompt may be longer than 100,000 tokens (`max_prompt_tokens`), above which Haiku's price rises; F's prompts are about 2,000–4,000.
+
+**Alternatives:** Sonnet 5.5 (US$2 and US$10), half Opus's price, which stays the fallback if Opus runs use more output than estimated; one model for both building and scoring.
+
 ## 2026-11-03: the secret scan allows SHA-256 cache keys in the embedding files, and nothing else
 
 **Decision** (#50): `.gitleaks.toml` keeps every default gitleaks rule and adds one exception. In `embeddings/*.jsonl` and `runs/embeddings*/*.json`, a value of 16 to 64 lowercase hex digits and nothing else is not reported by the `generic-api-key` rule. A key is 64 digits; `gitleaks dir` reads a large file in pieces, and a key cut at a piece's edge reaches the rule shorter.

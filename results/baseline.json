@@ -2,10 +2,25 @@
   "metric": "recall@5",
   "split": "dev",
   "source": "results/retrieval.md",
-  "note": "Checkpoint D baseline, reviewed by the owner with #36. J's quality gate fails a change that lowers any of these.",
+  "note": "Checkpoint D's BM25 runs, reviewed by the owner with #36, and checkpoint E's vector, hybrid and expansion runs (#50). J's quality gate fails a change that lowers any of these.",
   "runs": {
     "bm25-article": 0.72,
+    "bm25-article-refs": 0.68,
     "bm25-paragraph": 0.6,
-    "bm25-window-200-50": 0.6
+    "bm25-paragraph-refs": 0.64,
+    "bm25-window-200-50": 0.6,
+    "bm25-window-200-50-refs": 0.6,
+    "hybrid-article": 0.78,
+    "hybrid-article-refs": 0.8,
+    "hybrid-paragraph": 0.76,
+    "hybrid-paragraph-refs": 0.72,
+    "hybrid-window-200-50": 0.66,
+    "hybrid-window-200-50-refs": 0.7,
+    "vector-article": 0.72,
+    "vector-article-refs": 0.78,
+    "vector-paragraph": 0.68,
+    "vector-paragraph-refs": 0.68,
+    "vector-window-200-50": 0.66,
+    "vector-window-200-50-refs": 0.7
   }
 }

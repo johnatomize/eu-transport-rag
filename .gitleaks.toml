@@ -1,0 +1,24 @@
+# gitleaks configuration: the default rules, plus one narrow exception.
+#
+# The embedding cache and the embedding run logs name every embedded text by its cache key, a
+# SHA-256 of the text and the model setting (rag.embed.cache_key), as `"key": "<64 hex digits>"`.
+# The generic-api-key rule reads that as a secret. The exception covers only that rule, only a
+# value of nothing but lowercase hex digits, and only in those files; every other rule, value and
+# path is scanned as before, so a real token or an AWS key in the same files is still caught.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "SHA-256 cache keys in the embedding cache and run logs"
+targetRules = ["generic-api-key"]
+condition = "AND"
+# Not anchored at the start, so a scan from another directory, or with absolute paths, matches too.
+paths = [
+    '''(^|/)embeddings/[^/]+\.jsonl$''',
+    '''(^|/)runs/embeddings(-local)?/[^/]+\.json$''',
+]
+regexTarget = "secret"
+# 16 to 64 digits: `gitleaks dir` reads a large file in pieces, and a key cut at a piece's edge
+# reaches the rule shorter than 64.
+regexes = ['''^[0-9a-f]{16,64}$''']

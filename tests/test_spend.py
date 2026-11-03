@@ -3,7 +3,13 @@ from pathlib import Path
 
 import pytest
 
-from rag.spend import SpendLogError, load_spend_log, read_spend_log, unlogged_runs
+from rag.spend import (
+    SpendLogError,
+    load_spend_log,
+    read_spend_log,
+    spending,
+    unlogged_runs,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -77,3 +83,18 @@ def test_paid_runs_the_spend_log_does_not_name_yet_are_counted(tmp_path):
     assert unlogged_runs(named, runs) == [("2026-11-02T10-00-00Z.json", 0.002)]
     assert len(unlogged_runs(LOG, runs)) == 2
     assert unlogged_runs(LOG, tmp_path / "none yet") == []
+
+
+def test_spending_counts_paid_answer_runs_and_embedding_runs_not_yet_logged(tmp_path):
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "PROGRESS.md").write_text(LOG, encoding="utf-8")
+    _run_log(tmp_path / "runs", "keep-dir.json", 0.0)  # makes runs/; not a paid directory
+    _run_log(tmp_path / "runs" / "embeddings", "2026-11-02T10-00-00Z.json", 0.002)
+    _run_log(tmp_path / "runs" / "generation", "2026-11-04T10-00-00Z-claude-haiku-5-5.json", 0.03)
+    spent = spending(tmp_path)
+    assert spent.cap_usd == read_spend_log(LOG).cap_usd
+    assert spent.spent_usd == pytest.approx(read_spend_log(LOG).spent_usd + 0.032)
+    assert [name for name, _ in spent.pending] == [
+        "runs/embeddings/2026-11-02T10-00-00Z.json",
+        "runs/generation/2026-11-04T10-00-00Z-claude-haiku-5-5.json",
+    ]

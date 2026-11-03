@@ -8,9 +8,10 @@ The log is Markdown, written by hand. Two parts of it are read:
     | --- | --- | ---: | ---: |
     | 2026-10-27 | Project start | 0.00 | 0.00 |
 
-What has been spent is the sum of the cost column, plus any paid run whose call log in
-`runs/embeddings/` no row names yet (`unlogged_runs`). The last total must match that sum, so a row
-added with a wrong total is caught before it can hide spending.
+What has been spent is the sum of the cost column, plus any paid run whose log in one of
+`PAID_RUNS` (embeddings on Bedrock, answers from Claude) no row names yet (`unlogged_runs`).
+The last total must match that sum, so a row added with a wrong total is caught before it can
+hide spending.
 """
 
 import json
@@ -21,6 +22,10 @@ from pathlib import Path
 _CAP = re.compile(r"^Approved cap: \*\*US\$(\d+(?:\.\d+)?)\b", re.MULTILINE)
 _ROW = re.compile(r"^\|\s*\d{4}-\d{2}-\d{2}\s*\|")  # a row of the table: it starts with a date
 _AMOUNT = re.compile(r"-?\d+(?:\.\d+)?")
+
+
+# Where paid runs write their logs; each log's ["paid"]["cost_usd"] is what the run cost.
+PAID_RUNS = ("runs/embeddings", "runs/generation")
 
 
 class SpendLogError(Exception):
@@ -93,3 +98,27 @@ def load_spend_log(path: Path) -> SpendLog:
         raise SpendLogError(f"{path.name}: cannot read it ({e.strerror})") from e
     except SpendLogError as e:
         raise SpendLogError(f"{path.name}: {e}") from e
+
+
+@dataclass(frozen=True)
+class Spending:
+    cap_usd: float
+    spent_usd: float  # the spend log plus every paid run it doesn't name yet
+    pending: tuple[tuple[str, float], ...]  # those runs: their path from the root, and cost
+
+
+def spending(root: Path) -> Spending:
+    """What has been spent, counting every paid run's log the spend log doesn't name yet."""
+    path = root / "docs" / "PROGRESS.md"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as e:
+        raise SpendLogError(f"{path.name}: cannot read it ({e.strerror})") from e
+    log = read_spend_log(text)
+    pending = tuple(
+        (f"{runs}/{name}", cost)
+        for runs in PAID_RUNS
+        for name, cost in unlogged_runs(text, root / runs)
+    )
+    spent = log.spent_usd + sum(cost for _, cost in pending)
+    return Spending(cap_usd=log.cap_usd, spent_usd=spent, pending=pending)

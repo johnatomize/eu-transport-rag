@@ -4,6 +4,10 @@
 # kind       act (legislation) or guidance (Commission guidance and clarification notes)
 # phase      1 or 2; phase 2 joins after checkpoint G (docs/DESIGN.md)
 # celex      for an act: exactly the version that is cited
+# adopted    for an act pinned to its original text (a celex starting with 3): the day it was
+#            adopted, which an answer names as the version it quotes. Only an act that was
+#            never amended is pinned this way, and citations say "never amended"; an amended
+#            act is pinned to a consolidated version
 # format     xhtml, html or pdf; picks the parser
 # sha256     hash of the raw file; written, with retrieved, by scripts/fetch_corpus.py --pin
 # published  for a guidance note: when its content was written, as YYYY-MM-DD, or YYYY-MM when
@@ -45,6 +49,7 @@ documents:
     kind: act
     phase: 1
     celex: 32002L0015
+    adopted: 2002-03-11
     format: html
     url: https://publications.europa.eu/resource/celex/32002L0015
     file: corpus/raw/32002L0015.en.html

@@ -6,17 +6,12 @@ import pytest
 
 from rag.chunk import STRATEGIES, Chunk, window_chunks
 from rag.corpus import load_manifest
-from rag.parse import Node, Tree, parse_corpus
+from rag.parse import Node, Tree, parse_corpus, printed_label
 
 ROOT = Path(__file__).parents[1]
 AMENDING = ("561/2006:art26", "561/2006:art27", "165/2014:art45")
 ART6 = "Regulation (EC) No 561/2006 › Chapter II — Crews, driving times, breaks and rest periods"
 ART6_PREFIX = f"{ART6} › Article 6"
-
-
-@pytest.fixture(scope="module")
-def chunks(tree: Tree) -> dict[str, list[Chunk]]:
-    return {name: strategy(tree) for name, strategy in STRATEGIES.items()}
 
 
 def by_id(chunks: list[Chunk]) -> dict[str, Chunk]:
@@ -218,3 +213,26 @@ def test_window_node_ids_are_exactly_the_nodes_it_touches():
 def test_window_overlap_must_be_smaller_than_size():
     with pytest.raises(ValueError):
         window_chunks(small_tree(), size=50, overlap=50)
+
+
+@pytest.mark.parametrize("strategy", STRATEGIES)
+def test_every_body_line_names_the_node_it_belongs_to(tree, chunks, strategy):
+    """`line_owners` has one entry per body line, and its nodes are the chunk's, in order."""
+    for chunk in chunks[strategy]:
+        lines = chunk.body.split("\n")
+        assert len(chunk.line_owners) == len(lines), chunk.id
+        owners = [owner for owner in chunk.line_owners if owner is not None]
+        assert tuple(dict.fromkeys(owners)) == chunk.node_ids, chunk.id
+        for owner, line in zip(chunk.line_owners, lines, strict=True):
+            if owner is not None and strategy != "window-200-50":
+                # Windows can start or end inside a line, so only whole lines are compared. A
+                # node's first line carries its printed label, which full_text leaves out.
+                node = tree[owner]
+                label = printed_label(node) if node.kind in {"paragraph", "point"} else ""
+                text = line.removeprefix(label).strip()
+                assert text in tree.full_text(owner), (chunk.id, line)
+
+
+def test_line_owners_must_match_the_body():
+    with pytest.raises(ValueError, match="line_owners"):
+        Chunk("t:a:art1", "t", "a", "Act", "one\ntwo", ("a:art1",), line_owners=("a:art1",))

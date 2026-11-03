@@ -26,7 +26,7 @@ RAW_DIR = Path("corpus/raw")
 KINDS = {"act", "guidance"}
 FORMATS = {"xhtml", "html", "pdf"}
 REQUIRED = {"id", "title", "kind", "phase", "format", "url", "file", "sha256", "retrieved"}
-OPTIONAL = {"celex", "published", "published_source"}
+OPTIONAL = {"celex", "published", "published_source", "adopted"}
 # Where a guidance note's date comes from; see the comment at the top of the manifest.
 DATE_SOURCES = {"letter", "pdf", "commission-page"}
 
@@ -67,6 +67,11 @@ class Document:
     # month is known, "YYYY-MM"; and where that date comes from (one of DATE_SOURCES).
     published: str | None = None
     published_source: str | None = None
+    # For an act pinned to its original text (a CELEX starting with 3, not a consolidated
+    # version): the day it was adopted, which an answer's citation names as its version. Only
+    # an act that was never amended is pinned this way, and citations say so; an amended act is
+    # pinned to a consolidated version.
+    adopted: date | None = None
 
     @property
     def source(self) -> str:
@@ -132,6 +137,12 @@ def _document(index: int, entry: object) -> Document:
         raise fail("a guidance note needs published and published_source")
     if doc.kind == "act" and (doc.published is not None or doc.published_source is not None):
         raise fail("an act is dated by its celex, not by published")
+    if doc.kind == "act" and not doc.celex.startswith("0") and doc.adopted is None:
+        raise fail("an act pinned to its original text needs adopted, the day it was adopted")
+    if doc.adopted is not None and (doc.kind != "act" or doc.celex.startswith("0")):
+        raise fail("only an act pinned to its original text has adopted")
+    if doc.adopted is not None and type(doc.adopted) is not date:
+        raise fail("adopted must be a date (YYYY-MM-DD)")
     if type(doc.published) is date:  # YAML reads YYYY-MM-DD as a date, and YYYY-MM as text
         doc = replace(doc, published=doc.published.isoformat())
     elif doc.published is not None and not (

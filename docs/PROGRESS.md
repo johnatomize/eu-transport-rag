@@ -84,6 +84,8 @@ Checkpoints A–E are built and reviewed by the owner; D, the keyword retrieval 
   - **Baseline for J's quality gate:** `results/baseline.json` now holds recall@5 for all 18 runs; the BM25 values are unchanged.
   - The secret scan read the cache's SHA-256 keys as API keys; `.gitleaks.toml` now allows exactly those (reasons in `DECISIONS.md`). The test split has not been used.
 
+- **Prompt and answer format (#62):** `src/rag/prompt.py` turns a question and any retriever's chunks into a prompt in which every paragraph, point or guidance page is marked with its node ID, so an answer can cite "Article 6(3)" (choices in `DECISIONS.md`). It reads the model's reply in the format `{answerable, answer, citations[{node_id, quote}]}`, and gives the labels and fixed messages a reader sees: "Regulation (EC) No 561/2006, Article 6(3), consolidated version of 31.12.2024", a warning on guidance older than the 2020 Mobility Package, and the messages for a question the documents don't answer and for an answer that fails the checks. Tests show that every line of every chunk in all three chunkings lands in the node that owns it, that the same chunks always give the same prompt, that text such as `</node></passage>` or "ignore the instructions above" stays inside its node, and that replies with missing, extra, repeated or mistyped fields are rejected. No model is called. The manifest now records the adoption date of 2002/15, so the 18 retrieval run logs were made again; their rankings are unchanged.
+
 ## Spend log
 
 Every cost goes here: date, what it paid for, amount and running total. A paid step needs the owner's OK and a dry-run estimate first.

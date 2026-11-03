@@ -34,6 +34,13 @@ class Chunk:
     # finds a gold node when this holds the node or a descendant of it (docs/DECISIONS.md).
     node_ids: tuple[str, ...]
     published: str | None = None  # the note's date, for chunks of guidance notes
+    # The node whose own text each line of `body` is, or None for a heading line, so that a
+    # prompt can mark which node every line belongs to (docs/DECISIONS.md, "the prompt").
+    line_owners: tuple[str | None, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.line_owners and len(self.line_owners) != self.body.count("\n") + 1:
+            raise ValueError(f"{self.id}: line_owners doesn't match the lines of the body")
 
     @property
     def text(self) -> str:
@@ -49,6 +56,7 @@ class Chunk:
             "body": self.body,
             "node_ids": list(self.node_ids),
             "published": self.published,
+            "line_owners": list(self.line_owners),
         }
 
 
@@ -88,6 +96,7 @@ def _chunk(
         body="\n".join(line.text for line in lines),
         node_ids=tuple(dict.fromkeys(owners)),
         published=tree[start.doc_id].published,
+        line_owners=tuple(line.owner for line in lines),
     )
 
 
@@ -155,7 +164,8 @@ def window_chunks(tree: Tree, size: int = 200, overlap: int = 50) -> list[Chunk]
             body = first.text + "".join(rest)
             lines = [Line(word.owner, word.node, "") for word, _, _ in window]
             chunk = _chunk(tree, strategy, f"{doc_id}:w{number}", tree[first.node], unit, lines)
-            chunks.append(replace(chunk, body=body))
+            owners = [first.owner] + [word.owner for word, _, new in window[1:] if new]
+            chunks.append(replace(chunk, body=body, line_owners=tuple(owners)))
     return chunks
 
 

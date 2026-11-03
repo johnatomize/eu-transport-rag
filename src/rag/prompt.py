@@ -311,7 +311,28 @@ def parse_answer(reply: str) -> Answer:
     return Answer(row["answerable"], answer, tuple(citations))
 
 
-# --- What a reader is shown when there is no answer ----------------------------------------
+# --- What a reader is shown -----------------------------------------------------------------
+
+
+def shown_answer(
+    answer: str, citations: Sequence[tuple[str, str]], docs: Mapping[str, Document]
+) -> str:
+    """An answer that passed the check, as a reader sees it: the answer, each source with its
+    version and the quote as the corpus writes it, then `LEGAL_NOTE`.
+
+    `citations` are (node ID, quote) pairs from `rag.validate`, never the model's copies.
+    """
+    if not citations:
+        raise ValueError("an answer is shown only with its citations")
+    lines = [answer.strip(), "", "Sources:"]
+    for i, (node_id, quote) in enumerate(citations, 1):
+        lines.append(f"{i}. {citation_label(node_id, docs)}")
+        quoted = "\n".join(f"   {line.strip()}" for line in quote.strip().splitlines())
+        lines.append(
+            f"   \N{LEFT DOUBLE QUOTATION MARK}{quoted.lstrip()}\N{RIGHT DOUBLE QUOTATION MARK}"
+        )
+    lines += ["", LEGAL_NOTE]
+    return "\n".join(lines)
 
 
 def _chunk_place(chunk: Chunk) -> str:

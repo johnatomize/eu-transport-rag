@@ -9,9 +9,9 @@ The log is Markdown, written by hand. Two parts of it are read:
     | 2026-10-27 | Project start | 0.00 | 0.00 |
 
 What has been spent is the sum of the cost column, plus any paid run whose log in one of
-`PAID_RUNS` (embeddings on Bedrock, answers from Claude) no row names yet (`unlogged_runs`).
-The last total must match that sum, so a row added with a wrong total is caught before it can
-hide spending.
+`PAID_RUNS` (embeddings on Bedrock, answers from Claude, typed questions) no row names yet
+(`unlogged_runs`). The last total must match that sum, so a row added with a wrong total is
+caught before it can hide spending.
 """
 
 import json
@@ -25,7 +25,8 @@ _AMOUNT = re.compile(r"-?\d+(?:\.\d+)?")
 
 
 # Where paid runs write their logs; each log's ["paid"]["cost_usd"] is what the run cost.
-PAID_RUNS = ("runs/embeddings", "runs/generation")
+# runs/ask holds one log for each question asked and paid for with `make ask`.
+PAID_RUNS = ("runs/embeddings", "runs/generation", "runs/ask")
 
 
 class SpendLogError(Exception):
@@ -105,6 +106,16 @@ class Spending:
     cap_usd: float
     spent_usd: float  # the spend log plus every paid run it doesn't name yet
     pending: tuple[tuple[str, float], ...]  # those runs: their path from the root, and cost
+
+
+def spending_report(s: Spending) -> str:
+    """What has been spent against the cap, naming each paid run not in the spend log yet."""
+    lines = [f"Spent so far US${s.spent_usd:.4f} of the approved cap of US${s.cap_usd:.2f}."]
+    lines += [
+        f"  including US${cost:.4f} from {name}, not in the spend log yet"
+        for name, cost in s.pending
+    ]
+    return "\n".join(lines)
 
 
 def spending(root: Path) -> Spending:

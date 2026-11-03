@@ -25,21 +25,27 @@ and `scripts/answer.py` hands it one only with an explicit flag, after the check
 Choices and reasons: "the answer client" in docs/DECISIONS.md.
 """
 
+import datetime as dt
 import hashlib
 import json
 import math
+import os
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from functools import cached_property
+from pathlib import Path
 from typing import Protocol
 
 import anthropic
 
 from rag.chunk import Chunk
-from rag.embed_estimate import estimate_tokens
+from rag.db import read_env_file
+from rag.embed_estimate import PRICE_STALE_AFTER_DAYS, estimate_tokens
 from rag.generation_config import GenerationConfig, Price
 from rag.prompt import ANSWER_SCHEMA, SYSTEM, Prompt
+from rag.runlog import git_state
 from rag.validate import check_reply
 
 MARGIN = 1.5  # estimates are multiplied by this before they are priced
@@ -162,6 +168,38 @@ def check_cap(e: Estimate, spent_usd: float, cap_usd: float) -> None:
             f"this run may cost up to US${e.most_usd:.4f}; with US${spent_usd:.4f} already "
             f"spent that could pass the approved cap of US${cap_usd:.2f}"
         )
+
+
+def paid_holds(
+    e: Estimate, config: GenerationConfig, spent_usd: float, cap_usd: float, today: dt.date
+) -> list[str]:
+    """Why a paid run may not start: prices read too long ago, or a cost that could pass the
+    cap. Empty when it may."""
+    holds = []
+    age = (today - config.prices_read_on).days
+    if age > PRICE_STALE_AFTER_DAYS:
+        holds.append(
+            f"the prices were read {age} days ago; read them again on Anthropic's pricing page "
+            "and update config/generation.yaml"
+        )
+    try:
+        check_cap(e, spent_usd, cap_usd)
+    except GenerateError as err:
+        holds.append(str(err))
+    return holds
+
+
+def estimate_report(e: Estimate) -> str:
+    """The estimate in words: input with the margin, the expected cost and the most it can cost."""
+    calls = f"{e.calls} call{'s' if e.calls != 1 else ''}"
+    return (
+        f"{calls}: about {e.input_tokens:,} input tokens, {e.padded_input:,} with a "
+        f"{MARGIN - 1:.0%} margin.\n"
+        f"Expected cost, at {EXPECTED_OUTPUT_TOKENS:,} output tokens an answer plus the margin: "
+        f"US${e.expected_usd:.4f}.\n"
+        f"Most it can cost, every answer at {e.max_output_tokens:,} output tokens: "
+        f"US${e.most_usd:.4f}. The cap check uses this figure."
+    )
 
 
 # --- Calling the model ---------------------------------------------------------------------
@@ -316,12 +354,19 @@ def _verdict(reply: Reply, call: Call) -> dict:
     """The check's verdict on a reply, for the run log."""
     stopped = _failed_stop(reply)
     if stopped:
-        return {"ok": False, "answerable": None, "problems": [stopped], "citations": []}
+        return {
+            "ok": False,
+            "answerable": None,
+            "answer": None,
+            "problems": [stopped],
+            "citations": [],
+        }
     assert reply.text is not None
     checked = check_reply(reply.text, call.chunks)
     return {
         "ok": checked.ok,
         "answerable": checked.answer.answerable if checked.answer else None,
+        "answer": checked.answer.answer if checked.answer else None,  # the model's text, as read
         "problems": list(checked.problems),
         "citations": [{"node_id": c.node_id, "quote": c.quote} for c in checked.citations],
     }
@@ -359,7 +404,13 @@ def answer_all(
                 "estimated_input_tokens": call.input_tokens,
                 "raw": reply.text,
                 "stop_reason": reply.stop_reason,
-                "verdict": {"ok": False, "answerable": None, "problems": [], "citations": []},
+                "verdict": {
+                    "ok": False,
+                    "answerable": None,
+                    "answer": None,
+                    "problems": [],
+                    "citations": [],
+                },
                 "usage": {
                     "input_tokens": reply.input_tokens,
                     "output_tokens": reply.output_tokens,
@@ -390,3 +441,89 @@ def answer_all(
 
 def _describe(e: BaseException) -> str:
     return f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
+
+
+# --- The run log ----------------------------------------------------------------------------
+
+
+def run_log(
+    run: dict,
+    config: GenerationConfig,
+    model: str,
+    retrieval: dict,
+    split: str,
+    e: Estimate,
+    result: RunResult,
+) -> dict:
+    """What a paid run's log holds: the run, its settings, the estimate, and every call made.
+
+    `split` is the question set: "dev", or "typed" for a question asked with `make ask`.
+    `["paid"]["cost_usd"]` is what `rag.spend` counts until the spend log names the file.
+    """
+    price = config.prices[model]
+    return {
+        "run": run,
+        "config": {
+            "model": model,
+            "effort": config.effort,
+            "max_output_tokens": config.max_output_tokens,
+            "prompt_version": prompt_version(),
+            "price_usd_per_million": {"input": price.input, "output": price.output},
+            "prices_read_on": config.prices_read_on.isoformat(),
+            "retrieval": retrieval,
+            "split": split,
+        },
+        "estimate": {
+            "calls": e.calls,
+            "input_tokens": e.input_tokens,
+            "padded_input_tokens": e.padded_input,
+            "expected_usd": round(e.expected_usd, 6),
+            "most_usd": round(e.most_usd, 6),
+        },
+        "paid": {
+            "calls": len(result.answers),
+            "input_tokens": result.input_tokens,
+            "output_tokens": result.output_tokens,
+            "cost_usd": round(result.cost_usd, 6),
+        },
+        "error": result.error,
+        "failed": result.failed,
+        "answers": result.answers,
+    }
+
+
+def read_api_key(env: Path) -> str | None:
+    """ANTHROPIC_API_KEY from the environment, or else from the `.env` file at `env`."""
+    return os.environ.get("ANTHROPIC_API_KEY") or read_env_file(env).get("ANTHROPIC_API_KEY")
+
+
+def new_run(root: Path, runs: Path, model: str, prefix: str = "") -> tuple[dict, Path]:
+    """The run's header (time, commit, uncommitted changes) and a new, empty log file for it.
+
+    The log is named `<prefix><time>-<model>.json` and created exclusively, so two runs started
+    in the same second can't share one log and lose a paid reply's record: the second is
+    refused (`FileExistsError`, an `OSError`) before it sends anything.
+    """
+    commit, dirty = git_state(root)
+    created = datetime.now(UTC)
+    run = {"created": created.isoformat(timespec="seconds"), "commit": commit, "dirty": dirty}
+    runs.mkdir(parents=True, exist_ok=True)
+    path = runs / f"{prefix}{created.strftime('%Y-%m-%dT%H-%M-%SZ')}-{model}.json"
+    path.open("x").close()
+    return run, path
+
+
+def write_run_log(path: Path, log: dict) -> None:
+    """Write the log whole, through a temporary file, so it is never left half written.
+
+    If it can't be written, it is printed before the error is raised: the calls in it are paid
+    for, and their record must not be lost.
+    """
+    text = json.dumps(log, indent=1, ensure_ascii=False) + "\n"
+    try:
+        temporary = path.with_suffix(".tmp")
+        temporary.write_text(text, encoding="utf-8")
+        temporary.replace(path)
+    except OSError:
+        print(text)
+        raise

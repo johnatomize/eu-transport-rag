@@ -157,6 +157,7 @@ def test_each_reply_is_checked_and_recorded_with_its_tokens_cost_and_time():
     assert result.error is None
     first, second, third = result.answers
     assert first["verdict"]["ok"] and first["verdict"]["answerable"] is True
+    assert first["verdict"]["answer"] == "56 hours."
     assert first["verdict"]["citations"] == [
         {"node_id": "561/2006:art6(2)", "quote": "shall not exceed 56 hours"}
     ]
@@ -436,3 +437,19 @@ def test_a_paid_run_writes_a_log_with_every_answer(script, monkeypatch, capsys):
     assert log["paid"]["cost_usd"] == pytest.approx(2 * (1200 * 0.10 + 300 * 0.50) / 1e6, abs=1e-6)
     assert log["error"] is None
     assert f"names {path.name}" in capsys.readouterr().out
+
+
+def test_two_runs_started_in_the_same_second_never_share_a_log(monkeypatch, tmp_path):
+    import rag.generate
+
+    class Frozen(dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return dt.datetime(2026, 11, 3, 10, 0, 0, tzinfo=tz)
+
+    monkeypatch.setattr(rag.generate, "datetime", Frozen)
+    run, path = rag.generate.new_run(ROOT, tmp_path / "runs", "claude-haiku-5-5", prefix="ask-")
+    assert path.name == "ask-2026-11-03T10-00-00Z-claude-haiku-5-5.json" and path.exists()
+    assert run["created"] == "2026-11-03T10:00:00+00:00"
+    with pytest.raises(FileExistsError):
+        rag.generate.new_run(ROOT, tmp_path / "runs", "claude-haiku-5-5", prefix="ask-")

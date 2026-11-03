@@ -2,6 +2,14 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-03: the secret scan allows SHA-256 cache keys in the embedding files, and nothing else
+
+**Decision** (#50): `.gitleaks.toml` keeps every default gitleaks rule and adds one exception. In `embeddings/*.jsonl` and `runs/embeddings*/*.json`, a value of 16 to 64 lowercase hex digits and nothing else is not reported by the `generic-api-key` rule. A key is 64 digits; `gitleaks dir` reads a large file in pieces, and a key cut at a piece's edge reaches the rule shorter.
+
+- **Why:** the embedding cache and its run logs name each text by its cache key, a SHA-256 of the text and the model setting, written as `"key": "…"`. The generic rule reads every one of them as an API key, so the first commit of real vectors was refused with 831 findings. The keys are hashes of public legislation and hide nothing.
+- **How narrow:** one rule, one value shape, two kinds of file. A token made only of lowercase hex digits would also pass in those files, and nothing else writes to them. Checked with planted fakes: a token and an AWS access key in the same files are still caught, and the same hash in any other file is still reported. The hook stays on and `--no-verify` is still never used.
+- **Alternative:** rename the field in the cache and the run logs to a word the rule ignores. That changes the file formats, including the paid Bedrock run log that is checked against the bill, to work around a scanner, and the next field with a hash would need the same trick.
+
 ## 2026-11-03: embeddings come from Qwen3-Embedding 0.6B, run locally
 
 **Decision** (#57; the switch and the model were answered by the owner in a working session): checkpoint E turns chunks and questions into vectors with **Qwen3-Embedding 0.6B**, an open model (Apache 2.0) run on the owner's Mac with sentence-transformers. It replaces Titan Text Embeddings V2 (decision of 2026-10-31 below). Settings in `config/embedding.yaml`, code in `src/rag/embed.py`.

@@ -19,7 +19,7 @@ from rag.parse import ParseError, Tree, parse_corpus
 from rag.questions import validate
 from rag.retrieve import BM25, RRF, RRF_DEPTH, RRF_K, Expansion, Retriever
 from rag.runlog import dumps, make_run, same_results
-from rag.vector import VectorSearch
+from rag.vector import VectorIndexError, VectorSearch
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "corpus" / "manifest.yaml"
@@ -62,8 +62,8 @@ def retriever_for(
             cache[key] = BM25(chunks, k1=config["k1"], b=config["b"])
         return cache[key]
 
-    def vector() -> Retriever:
-        key = ("vector", strategy, config["model"])
+    def vector() -> Retriever:  # one embedding cache, so one vector index per strategy
+        key = ("vector", strategy)
         if key not in cache:
             cache[key] = VectorSearch(chunks, vectors)
         return cache[key]
@@ -98,9 +98,11 @@ def main() -> int:
     except (ConfigError, EmbedError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
-    OUT.mkdir(parents=True, exist_ok=True)
+    # Every run is made before any log is written, so a run that fails (a missing vector, say)
+    # leaves all the logs as they were.
     chunked: dict[str, list[Chunk]] = {}
     indexes: dict = {}
+    made = []
     for name, strategy, config in runs(setting_name(embedding)):
         if strategy not in chunked:
             chunked[strategy] = STRATEGIES[strategy](tree)
@@ -108,10 +110,12 @@ def main() -> int:
         try:
             retriever = retriever_for(config, chunks, tree, indexes, vectors)
             config = {**config, "strategy": strategy}
-            run = make_run(name, config, retriever, chunks, questions, ROOT)
-        except EmbedError as e:
-            print(f"error: {name}: {e}", file=sys.stderr)
+            made.append((name, make_run(name, config, retriever, chunks, questions, ROOT)))
+        except (EmbedError, VectorIndexError) as e:
+            print(f"error: {name}: {e}; no run log was written", file=sys.stderr)
             return 1
+    OUT.mkdir(parents=True, exist_ok=True)
+    for name, run in made:
         path = OUT / f"{name}.json"
         where = path.relative_to(ROOT)
         if path.exists() and same_results(json.loads(path.read_text(encoding="utf-8")), run):

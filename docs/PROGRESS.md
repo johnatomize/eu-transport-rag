@@ -2,7 +2,7 @@
 
 What is built and verified, as of 3 November 2026. The board holds the status of open work; past evidence is in git history and on the closed issues.
 
-Checkpoints A–E are built and reviewed by the owner; D, the keyword retrieval baseline (#31), closed with its first results table, and E, embeddings and hybrid search (#43), with the extended table. Checkpoint F, generation with citations (#60), is next.
+Checkpoints A–E are built and reviewed by the owner; D, the keyword retrieval baseline (#31), closed with its first results table, and E, embeddings and hybrid search (#43), with the extended table. Checkpoint F, generation with citations (#60), is built and has had its first paid run; its close (#67) is next.
 
 ## Built and verified
 
@@ -88,6 +88,26 @@ Checkpoints A–E are built and reviewed by the owner; D, the keyword retrieval 
 - **The check of every answer (#63):** `src/rag/validate.py` decides, without a model, whether an answer may be shown. It fails a reply that isn't in the answer format, a refusal that cites anything, an answer that cites nothing, a citation of a node that wasn't among the retrieved passages, and a quote that isn't word for word in the cited node's text; every failure is listed for the run log. Only spacing, invisible characters and the typography of quote marks and dashes are forgiven, so `'carriage by road'` matches the act's `‘carriage by road’`, but `3.5 tonnes` doesn't match `3,5 tonnes`, and a quote can't cut a number short: `shall not exceed 5` fails against `56 hours` (rules in `DECISIONS.md`). A passing citation carries the act's own text, which is what a reader is shown. Tests on hand-built answers cover each rule passing and failing, including a real quote from 561/2006 Art. 8(1) when that article wasn't retrieved and quotes one character off, and on the real corpus the text of every node the prompt shows, in all three chunkings, is what the check accepts for it. No model is called.
 - **The answer client (#64):** `make answers` shows what answering the dev questions with Claude would send and cost, and sends nothing: for each question the model, the estimated input tokens, the expected output and the most output allowed, then the totals. With Haiku 5.5, hybrid search over paragraph chunks and the top 5, the 60 dev questions come to about 128,000 input tokens, US$0.064 expected and US$0.14 at most; with Opus 5.5 US$2.57 and US$5.57 (choices in `DECISIONS.md`). `make answers RUN=1` pays, but refuses to start when the most the run could cost would take spending past the cap (counting paid embedding and answer runs not yet in the spend log), when the prices are more than a week old, or when no API key is set. Each answer is checked as it arrives, and the run log records the retrieved chunks, the raw reply, the verdict, the tokens the API counted, the cost and the time. Tests use stand-ins for Claude: without the flag no client is made, a run over the cap, without a key or with old prices doesn't start, a throttled call is tried again and then given up, a timeout is not tried again, a call that fails or an interruption stops the run and leaves a log of every reply paid for that the next cap check counts, a cut-off or refused reply fails the check, and the real SDK, pointed at a fake server, sends the answer format at the configured effort and sorts failures into ones worth retrying and the rest. No paid call has been made.
 - **Asking one question (#65):** `make ask Q="…"` runs the whole chain for a typed question: retrieval, the prompt, the model and the check. Without `RUN=1` it sends nothing: it prints the five passages found, the prompt's size and the estimated cost. For "How long may a driver drive in a week?" that is about 2,200 input tokens, US$0.0011 expected and US$0.0023 at most with Haiku 5.5, in about 7 seconds. With `RUN=1` it pays, under the same cap, price and key checks as `make answers`, and prints the answer with each source's article, version and quote, or the message for a question the documents don't answer, or "could not answer reliably" with the places found and the check's reasons. It uses hybrid search over paragraph chunks by default. A question that isn't in the question set is turned into a vector by the local embedding model, run offline on the owner's Mac (OK'd by the owner on 2026-11-03), and the vector isn't saved. Each paid question writes a log, with the question, to `runs/ask/`, which the cap check counts until the spend log names it (choices in `DECISIONS.md`). Tests use stand-ins for Claude and the embedding model, and check that without the flag nothing is called; that a question from the question set uses its cached vector; that a new question's vector is never saved; that a valid answer is shown with its sources; that an answer citing a passage that wasn't retrieved is shown as "could not answer reliably"; that a refusal is shown as a refusal; and that a question over the cap or without a key isn't sent. No paid call has been made.
+- **First paid answer run (#66):** on 3 November 2026 Claude answered the 60 dev questions twice, once with Haiku 5.5 and then with Opus 5.5, both with hybrid search over paragraph chunks, the top 5 and prompt version 7d03975820fd; the owner OK'd both after seeing the estimate. The run logs are in `runs/generation/`. Correctness is not scored here; that is G's work.
+
+  | | Haiku 5.5 | Opus 5.5 |
+  | --- | ---: | ---: |
+  | Answered, and passed the check | 39 | 42 |
+  | Said the documents don't answer | 20 | 18 |
+  | Could not answer reliably (failed the check) | 1 | 0 |
+  | Citations per answer, mean (most) | 2.5 (7) | 4.8 (10) |
+  | Output tokens per answer, mean (most) | 629 (1,772) | 476 (1,411) |
+  | Seconds per answer, mean (most) | 3.8 (10.8) | 6.2 (15.9) |
+  | Cost per answer | US$0.0006 | US$0.020 |
+  | Cost of the run | US$0.035 | US$1.23 |
+
+  - **The 10 unanswerable dev questions** were all refused by both models, with no citations, such as q003 on the size of a Swedish fine.
+  - **Seven answerable questions were refused by both models because search found none of their gold passages** (q024, q025, q029, q036, q048, q063, q064), such as "What is a 'company card'?". Given the passages they saw, refusing was right: no answer was made up. These are retrieval misses for G.
+  - **Refusals with a gold passage present:** Haiku refused three questions Opus answered. For q038 (police order to move the truck during a rest) it had the right guidance note but refused because the note predates the 2020 Mobility Package; for q061 and q062 it had one of two or three gold passages and refused the part it couldn't support. Opus refused one (q066), with one of its two gold passages found.
+  - **No answer was given without a gold passage among the retrieved ones.**
+  - **The one failed check** (Haiku, q091, two reduced weekly rests in a row abroad): five of six quotes were right, but one quoted point (b) of 561/2006 Art. 8(6) under the ID of paragraph 8(6) itself. The check refused the whole answer, as designed (the cost of citing the most specific node, in `DECISIONS.md`).
+  - **Estimate against the real counts:** the API counted 163,562 input tokens a run, 27% more than the estimate's 128,374 and within its 50% margin. Output was well under the 1,000 tokens an answer the estimate expects, and no answer reached the 4,000 limit. Nothing was throttled or retried.
+  - **The test split was not used.**
 
 ## Spend log
 
@@ -100,3 +120,5 @@ The owner upgraded the AWS project from the Free plan (US$100 of credits until 2
 | Date | Item | Cost (US$) | Total (US$) |
 | --- | --- | ---: | ---: |
 | 2026-10-27 | Project start | 0.00 | 0.00 |
+| 2026-11-03 | Dev answers with Claude Haiku 5.5, 60 questions (#66): `2026-11-03T20-59-15Z-claude-haiku-5-5.json`, 163,562 input and 37,766 output tokens | 0.0352 | 0.0352 |
+| 2026-11-03 | Dev answers with Claude Opus 5.5, 60 questions (#66): `2026-11-03T21-03-51Z-claude-opus-5-5.json`, 163,562 input and 28,603 output tokens | 1.2263 | 1.2615 |

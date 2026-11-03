@@ -11,9 +11,17 @@
 # thinking is billed as output. Haiku 5.5's prices hold for prompts up to 100,000 tokens and
 # rise above that, so no prompt may be longer than max_prompt_tokens. Before a paid run the
 # prices are read again, and a run refuses to start when they are more than a week old (#64).
+#
+# effort is how hard the model thinks before it answers (low, medium, high, xhigh, max), and
+# medium is both models' own default; set here so a change of default can't change a run.
+# max_output_tokens caps each answer, thinking included: an answer cut off there fails the
+# check, and a paid run's cap check assumes every answer uses all of it (docs/DECISIONS.md,
+# "the answer client").
 provider: anthropic
 build_model: claude-haiku-5-5
 scored_model: claude-opus-5-5
+effort: medium
+max_output_tokens: 4000
 max_prompt_tokens: 100000
 prices_read_on: 2026-11-03
 prices:

@@ -2,7 +2,7 @@
 # The db-* targets also need Docker with Compose and a running Colima VM (see CLAUDE.md).
 # Later checkpoints add targets (tables, deploy, destroy) and extend check.
 
-.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs embed-dry-run embed tables tables-check db-up db-check db-down test-db vector-index gitleaks-present docker-present
+.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs embed-dry-run embed answers tables tables-check db-up db-check db-down test-db vector-index gitleaks-present docker-present
 
 help: ## List the targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
@@ -49,6 +49,9 @@ embed-dry-run: ## Print what embedding the corpus and the questions would take (
 
 embed: ## Report which chunks and questions lack a cached vector; RUN=1 embeds them with the configured model
 	uv run --locked $(if $(RUN),--group local-embed,) python scripts/embed.py $(if $(RUN),--run,)
+
+answers: ## Show what answering the dev questions with Claude would send and cost; RUN=1 sends and pays
+	uv run --locked python scripts/answer.py $(if $(RUN),--run,) $(if $(ROLE),--role $(ROLE),) $(if $(ONLY),--only $(ONLY),)
 
 vector-index: db-up ## Load chunks and their cached vectors into local pgvector: make vector-index [STRATEGY=paragraph]
 	uv run --locked python scripts/vector_index.py $(if $(STRATEGY),--strategy $(STRATEGY),)

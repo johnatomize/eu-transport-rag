@@ -15,10 +15,13 @@ import yaml
 PROVIDERS = ("anthropic",)
 ROLES = ("build", "scored")
 PRICE_KINDS = ("input", "output", "batch_input", "batch_output")
+EFFORTS = ("low", "medium", "high", "xhigh", "max")
 _SETTINGS = {
     "provider": str,
     "build_model": str,
     "scored_model": str,
+    "effort": str,
+    "max_output_tokens": int,
     "max_prompt_tokens": int,
     "prices_read_on": dt.date,
     "prices": dict,
@@ -44,6 +47,8 @@ class GenerationConfig:
     provider: str
     build_model: str
     scored_model: str
+    effort: str
+    max_output_tokens: int
     max_prompt_tokens: int
     prices_read_on: dt.date
     prices: dict[str, Price]
@@ -91,8 +96,11 @@ def load_generation_config(path: Path) -> GenerationConfig:
     if not problems:
         if raw["provider"] not in PROVIDERS:
             problems.append(f"provider should be one of {PROVIDERS}")
-        if raw["max_prompt_tokens"] <= 0:
-            problems.append("max_prompt_tokens should be above 0")
+        if raw["effort"] not in EFFORTS:
+            problems.append(f"effort should be one of {EFFORTS}")
+        for k in ("max_output_tokens", "max_prompt_tokens"):
+            if raw[k] <= 0:
+                problems.append(f"{k} should be above 0")
         for model, entry in raw["prices"].items():
             price, found = _price(model, entry)
             problems += found

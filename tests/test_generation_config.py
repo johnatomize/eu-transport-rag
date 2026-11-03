@@ -14,6 +14,8 @@ GOOD = """\
 provider: anthropic
 build_model: claude-haiku-5-5
 scored_model: claude-opus-5-5
+effort: medium
+max_output_tokens: 4000
 max_prompt_tokens: 100000
 prices_read_on: 2026-11-03
 prices:
@@ -36,6 +38,8 @@ def test_committed_config_names_haiku_for_building_and_opus_for_scoring():
     assert config.prices["claude-opus-5-5"] == Price(4.0, 20.0, 2.0, 10.0)
     assert config.prices["claude-haiku-5-5"] == Price(0.10, 0.50, 0.05, 0.25)
     assert config.prices_read_on == dt.date(2026, 11, 3)
+    assert config.effort == "medium"
+    assert config.max_output_tokens == 4000
 
 
 def test_whole_numbers_are_read_as_prices(tmp_path):
@@ -57,7 +61,10 @@ def test_unknown_role_is_refused(tmp_path):
         ("max_prompt_tokens: 100000\n", "", "missing max_prompt_tokens"),
         ("max_prompt_tokens: 100000", "max_prompt_tokens: 0", "above 0"),
         ("prices_read_on: 2026-11-03", "prices_read_on: soon", "should be a date"),
-        ("provider: anthropic\n", "provider: anthropic\neffort: low\n", "unknown effort"),
+        ("provider: anthropic\n", "provider: anthropic\nthinking: off\n", "unknown thinking"),
+        ("effort: medium", "effort: extreme", "effort should be one of"),
+        ("max_output_tokens: 4000", "max_output_tokens: 0", "max_output_tokens should be above"),
+        ("max_output_tokens: 4000", "max_output_tokens: 4000.5", "should be int"),
         ("input: 4,", "input: true,", "input should be a number above 0"),
         ("input: 4,", "input: 0,", "input should be a number above 0"),
         ("input: 4,", "input: .nan,", "input should be a number above 0"),

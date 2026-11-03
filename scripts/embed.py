@@ -10,8 +10,8 @@ missing texts with the model in config/embedding.yaml, and only if every text ca
   versions, the token count of each input and the time taken, goes to runs/embeddings-local/.
 - **Bedrock** (provider `bedrock`) is paid, so a run also needs a price read in the last 7 days
   and an estimate, margin included, that keeps what has been spent within the approved cap.
-  What has been spent is the spend log in docs/PROGRESS.md plus any paid run whose call log in
-  runs/embeddings/ the spend log doesn't name yet. The call log holds the token count Bedrock
+  What has been spent is the spend log in docs/PROGRESS.md plus any paid run (embeddings or
+  answers) whose log the spend log doesn't name yet. The call log holds the token count Bedrock
   returned for each call, so the spend log can be checked against the bill; adding its row to
   the spend log, naming that file, stays a manual step.
 """
@@ -51,12 +51,12 @@ from rag.embed_estimate import (
 )
 from rag.parse import ParseError
 from rag.runlog import git_state
-from rag.spend import SpendLogError, read_spend_log, unlogged_runs
+from rag.spend import SpendLogError
+from rag.spend import spending as paid_runs_spending
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "config" / "embedding.yaml"
 CACHE = ROOT / "embeddings"
-SPEND_LOG = ROOT / "docs" / "PROGRESS.md"
 RUNS = ROOT / "runs" / "embeddings"  # paid Bedrock runs; the spend log names each file
 LOCAL_RUNS = ROOT / "runs" / "embeddings-local"  # free local runs, outside the spend log
 PROFILE = "eu-transport-rag"
@@ -176,14 +176,11 @@ def main() -> int:
 
 def spending() -> tuple[float, float]:
     """What has been spent, the spend log plus paid runs it doesn't name yet, and the cap."""
-    log_text = SPEND_LOG.read_text(encoding="utf-8")
-    spend = read_spend_log(log_text)
-    pending = unlogged_runs(log_text, RUNS)
-    spent = spend.spent_usd + sum(cost for _, cost in pending)
-    print(f"Spent so far US${spent:.5f} of the approved cap of US${spend.cap_usd:.2f}.")
-    for name, cost in pending:
-        print(f"  including US${cost:.5f} from runs/embeddings/{name}, not in the spend log yet")
-    return spent, spend.cap_usd
+    spent = paid_runs_spending(ROOT)
+    print(f"Spent so far US${spent.spent_usd:.5f} of the approved cap of US${spent.cap_usd:.2f}.")
+    for name, cost in spent.pending:
+        print(f"  including US${cost:.5f} from {name}, not in the spend log yet")
+    return spent.spent_usd, spent.cap_usd
 
 
 def paid_holds(p: Plan, config: EmbeddingConfig, spent: float, cap: float) -> list[str]:

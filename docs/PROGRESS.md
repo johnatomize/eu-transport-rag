@@ -2,7 +2,7 @@
 
 What is built and verified, as of 3 November 2026. The board holds the status of open work; past evidence is in git history and on the closed issues.
 
-Checkpoints A–E are built and reviewed by the owner; D, the keyword retrieval baseline (#31), closed with its first results table, and E, embeddings and hybrid search (#43), with the extended table. Checkpoint F, generation with citations (#60), is built and has had its first paid run; its close (#67) is next.
+Checkpoints A–E are built and reviewed by the owner; D, the keyword retrieval baseline (#31), closed with its first results table, and E, embeddings and hybrid search (#43), with the extended table. Checkpoint F, generation with citations (#60), is built and has had its first paid run; its exit gate is met apart from the owner's review of its learning notes (#67). Checkpoint G, answer evaluation, is next.
 
 ## Built and verified
 

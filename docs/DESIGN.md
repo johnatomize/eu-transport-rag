@@ -120,11 +120,11 @@ The Commission site rate-limits scripted downloads (HTTP 429 after about six PDF
 - `src/rag/retrieval_eval.py`: recall@k, MRR and nDCG against the gold node IDs, with intervals (Wilson for recall, bootstrap for the others) from stats code written in this repo; scoring rules in `DECISIONS.md`.
 - First results table: BM25 × three chunking strategies, dev split, reported separately for paraphrased and verbatim questions.
 
-### E. Embeddings, vector search, hybrid (~4–5 h, first paid step, gated)
+### E. Embeddings, vector search, hybrid (~4–5 h, gated)
 - **Before this step:** a dry-run prints the token count of the whole corpus and the question set, and the estimated cost at that day's Bedrock embedding prices. The owner sets up a personal AWS account, approves a spending cap (proposed: US$20 for the whole project), and an AWS budget alarm is set before the first paid call. F and I reuse the account.
-- Embeddings via **AWS Bedrock**: Amazon Titan Text Embeddings V2 (decided 2026-10-31, reasons in `DECISIONS.md`; Cohere Embed Multilingual is reconsidered if the bilingual extension is taken up). Model availability in the chosen EU region is checked and recorded.
-  - A small local embedding model stays possible later as an extra row in the table; it counts as a local model run, so it needs the owner's OK first.
-- Embeddings are cached on disk by `sha256(model + text)`, so re-running the evaluation doesn't pay again.
+- Embeddings from **Qwen3-Embedding 0.6B**, an open model run on the owner's Mac, pinned to one revision (decided 2026-11-03, reasons in `DECISIONS.md`). It replaces Amazon Titan Text Embeddings V2 on Bedrock, chosen on 2026-10-31, because the project's Bedrock limit for Titan is 0. Running it is a local model run, so it needs the owner's OK first; it costs nothing.
+  - Titan V2 stays possible as an extra row in the table if AWS raises the limit.
+- Embeddings are cached on disk by `sha256(model + revision + text)`, so re-running the evaluation doesn't run the model (or pay) again.
 - pgvector in Docker Compose. The corpus is small, so search is **exact** (no approximate index), which makes local and deployed results identical.
 - Hybrid search: BM25 + vector results merged with reciprocal rank fusion (RRF).
 - Results table extended: BM25 vs vector vs hybrid, × chunking, × with/without cross-reference expansion.

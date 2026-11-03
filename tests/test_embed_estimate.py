@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 READ_ON = dt.date(2026, 10, 31)
 
 CONFIG = EmbeddingConfig(
+    provider="bedrock",
     model_id="amazon.titan-embed-text-v2:0",
     region="eu-north-1",
     dimensions=1024,
@@ -27,7 +28,8 @@ CONFIG = EmbeddingConfig(
     price_read_on=READ_ON,
 )
 GOOD = (
-    "model_id: m\nregion: r\ndimensions: 1024\nnormalize: true\nmax_input_tokens: 8192\n"
+    "provider: bedrock\nmodel_id: m\nregion: r\n"
+    "dimensions: 1024\nnormalize: true\nmax_input_tokens: 8192\n"
     "price_usd_per_million_input_tokens: 0.021\nprice_read_on: 2026-10-31\n"
 )
 
@@ -38,11 +40,65 @@ def write(tmp_path, text):
     return path
 
 
-def test_the_committed_config_loads():
+LOCAL_GOOD = (
+    "provider: local\nmodel_id: Qwen/Qwen3-Embedding-0.6B\nrevision: " + "a" * 40 + "\n"
+    "device: mps\n"
+    "dimensions: 1024\nnormalize: true\nmax_input_tokens: 8192\n"
+    'query_prefix: "Instruct: find it\\nQuery:"\n'
+)
+
+
+def test_the_committed_config_is_qwen_run_locally_at_a_pinned_revision():
     config = load_config(ROOT / "config" / "embedding.yaml")
-    assert config.model_id == "amazon.titan-embed-text-v2:0"
-    assert config.region == "eu-north-1"
-    assert config.price_read_on == READ_ON
+    assert config.provider == "local" and not config.paid
+    assert config.model_id == "Qwen/Qwen3-Embedding-0.6B"
+    assert config.revision == "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3"
+    assert config.device == "mps"
+    assert config.query_prefix.startswith("Instruct: ")
+    assert config.query_prefix.endswith("\nQuery:")
+    assert cost_usd(1_000_000, config) == 0
+
+
+def test_a_local_config_loads_and_costs_nothing(tmp_path):
+    config = load_config(write(tmp_path, LOCAL_GOOD))
+    assert config.query_prefix == "Instruct: find it\nQuery:"
+    assert config.region is None and config.price_read_on is None
+    assert cost_usd(1_000_000, config) == 0
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "problem"),
+    [
+        ("revision: " + "a" * 40, "revision: main", "revision should be a full 40-character"),
+        ("dimensions: 1024", "dimensions: 0", "dimensions should be above 0"),
+        ("device: mps", "device: gpu", "device should be one of"),
+        ("provider: local", "provider: openai", "provider should be one of"),
+        (
+            "max_input_tokens: 8192\n",
+            "max_input_tokens: 8192\nregion: eu-north-1\n",
+            "region is not a setting of a local model",
+        ),
+        ('query_prefix: "Instruct: find it\\nQuery:"\n', "", "missing query_prefix"),
+    ],
+)
+def test_impossible_local_settings_are_refused(tmp_path, old, new, problem):
+    with pytest.raises(ConfigError, match=problem):
+        load_config(write(tmp_path, LOCAL_GOOD.replace(old, new)))
+
+
+def test_the_local_report_names_the_revision_and_no_price(tmp_path):
+    config = load_config(write(tmp_path, LOCAL_GOOD))
+    lines, fits = report({"questions": ["What?"]}, config, READ_ON + dt.timedelta(days=300))
+    text = "\n".join(lines)
+    assert fits
+    assert f"at revision {'a' * 40}" in text and "costs nothing" in text
+    assert "per million" not in text and "warning" not in text
+    assert "cost" not in lines[0] and "costs nothing" in text
+
+
+def test_a_bedrock_config_takes_no_query_prefix(tmp_path):
+    with pytest.raises(ConfigError, match="query_prefix is not a setting of a bedrock model"):
+        load_config(write(tmp_path, GOOD + 'query_prefix: "Instruct: x"\n'))
 
 
 def test_a_config_with_a_missing_unknown_or_mistyped_key_is_refused(tmp_path):

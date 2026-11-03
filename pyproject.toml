@@ -17,6 +17,13 @@ dev = [
     "pytest>=9.1",
     "ruff>=0.17",
 ]
+# The local embedding model's libraries (`make embed RUN=1`). Not installed by `make install`, so
+# `make check` and CI stay light: they read cached vectors and never run the model.
+local-embed = [
+    "sentence-transformers>=5",
+    "torch>=2.8",
+    "transformers>=4.51",
+]
 
 [build-system]
 requires = ["uv_build>=0.13,<0.14"]

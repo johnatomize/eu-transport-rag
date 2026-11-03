@@ -1,21 +1,30 @@
-"""Vectors for chunks and questions, from Titan Text Embeddings V2, cached on disk (design §E).
+"""Vectors for chunks and questions, from the model in `config/embedding.yaml`, cached on disk.
 
-Every vector Bedrock returns is kept in the cache, so the same text is never paid for twice, and
-the cache is committed (decided by the owner on 2026-10-31), so the tables and CI's quality gate
-can use the vectors without AWS. One file per model setting, under `embeddings/`:
+Design §E. Since 2026-11-03 the model is Qwen3-Embedding 0.6B, run on this machine by
+`LocalClient`; Titan Text Embeddings V2 on Bedrock, through `BedrockClient`, stays possible
+should AWS raise its limit above zero.
 
-    embeddings/amazon.titan-embed-text-v2_0-1024-normalized.jsonl
+Every vector a model returns is kept in the cache, so the same text is never embedded (or paid
+for) twice, and the cache is committed (decided by the owner on 2026-10-31), so the tables and
+CI's quality gate can use the vectors without the model. One file per model setting, under
+`embeddings/`:
+
+    embeddings/Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized.jsonl
     {"key": "<sha256>", "tokens": 37, "vector": "<base64 of 1024 little-endian float32>"}
 
-- The key is the sha256 of the model ID, the vector size, the normalisation and the text, so a
-  change to any of them misses the cache instead of returning a stale vector.
+- The key is the sha256 of the model ID, the vector size, the normalisation and the text the
+  model was given, and for a local model also its revision and the device it runs on (the GPU
+  and the CPU round differently), so a change to any of them misses the cache instead of
+  returning a stale vector. A question's text includes the query prefix (`query_input`). The
+  file name carries the revision and the device too, so a new one starts a new file.
 - Lines are sorted by key and the file is rewritten whole, through a temporary file, so the same
   vectors always give the same file, and an interrupted write never leaves half a line.
-- `tokens` is the count Bedrock returned when the vector was paid for.
-- Vectors are stored as float32, the precision Titan computes in, as base64: about 5.5 KB a
-  vector, against about 20 KB as JSON numbers.
+- `tokens` is the count the model reported: Bedrock's billed count, or the local tokenizer's.
+- Vectors are stored as float32, the precision both models compute in here, as base64: about
+  5.5 KB a vector, against about 20 KB as JSON numbers.
 
-Nothing here calls AWS unless it is handed a client; `BedrockClient` is the only one that does.
+Nothing here runs a model unless it is handed a client: `BedrockClient` calls AWS and costs
+money, and `LocalClient` loads the model's files, downloading them on its first use.
 """
 
 import array
@@ -38,10 +47,11 @@ from rag.embed_estimate import (
     cost_usd,
     estimate_tokens,
     input_problems,
+    query_input,
 )
 
 MAX_ATTEMPTS = 6  # per call, the first try included; botocore backs off between them
-SAVE_EVERY = 50  # new vectors between cache writes during a paid run
+SAVE_EVERY = 50  # new vectors between cache writes during a run
 _KEY = re.compile(r"[0-9a-f]{64}")
 
 
@@ -54,7 +64,7 @@ class OverCapError(EmbedError):
 
 
 class MissingVectorsError(EmbedError):
-    """Texts with no cached vector, where the caller may not pay for new ones."""
+    """Texts with no cached vector, where the caller may not run the model for new ones."""
 
 
 def cache_key(text: str, config: EmbeddingConfig) -> str:
@@ -64,14 +74,23 @@ def cache_key(text: str, config: EmbeddingConfig) -> str:
         "normalize": config.normalize,
         "text": text,
     }
+    # Only a local model has these; leaving them out otherwise keeps Titan's keys as they were.
+    if config.revision is not None:
+        record["revision"] = config.revision
+    if config.device is not None:
+        record["device"] = config.device
     return hashlib.sha256(json.dumps(record, sort_keys=True).encode()).hexdigest()
 
 
 def setting_name(config: EmbeddingConfig) -> str:
     """The model setting as a name: the cache file's stem, and the vector index's `model`."""
-    model = config.model_id.replace(":", "_").replace("/", "_")
-    norm = "-normalized" if config.normalize else ""
-    return f"{model}-{config.dimensions}{norm}"
+    parts = [config.model_id.replace(":", "_").replace("/", "_")]
+    if config.revision is not None:  # a new revision starts a new file, not a mixed one
+        parts.append(config.revision[:12])
+    if config.device is not None:
+        parts.append(config.device)
+    parts.append(f"{config.dimensions}{'-normalized' if config.normalize else ''}")
+    return "-".join(parts)
 
 
 def cache_path(directory: Path, config: EmbeddingConfig) -> Path:
@@ -172,8 +191,94 @@ class EmbeddingCache:
 
 class EmbeddingClient(Protocol):
     def embed(self, text: str) -> tuple[list[float], int]:
-        """The vector for `text` and the input tokens it was billed for. Raises on failure."""
+        """The vector for `text` and its input tokens (billed, for Bedrock). Raises on failure."""
         ...
+
+
+class LocalClient:
+    """An open embedding model run on this machine with sentence-transformers. Costs nothing.
+
+    `load` reads the model's files at the configured revision from the Hugging Face cache
+    (`~/.cache/huggingface`), downloading them on first use, and runs the model in float32 on the
+    configured device: `mps` is the Mac's GPU, and a machine without one is refused rather than
+    quietly falling back to the CPU, whose vectors differ in their last digits. Texts go in one
+    at a time, so a text's vector never depends on what it was batched with.
+
+    Three things would quietly spoil a vector, so `embed` refuses them instead:
+
+    - Input over `max_input_tokens`: sentence-transformers would cut it short without saying so.
+    - Input the library changes on its way to the model, such as wrapping it in a chat template:
+      the tokens the model is given must be the tokenized text, nothing more.
+    - Input that doesn't end with the end-of-text token. Qwen3-Embedding reads its vector off the
+      last token (last-token pooling), and was trained with that token there; the tokenizer
+      appends it, and this checks that it did.
+
+    The model then runs on exactly the tokens that were checked (`run`), not on a second
+    tokenization of the text.
+    """
+
+    def __init__(
+        self,
+        config: EmbeddingConfig,
+        model,
+        end_token_id: int,
+        run: Callable[[dict], Sequence[float]],
+    ):
+        self.config = config
+        self.device = config.device
+        self._model = model
+        self._end = end_token_id
+        self._run = run
+
+    @classmethod
+    def load(cls, config: EmbeddingConfig) -> "LocalClient":
+        import torch  # here, so that nothing without a local model needs torch to start
+        from sentence_transformers import SentenceTransformer
+        from sentence_transformers.util import batch_to_device
+
+        if config.device == "mps" and not torch.backends.mps.is_available():
+            raise EmbedError("config/embedding.yaml says device: mps, but this machine has no MPS")
+        model = SentenceTransformer(config.model_id, revision=config.revision, device=config.device)
+        model.to(torch.float32)
+        model.eval()
+        model.max_seq_length = config.max_input_tokens
+        normalises = any(type(module).__name__ == "Normalize" for module in model)
+        if normalises != config.normalize:
+            raise EmbedError(
+                f"{config.model_id} {'does' if normalises else 'does not'} normalise its vectors, "
+                f"but config/embedding.yaml says normalize: {str(config.normalize).lower()}"
+            )
+        end = model[0].auto_model.config.eos_token_id
+        if not isinstance(end, int):
+            raise EmbedError(f"{config.model_id} names no single end-of-text token: {end!r}")
+
+        def run(features: dict) -> list[float]:
+            with torch.inference_mode():
+                out = model(batch_to_device(features, model.device))
+            return out["sentence_embedding"][0].float().cpu().tolist()
+
+        return cls(config, model, end, run)
+
+    def embed(self, text: str) -> tuple[list[float], int]:
+        ids = list(self._model.tokenizer(text)["input_ids"])
+        if len(ids) > self.config.max_input_tokens:
+            raise EmbedError(
+                f"an input of {len(ids):,} tokens is over the limit of "
+                f"{self.config.max_input_tokens:,}; it would be cut short, so it is refused"
+            )
+        features = self._model.preprocess([text])
+        fed = features["input_ids"].tolist()
+        if fed != [ids]:
+            raise EmbedError(
+                "sentence-transformers would give the model other tokens than the tokenized text "
+                f"({len(fed[0]) if fed else 0} against {len(ids)}); check the library version"
+            )
+        if not ids or ids[-1] != self._end:
+            raise EmbedError(
+                "the tokenizer did not end the input with the end-of-text token the model reads "
+                "its vector from; check the model revision's tokenizer"
+            )
+        return [float(v) for v in self._run(features)], len(ids)
 
 
 class BedrockClient:
@@ -223,12 +328,12 @@ class BedrockClient:
         return vector, tokens
 
 
-# --- Planning and paying -------------------------------------------------------------------
+# --- Planning and running ------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class Plan:
-    """What embedding some texts would send to Bedrock, given what is already cached."""
+    """What embedding some texts would send to the model, given what is already cached."""
 
     distinct: int
     cached: int
@@ -266,7 +371,7 @@ def plan(texts: Iterable[str], cache: EmbeddingCache) -> Plan:
 
 
 def check_inputs(p: Plan) -> list[str]:
-    """Why the missing texts can't be sent, if they can't: Bedrock refuses empty or long input."""
+    """Why the missing texts can't be embedded, if they can't: empty or possibly too long."""
     return input_problems(batch("texts to send", p.missing), p.config)
 
 
@@ -280,8 +385,9 @@ def check_cap(p: Plan, spent_usd: float, cap_usd: float) -> None:
 
 
 @dataclass
-class Paid:
-    """What a paid run sent, call by call, for the run log and the spend log."""
+class RunResult:
+    """What a run sent to the model, call by call, for the run log (and, for Bedrock, the
+    spend log)."""
 
     calls: list[dict] = field(default_factory=list)  # {"key": …, "tokens": …}, in call order
     error: str | None = None
@@ -291,38 +397,39 @@ class Paid:
         return sum(c["tokens"] for c in self.calls)
 
 
-def pay(
+def embed_missing(
     p: Plan,
     cache: EmbeddingCache,
     client: EmbeddingClient,
     progress: Callable[[int, int], None] | None = None,
-) -> Paid:
+) -> RunResult:
     """Send every missing text of plan `p` to `client` and cache what comes back.
 
     The cache is written every `SAVE_EVERY` vectors and once more at the end, also when a call
-    fails or the run is interrupted, so what was paid for is kept. A failed call caches nothing
-    for its text and stops the run. Every call Bedrock answered is in the result, with its tokens,
-    even when its vector was refused; so is the error, and the caller decides what to do about it.
+    fails or the run is interrupted, so what was embedded (and paid for) is kept. A failed call
+    caches nothing for its text and stops the run. Every call the model answered is in the
+    result, with its tokens, even when its vector was refused; so is the error, and the caller
+    decides what to do about it.
     """
-    paid = Paid()
+    result = RunResult()
     try:
         for done, text in enumerate(p.missing, 1):
             vector, tokens = client.embed(text)
-            # Billed from here on, so logged before anything can refuse the vector.
-            paid.calls.append({"key": cache_key(text, cache.config), "tokens": tokens})
+            # Answered (and on Bedrock billed) from here on: logged before anything can refuse it.
+            result.calls.append({"key": cache_key(text, cache.config), "tokens": tokens})
             cache.put(text, vector, tokens)
             if done % SAVE_EVERY == 0:
                 cache.save()
             if progress:
                 progress(done, len(p.missing))
-    except (Exception, KeyboardInterrupt) as e:  # keep what was paid for, report the rest
-        paid.error = f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
+    except (Exception, KeyboardInterrupt) as e:  # keep what was embedded, report the rest
+        result.error = f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
     try:
         cache.save()
     except OSError as e:
         failed = f"the cache could not be written ({e})"
-        paid.error = f"{paid.error}; {failed}" if paid.error else failed
-    return paid
+        result.error = f"{result.error}; {failed}" if result.error else failed
+    return result
 
 
 def vectors(texts: Sequence[str], cache: EmbeddingCache) -> list[tuple[float, ...]]:
@@ -336,15 +443,16 @@ def vectors(texts: Sequence[str], cache: EmbeddingCache) -> list[tuple[float, ..
     if missing:
         raise MissingVectorsError(
             f"{missing} of {len(texts)} texts have no cached vector for {cache.config.model_id}; "
-            "run `make embed` to see what sending them would cost"
+            "run `make embed` to see what embedding them would take"
         )
     return [e.vector for e in entries if e is not None]
 
 
-def corpus_texts(root: Path) -> dict[str, list[str]]:
+def corpus_texts(root: Path, config: EmbeddingConfig) -> dict[str, list[str]]:
     """Every text E embeds, by batch name: each chunking's chunks, and the questions of both splits.
 
-    G embeds the test questions too, and embedding a question is not scoring it.
+    Questions are given as the model sees them, after the query prefix (`query_input`). G embeds
+    the test questions too, and embedding a question is not scoring it.
     """
     from rag.chunk import STRATEGIES
     from rag.corpus import load_manifest
@@ -357,5 +465,5 @@ def corpus_texts(root: Path) -> dict[str, list[str]]:
     if errors:
         raise EmbedError(f"{questions_file.name} is not valid; run `make questions`")
     texts = {f"chunks: {name}": [c.text for c in chunk(tree)] for name, chunk in STRATEGIES.items()}
-    texts["questions"] = [q.question for q in questions]
+    texts["questions"] = [query_input(q.question, config) for q in questions]
     return texts

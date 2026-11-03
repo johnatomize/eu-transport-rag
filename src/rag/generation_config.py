@@ -6,6 +6,7 @@ answers" in docs/DECISIONS.md.
 """
 
 import datetime as dt
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -61,7 +62,8 @@ def _price(model: str, raw: object) -> tuple[Price | None, list[str]]:
     problems += [f"prices of {model}: unknown {k}" for k in raw if k not in PRICE_KINDS]
     for k in PRICE_KINDS:
         # `type`, not isinstance: a YAML `true` must not become 1.0.
-        if k in raw and (type(raw[k]) not in (int, float) or raw[k] <= 0):
+        number = k in raw and type(raw[k]) in (int, float) and math.isfinite(raw[k])
+        if k in raw and (not number or raw[k] <= 0):
             problems.append(f"prices of {model}: {k} should be a number above 0")
     if problems:
         return None, problems

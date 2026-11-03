@@ -60,6 +60,8 @@ def test_unknown_role_is_refused(tmp_path):
         ("provider: anthropic\n", "provider: anthropic\neffort: low\n", "unknown effort"),
         ("input: 4,", "input: true,", "input should be a number above 0"),
         ("input: 4,", "input: 0,", "input should be a number above 0"),
+        ("input: 4,", "input: .nan,", "input should be a number above 0"),
+        ("input: 4,", "input: .inf,", "input should be a number above 0"),
         ("batch_output: 10}", "batch_output: 10, cache: 1}", "unknown cache"),
         (", batch_output: 10}", "}", "missing batch_output"),
     ],

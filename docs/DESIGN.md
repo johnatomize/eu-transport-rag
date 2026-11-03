@@ -121,7 +121,7 @@ The Commission site rate-limits scripted downloads (HTTP 429 after about six PDF
 - First results table: BM25 × three chunking strategies, dev split, reported separately for paraphrased and verbatim questions.
 
 ### E. Embeddings, vector search, hybrid (~4–5 h, gated)
-- **Before this step:** a dry-run prints the token count of the whole corpus and the question set, and the estimated cost at that day's Bedrock embedding prices. The owner sets up a personal AWS account, approves a spending cap (proposed: US$20 for the whole project), and an AWS budget alarm is set before the first paid call. F and I reuse the account.
+- **Before this step:** a dry-run prints the token count of the whole corpus and the question set, and the estimated cost at that day's Bedrock embedding prices. The owner sets up a personal AWS account, approves a spending cap (proposed: US$20 for the whole project), and an AWS budget alarm is set before the first paid call. I reuses the account.
 - Embeddings from **Qwen3-Embedding 0.6B**, an open model run on the owner's Mac, pinned to one revision (decided 2026-11-03, reasons in `DECISIONS.md`). It replaces Amazon Titan Text Embeddings V2 on Bedrock, chosen on 2026-10-31, because the project's Bedrock limit for Titan is 0. Running it is a local model run, so it needs the owner's OK first; it costs nothing.
   - Titan V2 stays possible as an extra row in the table if AWS raises the limit.
 - Embeddings are cached on disk by `sha256(model + revision + text)`, so re-running the evaluation doesn't run the model (or pay) again.
@@ -130,7 +130,7 @@ The Commission site rate-limits scripted downloads (HTTP 429 after about six PDF
 - Results table extended: BM25 vs vector vs hybrid, × chunking, × with/without cross-reference expansion.
 
 ### F. Generation with citations and refusal (~3–4 h, paid, within the cap)
-- Claude on Bedrock (the model ID and EU cross-region inference profile are recorded in `DECISIONS.md`).
+- Claude through Anthropic's own API, paid from the owner's Anthropic account (decided 2026-11-03; the model, its price and the reasons are in `DECISIONS.md`). Bedrock was the first plan, but the project's Bedrock limit for Anthropic models is 0. The spend counts against the same cap, and paid runs are checked against it as in E.
 - The prompt gives the retrieved chunks with their node IDs, tells the model to treat document text as data rather than instructions, and asks for structured output: `{answerable, answer, citations[{node_id, quote}]}`.
 - `src/rag/validate.py` checks every answer deterministically:
   - cited IDs must be among the retrieved chunks;
@@ -164,7 +164,7 @@ The Commission site rate-limits scripted downloads (HTTP 429 after about six PDF
 - **AWS CDK in Python** defines everything:
   - ECR for the image;
   - the service on **Lambda (container image)**, compared in `DECISIONS.md` with ECS Fargate;
-  - an IAM role allowed to call only the specific Bedrock models;
+  - the Anthropic API key stored as an AWS secret that only the service's own role can read;
   - CloudWatch logs with short retention.
 - **Where the index lives is decided in `DECISIONS.md`.** Recommended: an index file built in CI, stored in S3 and loaded into memory, which is cheap and enough for this corpus. The alternatives, RDS with pgvector, or Bedrock Knowledge Bases with OpenSearch Serverless, are realistic at scale but cost money even when idle. Their prices are checked on the day and the trade-off is written down. Retrieval sits behind one interface, and a test checks that the in-memory and pgvector backends return identical rankings.
 - `make deploy` and `make destroy`. Leaving nothing running is part of the checklist.

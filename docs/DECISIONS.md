@@ -2,6 +2,16 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-03: answers come from Claude through Anthropic's API, not Bedrock
+
+**Decision** (#61; answered by the owner in a working session): F and G send their prompts to Claude through Anthropic's own API, with an API key from the owner's Anthropic account, instead of through Bedrock's EU cross-region inference profile (decision of 2026-10-31 below). The model is chosen separately, in #61.
+
+- **Why:** the owner found the project's Bedrock quota for Anthropic models at 0 on 2026-11-03, the same block E hit with Titan, which AWS would not raise without a usage history. The API works with the owner's key at once. Its standard limits for the lowest paid tier are 4,000 requests, 2,000,000 input tokens and 400,000 output tokens a minute for each of Opus 5.5, Sonnet 5.5 and Haiku 5.5 (Anthropic's rate-limit page, read 2026-11-03), far above what 60 questions need. A new account may start lower, in an evaluation tier; the account's own limits are on the Console's Limits page.
+- **Spending:** the owner's Anthropic account holds about US$100 of promotional credits. As with AWS's credits, each cost is logged at list price and counts against the project cap of US$20, whichever pays. The AWS budget emails can't see this spend, so the owner sets a spend limit on the Console's Billing page before the first paid answer. A paid run is held to the cap by the same dry-run, cap and price-age checks as the embedding client.
+- **Where questions are processed:** the API routes requests globally by default, and the only pin it offers is US-only (`inference_geo: "us"`, at 1.1 times the price); there is no EU-only option, which Bedrock's EU profile gave. The corpus and the evaluation questions are public, so nothing personal leaves the EU now. It matters for the deployed service (I), where people may type personal details into a question, and is weighed when I is planned.
+- **Deployment (I):** the service holds the key as an AWS secret that only its own role can read, instead of an IAM permission on Bedrock models. GitHub still reaches AWS through OIDC; the Anthropic key is the project's one long-lived secret, kept in `.env` locally.
+- **Bedrock stays possible:** the answer client gets a `provider` setting like the embedding client's, so Claude on Bedrock can come back if AWS raises the quota.
+
 ## 2026-11-03: the secret scan allows SHA-256 cache keys in the embedding files, and nothing else
 
 **Decision** (#50): `.gitleaks.toml` keeps every default gitleaks rule and adds one exception. In `embeddings/*.jsonl` and `runs/embeddings*/*.json`, a value of 16 to 64 lowercase hex digits and nothing else is not reported by the `generic-api-key` rule. A key is 64 digits; `gitleaks dir` reads a large file in pieces, and a key cut at a piece's edge reaches the rule shorter.

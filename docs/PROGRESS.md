@@ -1,8 +1,8 @@
 # Progress
 
-What is built and verified, as of 1 November 2026. The board holds the status of open work; past evidence is in git history and on the closed issues.
+What is built and verified, as of 3 November 2026. The board holds the status of open work; past evidence is in git history and on the closed issues.
 
-Checkpoints A–D are built and reviewed by the owner; D, the keyword retrieval baseline (#31), closed with its first results table. Checkpoint E, embeddings and hybrid search, is next.
+Checkpoints A–D are built and reviewed by the owner; D, the keyword retrieval baseline (#31), closed with its first results table. Checkpoint E, embeddings and hybrid search (#43), is built; its exit gate is met apart from the owner's review of its learning notes (#51). Checkpoint F, generation with citations, is next.
 
 ## Built and verified
 
@@ -77,6 +77,10 @@ Checkpoints A–D are built and reviewed by the owner; D, the keyword retrieval 
   - **Keywords still matter for version traps.** Vector search alone finds 0.88, 0.75 and 0.62 of them against BM25's 1.00, 1.00 and 0.75, because an act's number and year are exact words. Hybrid search keeps BM25's 1.00 with article and paragraph chunks, which is why it is ahead overall.
   - **Expansion is still noise overall**, as with BM25: between −2 and +3 questions. It helps vector search with article chunks most (0.72 → 0.78, recall@10 0.80 → 0.88). Cross-act questions stay at 0.00–0.33 for every run.
   - **Five of the six questions every BM25 run missed are now found in the top 10 by at least one run.** q023 ("What is a 'break'…?") is in the top 5 of every vector run and first with paragraph chunks and windows. q051 (the empty truck to the car wash) is found by expansion with all three methods. q050 (a Swedish company's responsibility for a breach in Germany) is in the top 5 only with vector search over windows. q066 (who trains drivers on the tachograph) is found only by vector search over articles with expansion, and q062 (56 hours with loading work) only reaches the top 10, with hybrid search over articles. q048, "I also work evenings in a warehouse for another company. Do I have to put that on my tachograph?", is missed by every run: neither method connects a warehouse job with the act's "other work".
+  - **A paired count is sharper than the intervals.** On the questions where hybrid and BM25 over paragraph chunks disagree at recall@5, hybrid wins 8 and loses 0. If neither method were better, a split that lopsided would happen with a probability of 0.008 (a two-sided sign test). With article chunks it is 4 to 1 (0.38) and with windows 5 to 2 (0.45). Nine such comparisons were looked at, all on the dev split, so this is a strong hint for G to test, not a result.
+  - **At an equal budget of words, hybrid search over paragraph chunks finds the most.** Taking chunks in rank order until 1,000 words of chunk text (headings included) are used, hybrid search over paragraph chunks has all the evidence for 37 of the 50 questions, vector search 36, BM25 32; BM25 over article chunks has 20. It leads at 500 and 1,500 words too; at 3,000 words the runs find between 34 and 40.
+  - **Similarity doesn't separate unanswerable questions.** The best paragraph chunk scores a cosine of 0.51–0.66 for the 10 unanswerable dev questions and 0.58–0.89 for the 50 answerable ones (mean 0.76). q029, "What is a 'company card'?", has a best score of 0.58, below six of the unanswerable questions, so no threshold on similarity can decide that a question has no answer. That stays with F's model and its checked citations.
+  - **pgvector gives the same rankings as the run logs.** With the real vectors loaded by `make vector-index`, exact search in the local database returned the same top 50 chunks, in the same order, as the in-memory search the run logs were made with, for all 60 dev questions and all three chunkings; scores differ by less than 1e-6. `make test-db` passes.
   - **Baseline for J's quality gate:** `results/baseline.json` now holds recall@5 for all 18 runs; the BM25 values are unchanged.
   - The secret scan read the cache's SHA-256 keys as API keys; `.gitleaks.toml` now allows exactly those (reasons in `DECISIONS.md`). The test split has not been used.
 

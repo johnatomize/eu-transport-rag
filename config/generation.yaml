@@ -1,0 +1,29 @@
+# The Claude models that write answers in checkpoints F and G, through Anthropic's API with the
+# owner's key (docs/DECISIONS.md, "answers come from Claude through Anthropic's API" and "Haiku
+# 5.5 while building, Opus 5.5 for scored answers").
+#
+# build_model answers while F is built and debugged, when many cheap runs are useful.
+# scored_model writes every answer that G scores, and is the model the results table reports.
+#
+# Prices are US$ per million tokens from Anthropic's pricing page
+# (https://platform.claude.com/docs/en/about-claude/pricing), read on prices_read_on. The batch
+# prices are for the Message Batches API, which answers within hours at half price. The model's
+# thinking is billed as output. Haiku 5.5's prices hold for prompts up to 100,000 tokens and
+# rise above that, so no prompt may be longer than max_prompt_tokens. Before a paid run the
+# prices are read again, and a run refuses to start when they are more than a week old (#64).
+provider: anthropic
+build_model: claude-haiku-5-5
+scored_model: claude-opus-5-5
+max_prompt_tokens: 100000
+prices_read_on: 2026-11-03
+prices:
+  claude-haiku-5-5:
+    input: 0.10
+    output: 0.50
+    batch_input: 0.05
+    batch_output: 0.25
+  claude-opus-5-5:
+    input: 4.00
+    output: 20.00
+    batch_input: 2.00
+    batch_output: 10.00

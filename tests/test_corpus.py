@@ -342,6 +342,18 @@ def pin_in_memory(doc):
         ("published: 2007-12-18", "published: 2007-12-18 10:00:00", "published must be"),
         ("published_source: pdf", "published_source: website", "published_source must be"),
         ("published_source: pdf", "published_source: [pdf]", "published_source must be"),
+        ("celex: 02006R0561-20241231\n", "celex: 32006R0561\n", "needs adopted"),
+        ("celex: 02006R0561-20241231\n", "celex: 32006R0561\n    adopted: 2006\n", "adopted must"),
+        (
+            "celex: 02006R0561-20241231\n",
+            "celex: 02006R0561-20241231\n    adopted: 2006-03-15\n",
+            "only an act pinned to its original text",
+        ),
+        (
+            "published_source: pdf\n",
+            "published_source: pdf\n    adopted: 2007-12-18\n",
+            "only an act pinned to its original text",
+        ),
     ],
 )
 def test_manifest_validation(old, new, error):

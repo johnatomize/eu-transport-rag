@@ -98,21 +98,21 @@ Placed by references is the share of the top 5 places held by a chunk that cross
 
 | Run | Retriever | Strategy | Chunks | Depth | Placed by references | Commit |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
-| bm25-article | bm25 (k1 1.5, b 0.75) | article | 133 | 50 | – | a4c1a85 |
-| bm25-article-refs | bm25 (k1 1.5, b 0.75, expansion references) | article | 133 | 50 | 48% | a4c1a85 |
-| bm25-paragraph | bm25 (k1 1.5, b 0.75) | paragraph | 412 | 50 | – | a4c1a85 |
-| bm25-paragraph-refs | bm25 (k1 1.5, b 0.75, expansion references) | paragraph | 412 | 50 | 32% | a4c1a85 |
-| bm25-window-200-50 | bm25 (k1 1.5, b 0.75) | window-200-50 | 246 | 50 | – | a4c1a85 |
-| bm25-window-200-50-refs | bm25 (k1 1.5, b 0.75, expansion references) | window-200-50 | 246 | 50 | 46% | a4c1a85 |
-| hybrid-article | hybrid (k1 1.5, b 0.75, model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, rrf_k 60, rrf_depth 50) | article | 133 | 50 | – | 724d688 |
-| hybrid-article-refs | hybrid (k1 1.5, b 0.75, model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, rrf_k 60, rrf_depth 50, expansion references) | article | 133 | 50 | 48% | 724d688 |
-| hybrid-paragraph | hybrid (k1 1.5, b 0.75, model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, rrf_k 60, rrf_depth 50) | paragraph | 412 | 50 | – | 724d688 |
-| hybrid-paragraph-refs | hybrid (k1 1.5, b 0.75, model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, rrf_k 60, rrf_depth 50, expansion references) | paragraph | 412 | 50 | 30% | 724d688 |
-| hybrid-window-200-50 | hybrid (k1 1.5, b 0.75, model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, rrf_k 60, rrf_depth 50) | window-200-50 | 246 | 50 | – | 724d688 |
-| hybrid-window-200-50-refs | hybrid (k1 1.5, b 0.75, model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, rrf_k 60, rrf_depth 50, expansion references) | window-200-50 | 246 | 50 | 51% | 724d688 |
-| vector-article | vector (model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized) | article | 133 | 50 | – | 724d688 |
-| vector-article-refs | vector (model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, expansion references) | article | 133 | 50 | 46% | 724d688 |
-| vector-paragraph | vector (model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized) | paragraph | 412 | 50 | – | 724d688 |
-| vector-paragraph-refs | vector (model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, expansion references) | paragraph | 412 | 50 | 30% | 724d688 |
-| vector-window-200-50 | vector (model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized) | window-200-50 | 246 | 50 | – | 724d688 |
-| vector-window-200-50-refs | vector (model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, expansion references) | window-200-50 | 246 | 50 | 52% | 724d688 |
+| bm25-article | bm25 (k1 1.5, b 0.75) | article | 133 | 50 | – | 588d619 |
+| bm25-article-refs | bm25 (k1 1.5, b 0.75, expansion references) | article | 133 | 50 | 48% | 588d619 |
+| bm25-paragraph | bm25 (k1 1.5, b 0.75) | paragraph | 412 | 50 | – | 588d619 |
+| bm25-paragraph-refs | bm25 (k1 1.5, b 0.75, expansion references) | paragraph | 412 | 50 | 32% | 588d619 |
+| bm25-window-200-50 | bm25 (k1 1.5, b 0.75) | window-200-50 | 246 | 50 | – | 588d619 |
+| bm25-window-200-50-refs | bm25 (k1 1.5, b 0.75, expansion references) | window-200-50 | 246 | 50 | 46% | 588d619 |
+| hybrid-article | hybrid (k1 1.5, b 0.75, model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, rrf_k 60, rrf_depth 50) | article | 133 | 50 | – | 588d619 |
+| hybrid-article-refs | hybrid (k1 1.5, b 0.75, model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, rrf_k 60, rrf_depth 50, expansion references) | article | 133 | 50 | 48% | 588d619 |
+| hybrid-paragraph | hybrid (k1 1.5, b 0.75, model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, rrf_k 60, rrf_depth 50) | paragraph | 412 | 50 | – | 588d619 |
+| hybrid-paragraph-refs | hybrid (k1 1.5, b 0.75, model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, rrf_k 60, rrf_depth 50, expansion references) | paragraph | 412 | 50 | 30% | 588d619 |
+| hybrid-window-200-50 | hybrid (k1 1.5, b 0.75, model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, rrf_k 60, rrf_depth 50) | window-200-50 | 246 | 50 | – | 588d619 |
+| hybrid-window-200-50-refs | hybrid (k1 1.5, b 0.75, model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, rrf_k 60, rrf_depth 50, expansion references) | window-200-50 | 246 | 50 | 51% | 588d619 |
+| vector-article | vector (model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized) | article | 133 | 50 | – | 588d619 |
+| vector-article-refs | vector (model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, expansion references) | article | 133 | 50 | 46% | 588d619 |
+| vector-paragraph | vector (model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized) | paragraph | 412 | 50 | – | 588d619 |
+| vector-paragraph-refs | vector (model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, expansion references) | paragraph | 412 | 50 | 30% | 588d619 |
+| vector-window-200-50 | vector (model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized) | window-200-50 | 246 | 50 | – | 588d619 |
+| vector-window-200-50-refs | vector (model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, expansion references) | window-200-50 | 246 | 50 | 52% | 588d619 |

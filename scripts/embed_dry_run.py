@@ -1,4 +1,4 @@
-"""Print what embedding the corpus and questions would cost; calls nothing (`make embed-dry-run`).
+"""Print what embedding everything would take and cost; runs nothing (`make embed-dry-run`).
 
 Every chunking strategy is counted, and the questions of both splits (see `corpus_texts`). Fails
 if any input is empty or may be over the model's limit.
@@ -20,7 +20,7 @@ CONFIG = ROOT / "config" / "embedding.yaml"
 def main() -> int:
     try:
         config = load_config(CONFIG)
-        texts = corpus_texts(ROOT)
+        texts = corpus_texts(ROOT, config)
     except (ConfigError, CorpusError, ParseError, EmbedError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1

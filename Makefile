@@ -44,11 +44,11 @@ search: ## Print the best chunks for a question: make search Q="How long may I d
 retrieval-runs: ## Run every retrieval configuration on the dev split and write runs/retrieval/*.json
 	uv run --locked python scripts/retrieval_runs.py
 
-embed-dry-run: ## Print what embedding the corpus and the questions would cost; calls nothing
+embed-dry-run: ## Print what embedding the corpus and the questions would take (and cost, on Bedrock); runs nothing
 	uv run --locked python scripts/embed_dry_run.py
 
-embed: ## Report which chunks and questions lack a cached vector and what sending them would cost; SEND=1 pays
-	uv run --locked python scripts/embed.py $(if $(SEND),--send,)
+embed: ## Report which chunks and questions lack a cached vector; RUN=1 embeds them with the configured model
+	uv run --locked $(if $(RUN),--group local-embed,) python scripts/embed.py $(if $(RUN),--run,)
 
 vector-index: db-up ## Load chunks and their cached vectors into local pgvector: make vector-index [STRATEGY=paragraph]
 	uv run --locked python scripts/vector_index.py $(if $(STRATEGY),--strategy $(STRATEGY),)

@@ -1,6 +1,7 @@
 """Vector search in memory; the database backend is tested in test_vector_db.py (`make test-db`)."""
 
 import array
+import dataclasses
 import datetime as dt
 
 import pytest
@@ -12,6 +13,7 @@ from rag.retrieve import BM25, RRF
 from rag.vector import VectorIndexError, VectorSearch, cosine_distance, literal
 
 CONFIG = EmbeddingConfig(
+    provider="bedrock",
     model_id="amazon.titan-embed-text-v2:0",
     region="eu-north-1",
     dimensions=4,
@@ -136,3 +138,13 @@ def test_the_literal_keeps_float32_values_exactly():
 
 def test_the_setting_name_is_the_cache_files_stem():
     assert setting_name(CONFIG) == "amazon.titan-embed-text-v2_0-4-normalized"
+
+
+def test_the_question_is_looked_up_with_the_query_prefix(tmp_path):
+    prefixed = dataclasses.replace(CONFIG, query_prefix="Instruct: find it\nQuery:")
+    queries = {f"{prefixed.query_prefix}{q}": v for q, v in QUERIES.items()}
+    search = VectorSearch(CHUNKS, make_cache(tmp_path, queries=queries, config=prefixed))
+    assert ids(search.search("along a", 2)) == ["a", "d"]
+    bare = VectorSearch(CHUNKS, make_cache(tmp_path, config=prefixed))  # only unprefixed queries
+    with pytest.raises(MissingVectorsError):
+        bare.search("along a", 2)

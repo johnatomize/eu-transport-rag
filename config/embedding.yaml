@@ -1,13 +1,26 @@
-# The embedding model checkpoint E uses, and its price (docs/DECISIONS.md, "embeddings come from
-# Amazon Titan Text Embeddings V2 on Bedrock" and "Bedrock runs in Stockholm").
+# The embedding model checkpoint E uses (docs/DECISIONS.md, "embeddings come from Qwen3-Embedding
+# 0.6B, run locally"). It runs on the owner's Mac and costs nothing; `make embed RUN=1` runs it.
 #
-# The price is the on-demand input price from the AWS Price List API (offer AmazonBedrock, region
-# eu-north-1, usage type EUN1-TitanEmbeddingV2-Text-input-tokens). Read it again before a paid
-# run, and update price_read_on with it.
-model_id: amazon.titan-embed-text-v2:0
-region: eu-north-1
+# The revision pins the model's files to one commit on Hugging Face
+# (https://huggingface.co/Qwen/Qwen3-Embedding-0.6B, Apache 2.0), so a later upload can never
+# change the vectors; the cache key includes it. A new revision means embedding everything again.
+#
+# The device is the Mac's GPU (mps). The GPU and the CPU round differently in the last digits, so
+# the device is in the cache key too, and a machine without MPS refuses rather than mixing them.
+#
+# Questions get the query prefix, an instruction in the form Qwen3-Embedding was trained on
+# ("Instruct: <task>\nQuery:" and then the question); chunks get nothing. The task is written for
+# this corpus rather than the model's generic "web search query".
+#
+# To go back to Titan Text Embeddings V2 on Bedrock, should AWS raise its limit above zero:
+#   provider: bedrock, model_id: amazon.titan-embed-text-v2:0, region: eu-north-1,
+#   dimensions: 1024, normalize: true, max_input_tokens: 8192,
+#   price_usd_per_million_input_tokens: 0.021, price_read_on: <the day it was read>
+provider: local
+model_id: Qwen/Qwen3-Embedding-0.6B
+revision: 97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3
+device: mps
 dimensions: 1024
 normalize: true
 max_input_tokens: 8192
-price_usd_per_million_input_tokens: 0.021
-price_read_on: 2026-10-31
+query_prefix: "Instruct: Given a question about EU road transport law, retrieve the passages of legislation and Commission guidance that answer it\nQuery:"

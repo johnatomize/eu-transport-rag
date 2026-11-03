@@ -7,8 +7,9 @@ see Precision below):
 - `PgVectorSearch` searches the `chunk_vectors` table in the local Postgres + pgvector database,
   loaded by `load_index` (`make vector-index`).
 
-Both take every vector, the question's included, from the embedding cache, so neither calls AWS:
-a question with no cached vector raises `MissingVectorsError`.
+Both take every vector, the question's included, from the embedding cache, so neither runs the
+model: a question with no cached vector raises `MissingVectorsError`. The question is looked up as
+the model was given it, after the query prefix (`query_input`).
 
 **Distance.** Both compute pgvector's cosine distance, 1 − s, where the similarity
 s = a·b / sqrt(|a|² |b|²) is clamped to [−1, 1]. A hit's score is s, read back as 1 − distance,
@@ -37,6 +38,7 @@ import psycopg
 
 from rag.chunk import Chunk
 from rag.embed import EmbeddingCache, setting_name, vectors
+from rag.embed_estimate import query_input
 from rag.retrieve import Hit, check_k
 
 TABLE = "chunk_vectors"
@@ -111,7 +113,7 @@ class VectorSearch:
 
     def search(self, query: str, k: int) -> list[Hit]:
         check_k(k)
-        q = vectors([query], self.cache)[0]
+        q = vectors([query_input(query, self.cache.config)], self.cache)[0]
         q2 = _norm2(q)
         distances = [
             cosine_distance(q, v, q2, n) for v, n in zip(self._vectors, self._norms, strict=True)
@@ -205,7 +207,7 @@ class PgVectorSearch:
 
     def search(self, query: str, k: int) -> list[Hit]:
         check_k(k)
-        q = vectors([query], self.cache)[0]
+        q = vectors([query_input(query, self.cache.config)], self.cache)[0]
         _norm2(q)
         rows = self.conn.execute(
             SEARCH, {"query": literal(q), "model": self.model, "strategy": self.strategy, "k": k}

@@ -2,7 +2,7 @@
 # The db-* targets also need Docker with Compose and a running Colima VM (see CLAUDE.md).
 # Later checkpoints add targets (tables, deploy, destroy) and extend check.
 
-.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs embed-dry-run embed answers tables tables-check db-up db-check db-down test-db vector-index gitleaks-present docker-present
+.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs embed-dry-run embed answers ask tables tables-check db-up db-check db-down test-db vector-index gitleaks-present docker-present
 
 help: ## List the targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
@@ -52,6 +52,13 @@ embed: ## Report which chunks and questions lack a cached vector; RUN=1 embeds t
 
 answers: ## Show what answering the dev questions with Claude would send and cost; RUN=1 sends and pays
 	uv run --locked python scripts/answer.py $(if $(RUN),--run,) $(if $(ROLE),--role $(ROLE),) $(if $(ONLY),--only $(ONLY),)
+
+ask: export Q := $(Q)
+ask: ## Answer one typed question: make ask Q="…" shows the passages and cost; RUN=1 sends and pays
+	@test -n "$$Q" || { echo 'usage: make ask Q="your question" [RUN=1] [ROLE=scored] [RETRIEVER=hybrid|bm25|vector] [STRATEGY=paragraph] [K=5]' >&2; exit 1; }
+	HF_HUB_OFFLINE=1 TRANSFORMERS_VERBOSITY=error uv run --locked $(if $(filter bm25,$(RETRIEVER)),,--group local-embed) python scripts/ask.py \
+		$(if $(RUN),--run,) $(if $(ROLE),--role $(ROLE),) $(if $(RETRIEVER),--retriever $(RETRIEVER),) \
+		$(if $(STRATEGY),--strategy $(STRATEGY),) $(if $(K),-k $(K),) "$$Q"
 
 vector-index: db-up ## Load chunks and their cached vectors into local pgvector: make vector-index [STRATEGY=paragraph]
 	uv run --locked python scripts/vector_index.py $(if $(STRATEGY),--strategy $(STRATEGY),)

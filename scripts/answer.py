@@ -25,40 +25,37 @@ waits for G.
 
 import argparse
 import datetime as dt
-import json
-import os
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 
-from rag.chunk import STRATEGIES, Chunk
+from rag.chunk import STRATEGIES
 from rag.corpus import CorpusError, load_manifest
-from rag.db import read_env_file
 from rag.embed import EmbeddingCache, EmbedError
-from rag.embed_estimate import PRICE_STALE_AFTER_DAYS, ConfigError, load_config
+from rag.embed_estimate import ConfigError, load_config
 from rag.generate import (
     EXPECTED_OUTPUT_TOKENS,
-    MARGIN,
     AnthropicClient,
     Call,
-    Estimate,
     GenerateError,
     RunResult,
     answer_all,
-    check_cap,
     estimate,
+    estimate_report,
     input_problems,
+    new_run,
+    paid_holds,
     prompt_version,
+    read_api_key,
+    run_log,
+    write_run_log,
 )
-from rag.generation_config import ROLES, GenerationConfig, GenerationConfigError
+from rag.generation_config import ROLES, GenerationConfigError
 from rag.generation_config import load_generation_config as load_generation
 from rag.parse import ParseError, parse_corpus
 from rag.prompt import build_prompt
 from rag.questions import validate
-from rag.retrieve import BM25, RRF, RRF_DEPTH, RRF_K, Retriever
-from rag.runlog import git_state
-from rag.spend import SpendLogError, spending
-from rag.vector import VectorIndexError, VectorSearch
+from rag.spend import SpendLogError, spending, spending_report
+from rag.vector import RETRIEVERS, VectorIndexError, make_retriever
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "corpus" / "manifest.yaml"
@@ -68,18 +65,6 @@ EMBEDDING_CONFIG = ROOT / "config" / "embedding.yaml"
 EMBEDDINGS = ROOT / "embeddings"
 RUNS = ROOT / "runs" / "generation"
 ENV = ROOT / ".env"
-RETRIEVERS = ("hybrid", "bm25", "vector")
-
-
-def make_retriever(kind: str, chunks: list[Chunk]) -> Retriever:
-    """The retriever by name, with E's settings; vector search reads the embedding cache."""
-    if kind == "bm25":
-        return BM25(chunks)
-    vectors = EmbeddingCache.load(EMBEDDINGS, load_config(EMBEDDING_CONFIG))
-    vector = VectorSearch(chunks, vectors)
-    if kind == "vector":
-        return vector
-    return RRF(chunks, [BM25(chunks), vector], RRF_K, RRF_DEPTH)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -121,7 +106,10 @@ def main(argv: list[str] | None = None) -> int:
     model = config.model(args.role)
     chunks = STRATEGIES[args.strategy](tree)
     try:
-        retriever = make_retriever(args.retriever, chunks)
+        cache = None
+        if args.retriever != "bm25":
+            cache = EmbeddingCache.load(EMBEDDINGS, load_config(EMBEDDING_CONFIG))
+        retriever = make_retriever(args.retriever, chunks, cache)
         calls = []
         for q in dev:
             hits = retriever.search(q.question, args.k)
@@ -147,17 +135,15 @@ def main(argv: list[str] | None = None) -> int:
             f"{c.question_id:9} {c.input_tokens:>10,} {EXPECTED_OUTPUT_TOKENS:>11,} "
             f"{config.max_output_tokens:>10,}"
         )
-    print(report(e))
+    print(estimate_report(e))
 
     try:
         spent = spending(ROOT)
     except SpendLogError as err:
         print(f"error: {err}", file=sys.stderr)
         return 1
-    print(f"Spent so far US${spent.spent_usd:.4f} of the approved cap of US${spent.cap_usd:.2f}.")
-    for name, cost in spent.pending:
-        print(f"  including US${cost:.4f} from {name}, not in the spend log yet")
-    holds = paid_holds(e, config, spent.spent_usd, spent.cap_usd)
+    print(spending_report(spent))
+    holds = paid_holds(e, config, spent.spent_usd, spent.cap_usd, dt.date.today())
     errors = input_problems(e, config)
     for problem in errors:
         print(f"error: {problem}", file=sys.stderr)
@@ -167,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"warning: a paid run would refuse to start: {problem}", file=sys.stderr)
         print("Nothing was sent. To send and pay: make answers RUN=1")
         return 1 if errors else 0
-    key = os.environ.get("ANTHROPIC_API_KEY") or read_env_file(ENV).get("ANTHROPIC_API_KEY")
+    key = read_api_key(ENV)
     if not key:
         holds.append("ANTHROPIC_API_KEY is not set: add it to .env (see .env.example)")
     for problem in holds:
@@ -176,16 +162,11 @@ def main(argv: list[str] | None = None) -> int:
         print("Nothing was sent.", file=sys.stderr)
         return 1
 
-    commit, dirty = git_state(ROOT)
-    created = datetime.now(UTC)
-    run = {"created": created.isoformat(timespec="seconds"), "commit": commit, "dirty": dirty}
-    path = RUNS / f"{created.strftime('%Y-%m-%dT%H-%M-%SZ')}-{model}.json"
-
     def save(result: RunResult) -> None:
-        write_log(path, run, config, model, retrieval, e, result)
+        write_run_log(path, run_log(run, config, model, retrieval, "dev", e, result))
 
     try:  # before anything is sent, so a run that can't be logged never starts
-        RUNS.mkdir(parents=True, exist_ok=True)
+        run, path = new_run(ROOT, RUNS, model)
         save(RunResult())
     except OSError as err:
         print(f"error: cannot write the run log ({err}); nothing was sent", file=sys.stderr)
@@ -222,83 +203,6 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: stopped early: {result.error}", file=sys.stderr)
         return 1
     return 0
-
-
-def report(e: Estimate) -> str:
-    return (
-        f"{e.calls} calls: about {e.input_tokens:,} input tokens, {e.padded_input:,} with a "
-        f"{MARGIN - 1:.0%} margin.\n"
-        f"Expected cost, at {EXPECTED_OUTPUT_TOKENS:,} output tokens an answer plus the margin: "
-        f"US${e.expected_usd:.4f}.\n"
-        f"Most it can cost, every answer at {e.max_output_tokens:,} output tokens: "
-        f"US${e.most_usd:.4f}. The cap check uses this figure."
-    )
-
-
-def paid_holds(e: Estimate, config: GenerationConfig, spent: float, cap: float) -> list[str]:
-    """Why a paid run may not start: an old price, or a cost that could pass the cap."""
-    holds = []
-    age = (dt.date.today() - config.prices_read_on).days
-    if age > PRICE_STALE_AFTER_DAYS:
-        holds.append(
-            f"the prices were read {age} days ago; read them again on Anthropic's pricing page "
-            "and update config/generation.yaml"
-        )
-    try:
-        check_cap(e, spent, cap)
-    except GenerateError as err:
-        holds.append(str(err))
-    return holds
-
-
-def write_log(
-    path: Path,
-    run: dict,
-    config: GenerationConfig,
-    model: str,
-    retrieval: dict,
-    e: Estimate,
-    result: RunResult,
-) -> None:
-    """Write the run log whole, through a temporary file, so it is never left half written."""
-    price = config.prices[model]
-    log = {
-        "run": run,
-        "config": {
-            "model": model,
-            "effort": config.effort,
-            "max_output_tokens": config.max_output_tokens,
-            "prompt_version": prompt_version(),
-            "price_usd_per_million": {"input": price.input, "output": price.output},
-            "prices_read_on": config.prices_read_on.isoformat(),
-            "retrieval": retrieval,
-            "split": "dev",
-        },
-        "estimate": {
-            "calls": e.calls,
-            "input_tokens": e.input_tokens,
-            "padded_input_tokens": e.padded_input,
-            "expected_usd": round(e.expected_usd, 6),
-            "most_usd": round(e.most_usd, 6),
-        },
-        "paid": {
-            "calls": len(result.answers),
-            "input_tokens": result.input_tokens,
-            "output_tokens": result.output_tokens,
-            "cost_usd": round(result.cost_usd, 6),
-        },
-        "error": result.error,
-        "failed": result.failed,
-        "answers": result.answers,
-    }
-    text = json.dumps(log, indent=1, ensure_ascii=False) + "\n"
-    try:
-        temporary = path.with_suffix(".tmp")
-        temporary.write_text(text, encoding="utf-8")
-        temporary.replace(path)
-    except OSError:
-        print(text)  # the calls are paid for: never lose their record
-        raise
 
 
 if __name__ == "__main__":

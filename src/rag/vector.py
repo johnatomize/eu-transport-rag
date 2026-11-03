@@ -39,9 +39,10 @@ import psycopg
 from rag.chunk import Chunk
 from rag.embed import EmbeddingCache, setting_name, vectors
 from rag.embed_estimate import query_input
-from rag.retrieve import Hit, check_k
+from rag.retrieve import BM25, RRF, RRF_DEPTH, RRF_K, Hit, Retriever, check_k
 
 TABLE = "chunk_vectors"
+RETRIEVERS = ("hybrid", "bm25", "vector")  # what `make_retriever` builds, by name
 
 SCHEMA = f"""
 CREATE TABLE IF NOT EXISTS {TABLE} (
@@ -120,6 +121,21 @@ class VectorSearch:
         ]
         order = heapq.nsmallest(k, range(len(self.chunks)), key=lambda i: (distances[i], i))
         return [Hit(self.chunks[i], 1.0 - distances[i]) for i in order]
+
+
+def make_retriever(kind: str, chunks: Sequence[Chunk], cache: EmbeddingCache | None) -> Retriever:
+    """A retriever by name, with E's settings: BM25, in-memory vector search, or hybrid search
+    (both fused by RRF). Vector and hybrid search read every vector from `cache`."""
+    if kind == "bm25":
+        return BM25(chunks)
+    if kind not in RETRIEVERS:
+        raise ValueError(f"no retriever called {kind!r}; choose from {', '.join(RETRIEVERS)}")
+    if cache is None:
+        raise ValueError(f"{kind} search needs the embedding cache")
+    vector = VectorSearch(chunks, cache)
+    if kind == "vector":
+        return vector
+    return RRF(chunks, [BM25(chunks), vector], RRF_K, RRF_DEPTH)
 
 
 def _parse(text: str) -> tuple[float, ...]:

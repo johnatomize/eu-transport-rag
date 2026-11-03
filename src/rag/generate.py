@@ -13,12 +13,14 @@ and `scripts/answer.py` hands it one only with an explicit flag, after the check
   stays within the approved cap (`check_cap`), and only if no prompt may be over
   `max_prompt_tokens`, above which Haiku 5.5's price rises.
 - **Calls.** `AnthropicClient` sends one prompt and asks for the answer format as structured
-  output. The SDK's own retries are off: `send` retries throttling and passing server errors
-  itself, at most `MAX_ATTEMPTS` tries with growing waits, and a call that still fails stops
-  the run. It is logged as failed and never counted as an answer.
+  output. The SDK's own retries are off: `send_with_retries` tries again only after refusals
+  that aren't billed (429, 5xx), at most `MAX_ATTEMPTS` tries with growing waits. A timeout or
+  dropped connection may have been billed, so it is not tried again. A call that fails stops
+  the run; it is logged as failed and never counted as an answer.
 - **Record.** `answer_all` checks each reply (`validate.check_reply`) and keeps, for the run
   log, the retrieved chunk IDs, the raw reply, the verdict and its reasons, the tokens the API
-  counted, the cost at the configured price and the latency.
+  counted, the cost at the configured price and the latency, and hands the record to `save`
+  after every call, so a run stopped by anything leaves every paid reply on disk.
 
 Choices and reasons: "the answer client" in docs/DECISIONS.md.
 """
@@ -29,7 +31,10 @@ import math
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from functools import cached_property
 from typing import Protocol
+
+import anthropic
 
 from rag.chunk import Chunk
 from rag.embed_estimate import estimate_tokens
@@ -60,12 +65,13 @@ class OverCapError(GenerateError):
 
 
 class Throttled(GenerateError):
-    """A call refused for now: too many requests, an overloaded or failing server, a timeout or
-    a dropped connection. Tried again, up to `MAX_ATTEMPTS`."""
+    """A call refused for now, and not billed: too many requests (429), or an overloaded or
+    failing server (5xx, 529 included). Tried again, up to `MAX_ATTEMPTS`."""
 
 
 class CallFailed(GenerateError):
-    """A call that trying again won't fix: a bad key, an unknown model, a refused request."""
+    """A call not tried again: a bad key, an unknown model, a refused request, or a timeout or
+    dropped connection, after which the call may have been billed."""
 
 
 def prompt_version() -> str:
@@ -86,7 +92,7 @@ class Call:
     prompt: Prompt
     chunks: tuple[Chunk, ...]
 
-    @property
+    @cached_property
     def input_tokens(self) -> int:
         """Estimated, before the margin."""
         return (
@@ -198,9 +204,6 @@ class AnthropicClient:
     """
 
     def __init__(self, config: GenerationConfig, model: str, api_key: str, http_client=None):
-        import anthropic  # here, so that nothing without a client needs the SDK to start
-
-        self._anthropic = anthropic
         self.model = model
         self.config = config
         self._client = anthropic.Anthropic(
@@ -208,7 +211,6 @@ class AnthropicClient:
         )
 
     def send(self, prompt: Prompt) -> Reply:
-        anthropic = self._anthropic
         try:
             message = self._client.messages.create(
                 model=self.model,
@@ -220,11 +222,13 @@ class AnthropicClient:
                     "format": {"type": "json_schema", "schema": ANSWER_SCHEMA},
                 },
             )
-        except anthropic.APIConnectionError as e:  # timeouts included
-            raise Throttled(f"{type(e).__name__}: {e}") from e
+        except anthropic.APIConnectionError as e:
+            # A timeout or a dropped connection: the model may have answered, and been paid
+            # for, without the reply arriving. Trying again could pay twice, so it isn't.
+            raise CallFailed(f"{type(e).__name__} (may have been billed): {e}") from e
         except anthropic.APIStatusError as e:
             failure = f"HTTP {e.status_code} {type(e).__name__}: {e.message}"
-            if e.status_code == 429 or e.status_code >= 500:
+            if e.status_code == 429 or e.status_code >= 500:  # refused or failed, not billed
                 raise Throttled(failure) from e
             raise CallFailed(failure) from e
         except anthropic.AnthropicError as e:  # a reply the SDK couldn't read, say
@@ -270,6 +274,7 @@ class RunResult:
     """Every call a run made, in order, for the run log and the spend log."""
 
     answers: list[dict] = field(default_factory=list)
+    failed: list[dict] = field(default_factory=list)  # calls that got no reply: {"id", "error"}
     error: str | None = None
 
     @property
@@ -288,6 +293,11 @@ class RunResult:
     def passed(self) -> int:
         return sum(1 for a in self.answers if a["verdict"]["ok"])
 
+    @property
+    def refusals(self) -> int:
+        """Answers that passed the check by saying the documents don't answer."""
+        return sum(1 for a in self.answers if a["verdict"]["ok"] and not a["verdict"]["answerable"])
+
 
 def _failed_stop(reply: Reply) -> str | None:
     """Why a reply that came back can't be an answer, before its text is read."""
@@ -302,63 +312,81 @@ def _failed_stop(reply: Reply) -> str | None:
     return None
 
 
+def _verdict(reply: Reply, call: Call) -> dict:
+    """The check's verdict on a reply, for the run log."""
+    stopped = _failed_stop(reply)
+    if stopped:
+        return {"ok": False, "answerable": None, "problems": [stopped], "citations": []}
+    assert reply.text is not None
+    checked = check_reply(reply.text, call.chunks)
+    return {
+        "ok": checked.ok,
+        "answerable": checked.answer.answerable if checked.answer else None,
+        "problems": list(checked.problems),
+        "citations": [{"node_id": c.node_id, "quote": c.quote} for c in checked.citations],
+    }
+
+
 def answer_all(
     calls: Sequence[Call],
     client: AnswerClient,
     price: Price,
     progress: Callable[[int, int], None] | None = None,
+    save: Callable[[RunResult], None] | None = None,
     sleep: Callable[[float], None] = time.sleep,
     clock: Callable[[], float] = time.monotonic,
 ) -> RunResult:
     """Send each call, check each reply, and keep everything a run log needs.
 
-    A call that fails after its retries, or an interruption, stops the run: the answers so far
-    are kept, with the error, and the rest are not sent.
+    `save` is called after every call, answered or failed, so the run log on disk always holds
+    every reply paid for, whatever stops the run. A call that fails after its retries, an
+    interruption or any other error stops the run: the answers so far are kept, the failed call
+    is listed in `failed`, the error is kept, and the rest are not sent.
     """
     result = RunResult()
     try:
         for done, call in enumerate(calls, 1):
             started = clock()
-            reply, attempts = send_with_retries(client, call.prompt, sleep)
-            seconds = clock() - started
-            # Paid for from here on: recorded before anything can refuse it.
-            stopped = _failed_stop(reply)
-            if stopped:
-                verdict = {"ok": False, "answerable": None, "problems": [stopped], "citations": []}
-            else:
-                assert reply.text is not None
-                checked = check_reply(reply.text, call.chunks)
-                verdict = {
-                    "ok": checked.ok,
-                    "answerable": checked.answer.answerable if checked.answer else None,
-                    "problems": list(checked.problems),
-                    "citations": [
-                        {"node_id": c.node_id, "quote": c.quote} for c in checked.citations
-                    ],
-                }
-            result.answers.append(
-                {
-                    "id": call.question_id,
-                    "retrieved": [c.id for c in call.chunks],
-                    "estimated_input_tokens": call.input_tokens,
-                    "raw": reply.text,
-                    "stop_reason": reply.stop_reason,
-                    "verdict": verdict,
-                    "usage": {
-                        "input_tokens": reply.input_tokens,
-                        "output_tokens": reply.output_tokens,
-                        "cache_write_tokens": reply.cache_write_tokens,
-                        "cache_read_tokens": reply.cache_read_tokens,
-                    },
-                    "cost_usd": round(reply.cost_usd(price), 8),
-                    "seconds": round(seconds, 2),
-                    "attempts": attempts,
-                    "model": reply.model,
-                    "request_id": reply.request_id,
-                }
-            )
+            try:
+                reply, attempts = send_with_retries(client, call.prompt, sleep)
+            except (Exception, KeyboardInterrupt) as e:
+                result.failed.append({"id": call.question_id, "error": _describe(e)})
+                raise
+            # Paid for from here on: recorded before the check, which can't then lose it.
+            entry = {
+                "id": call.question_id,
+                "retrieved": [c.id for c in call.chunks],
+                "estimated_input_tokens": call.input_tokens,
+                "raw": reply.text,
+                "stop_reason": reply.stop_reason,
+                "verdict": {"ok": False, "answerable": None, "problems": [], "citations": []},
+                "usage": {
+                    "input_tokens": reply.input_tokens,
+                    "output_tokens": reply.output_tokens,
+                    "cache_write_tokens": reply.cache_write_tokens,
+                    "cache_read_tokens": reply.cache_read_tokens,
+                },
+                "cost_usd": round(reply.cost_usd(price), 8),
+                "seconds": round(clock() - started, 2),
+                "attempts": attempts,
+                "model": reply.model,
+                "request_id": reply.request_id,
+            }
+            result.answers.append(entry)
+            try:
+                entry["verdict"] = _verdict(reply, call)
+            except Exception as e:  # a bug in the check: the answer fails, the run goes on
+                entry["verdict"]["problems"] = [f"the check itself failed: {_describe(e)}"]
+            if save:
+                save(result)
             if progress:
                 progress(done, len(calls))
-    except (GenerateError, KeyboardInterrupt) as e:
-        result.error = f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
+    except (Exception, KeyboardInterrupt) as e:
+        result.error = _describe(e)
+    if save:
+        save(result)
     return result
+
+
+def _describe(e: BaseException) -> str:
+    return f"{type(e).__name__}: {e}" if str(e) else type(e).__name__

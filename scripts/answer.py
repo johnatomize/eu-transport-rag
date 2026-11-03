@@ -114,6 +114,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"error: not dev questions: {', '.join(unknown)}", file=sys.stderr)
             return 1
         dev = [q for q in dev if q.id in wanted]
+        if not dev:
+            print("error: --only names no question", file=sys.stderr)
+            return 1
 
     model = config.model(args.role)
     chunks = STRATEGIES[args.strategy](tree)
@@ -175,23 +178,36 @@ def main(argv: list[str] | None = None) -> int:
 
     commit, dirty = git_state(ROOT)
     created = datetime.now(UTC)
-    try:
-        client = AnthropicClient(config, model, api_key=key)
-    except ImportError as err:
-        print(f"error: {err}", file=sys.stderr)
+    run = {"created": created.isoformat(timespec="seconds"), "commit": commit, "dirty": dirty}
+    path = RUNS / f"{created.strftime('%Y-%m-%dT%H-%M-%SZ')}-{model}.json"
+
+    def save(result: RunResult) -> None:
+        write_log(path, run, config, model, retrieval, e, result)
+
+    try:  # before anything is sent, so a run that can't be logged never starts
+        RUNS.mkdir(parents=True, exist_ok=True)
+        save(RunResult())
+    except OSError as err:
+        print(f"error: cannot write the run log ({err}); nothing was sent", file=sys.stderr)
         return 1
+    client = AnthropicClient(config, model, api_key=key)
 
     def progress(done: int, total: int) -> None:
         if done % 10 == 0 or done == total:
             print(f"  {done}/{total}", flush=True)
 
-    result = answer_all(calls, client, config.prices[model], progress)
-    run = {"created": created.isoformat(timespec="seconds"), "commit": commit, "dirty": dirty}
-    path = write_log(run, config, model, retrieval, e, result)
-    refusals = sum(1 for a in result.answers if a["verdict"]["answerable"] is False)
+    try:
+        result = answer_all(calls, client, config.prices[model], progress, save)
+    except OSError as err:
+        print(
+            f"error: the run log could not be written ({err}); it is printed above. Save it "
+            "to runs/generation/ before anything else is run, so the spend is counted.",
+            file=sys.stderr,
+        )
+        return 1
     print(
         f"Answered {len(result.answers)} of {len(calls)}: {result.passed} passed the check, "
-        f"{refusals} of them saying the documents don't answer; "
+        f"{result.refusals} of them saying the documents don't answer; "
         f"{len(result.answers) - result.passed} could not be answered reliably."
     )
     print(
@@ -236,16 +252,15 @@ def paid_holds(e: Estimate, config: GenerationConfig, spent: float, cap: float) 
 
 
 def write_log(
+    path: Path,
     run: dict,
     config: GenerationConfig,
     model: str,
     retrieval: dict,
     e: Estimate,
     result: RunResult,
-) -> Path:
-    RUNS.mkdir(parents=True, exist_ok=True)
-    created = datetime.fromisoformat(run["created"])
-    path = RUNS / f"{created.strftime('%Y-%m-%dT%H-%M-%SZ')}-{model}.json"
+) -> None:
+    """Write the run log whole, through a temporary file, so it is never left half written."""
     price = config.prices[model]
     log = {
         "run": run,
@@ -273,15 +288,17 @@ def write_log(
             "cost_usd": round(result.cost_usd, 6),
         },
         "error": result.error,
+        "failed": result.failed,
         "answers": result.answers,
     }
     text = json.dumps(log, indent=1, ensure_ascii=False) + "\n"
     try:
-        path.write_text(text, encoding="utf-8")
+        temporary = path.with_suffix(".tmp")
+        temporary.write_text(text, encoding="utf-8")
+        temporary.replace(path)
     except OSError:
         print(text)  # the calls are paid for: never lose their record
         raise
-    return path
 
 
 if __name__ == "__main__":

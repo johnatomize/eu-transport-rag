@@ -81,7 +81,7 @@ class Scripted:
     def send(self, prompt: Prompt) -> Reply:
         self.sent.append(prompt)
         outcome = self.outcomes.pop(0)
-        if isinstance(outcome, Exception):
+        if isinstance(outcome, BaseException):
             raise outcome
         return outcome
 
@@ -200,6 +200,56 @@ def test_a_call_that_fails_stops_the_run_and_keeps_what_was_answered():
     assert len(client.sent) == 2  # q3 was never sent
 
 
+def test_any_error_stops_the_run_but_keeps_every_paid_reply_and_names_the_failed_call():
+    client = Scripted(reply(answer(answerable=False)), RuntimeError("something unforeseen"))
+    saved: list[int] = []
+    result = answer_all(
+        [call("q1"), call("q2"), call("q3")],
+        client,
+        HAIKU,
+        save=lambda r: saved.append(len(r.answers)),
+    )
+    assert [a["id"] for a in result.answers] == ["q1"]
+    assert result.failed == [{"id": "q2", "error": "RuntimeError: something unforeseen"}]
+    assert result.error == "RuntimeError: something unforeseen"
+    assert saved == [1, 1]  # after q1, and once more when the run stopped
+
+
+def test_the_log_is_saved_after_every_answer():
+    canned = reply(answer(answerable=False))
+    saved: list[int] = []
+    answer_all(
+        [call("q1"), call("q2")],
+        Scripted(canned, canned),
+        HAIKU,
+        save=lambda r: saved.append(len(r.answers)),
+    )
+    assert saved == [1, 2, 2]
+
+
+def test_a_check_that_crashes_fails_the_answer_and_keeps_its_cost(monkeypatch):
+    import rag.generate as generate
+
+    def broken(*args):
+        raise TypeError("bug")
+
+    monkeypatch.setattr(generate, "check_reply", broken)
+    result = answer_all([call("q1"), call("q2")], Scripted(reply("{}"), reply("{}")), HAIKU)
+    assert result.error is None and len(result.answers) == 2
+    assert result.answers[0]["verdict"]["problems"] == ["the check itself failed: TypeError: bug"]
+    assert result.answers[0]["cost_usd"] > 0
+
+
+def test_refusals_count_only_answers_that_passed():
+    client = Scripted(
+        reply(answer(answerable=False)),
+        reply(answer(("561/2006:art6(2)", "shall not exceed 56 hours"), answerable=False)),
+        reply(answer(("561/2006:art6(2)", "shall not exceed 56 hours"))),
+    )
+    result = answer_all([call("q1"), call("q2"), call("q3")], client, HAIKU)
+    assert (result.passed, result.refusals) == (2, 1)
+
+
 def test_cache_tokens_are_never_counted_below_their_price():
     r = Reply("{}", "end_turn", None, 100, 10, 1000, 1000, "m", None)
     assert r.cost_usd(HAIKU) == pytest.approx(((100 + 1250 + 1000) * 0.10 + 10 * 0.50) / 1e6)
@@ -266,7 +316,8 @@ def test_the_client_asks_for_the_answer_format_at_the_configured_effort():
         (error(429, "rate_limit_error"), Throttled),
         (error(529, "overloaded_error"), Throttled),
         (error(500, "api_error"), Throttled),
-        (httpx2.ConnectError("no route"), Throttled),
+        (httpx2.ConnectError("no route"), CallFailed),  # may have been billed: not retried
+        (httpx2.ReadTimeout("slow"), CallFailed),
         (error(401, "authentication_error"), CallFailed),
         (error(400, "invalid_request_error"), CallFailed),
         (error(404, "not_found_error"), CallFailed),
@@ -343,6 +394,29 @@ def test_a_test_split_question_is_refused(script, capsys):
     assert script.main(["--only", test_id]) == 1
     assert f"not dev questions: {test_id}" in capsys.readouterr().err
     assert script.built == []
+
+
+def test_an_empty_selection_is_refused(script, capsys):
+    assert script.main(["--only", ","]) == 1
+    assert "names no question" in capsys.readouterr().err
+
+
+def test_a_run_stopped_midway_leaves_a_log_the_spend_check_counts(script, monkeypatch, tmp_path):
+    from rag.spend import unlogged_runs
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    first = reply(answer(answerable=False))
+    monkeypatch.setattr(
+        script, "AnthropicClient", lambda *a, **k: Scripted(first, KeyboardInterrupt())
+    )
+    assert script.main(["--only", "q001,q002", "--run"]) == 1
+    (path,) = script.RUNS.glob("*.json")
+    log = json.loads(path.read_text(encoding="utf-8"))
+    assert [a["id"] for a in log["answers"]] == ["q001"]
+    assert log["failed"] == [{"id": "q002", "error": "KeyboardInterrupt"}]
+    pending = unlogged_runs("# Progress\n\n## Spend log\n", script.RUNS)
+    assert pending == [(path.name, log["paid"]["cost_usd"])] and pending[0][1] > 0
+    assert not list(script.RUNS.glob("*.tmp"))
 
 
 def test_a_paid_run_writes_a_log_with_every_answer(script, monkeypatch, capsys):

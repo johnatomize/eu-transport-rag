@@ -380,7 +380,7 @@ local-embed = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anthropic", specifier = ">=1" },
+    { name = "anthropic", specifier = ">=2.3" },
     { name = "boto3", extras = ["crt"], specifier = ">=1.40" },
     { name = "pdfminer-six", specifier = ">=20260107" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },

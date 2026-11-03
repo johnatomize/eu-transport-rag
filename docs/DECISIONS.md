@@ -2,6 +2,17 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-03: the check of every answer
+
+**Decision** (#63): `src/rag/validate.py` checks the model's reply against the chunks its prompt was built from, with code alone, before anything is shown. A reply fails when it doesn't fit the answer format, when a refusal cites anything or an answer cites nothing, when a cited ID isn't one of the `<node>` IDs the prompt marked, or when a quote isn't a continuous piece of that node's text as the retrieved chunks hold it. Every citation is checked and every failure listed, for the run log; a failed answer is shown as "could not answer reliably" (decision of the same day below).
+
+- **What counts as the node's text:** the lines a chunk gives that node, joined by line breaks, exactly as its `<node>` element shows them. A window that holds only part of a node offers only that part; a paragraph with text before and after its own points offers two pieces, and a quote can't run from one into the other. A heading or lead-in line is not quotable, and neither is an article's ID when only its paragraphs were marked.
+- **What is normalised before matching:** every run of whitespace (line breaks, tabs, no-break spaces) becomes one space, the quote's ends are trimmed, and curly or low quote marks and primes become straight ones, and hyphens, en and em dashes and the minus sign become "-". The acts write `‘carriage by road’` and list definitions after an em dash, and a model often writes them plainly, without changing a word. Nothing else is forgiven: case, digits, a decimal point for the act's decimal comma (`3.5` for `3,5`), punctuation, and `...` or `…` standing for left-out words all fail. A test finds every node's own text again in all three chunkings, so the rules never break a true quote.
+- **The reader sees the corpus's text:** a passing citation carries the quote as the corpus writes it, read back from the match, with its own quote marks and line breaks, never the model's copy.
+- **Text the prompt escaped:** the check reads the chunks, not the prompt, so a quote that copies the prompt's `&lt;` fails. The corpus has no `<` today.
+
+**Alternatives:** an exact match with no normalisation, which would refuse true quotes over a line break or a quote mark; also forgiving case or the ellipsis, which would let a model change or shorten the law's words and still pass; fuzzy matching with a similarity threshold, which would make "word for word" a matter of degree.
+
 ## 2026-11-03: the prompt and the answer format
 
 **Decision** (#62; the three choices that change what a reader sees were answered by the owner in a working session): `src/rag/prompt.py` builds the prompt from any retriever's chunks, reads the model's reply, and holds the labels and fixed messages a reader is shown.

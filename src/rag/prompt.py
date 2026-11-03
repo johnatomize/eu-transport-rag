@@ -9,7 +9,7 @@ tags is made harmless, so a passage can't end early or pass for another one, and
 instructions say that passage text is material to quote, never instructions.
 
 `parse_answer` reads the model's reply into an `Answer` and rejects missing, extra or
-mistyped fields. Whether the citations hold up is checked separately (#63).
+mistyped fields. Whether the citations hold up is checked by `rag.validate`.
 
 `citation_label` is how a citation is shown, with the version the code knows the document is
 pinned to: the model never writes it. The fixed messages for a question the documents don't
@@ -290,7 +290,7 @@ def _text(value: object, where: str) -> str:
 def parse_answer(reply: str) -> Answer:
     """The model's reply as an `Answer`; `AnswerFormatError` if it doesn't fit the format.
 
-    Only the shape is checked here: whether the citations hold up is #63's.
+    Only the shape is checked here: whether the citations hold up is `rag.validate`'s.
     """
     try:
         obj = json.loads(reply, object_pairs_hook=_no_duplicate_keys)

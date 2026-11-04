@@ -17,38 +17,14 @@ import sys
 from pathlib import Path
 
 from rag.corpus import CorpusError, Document, load_manifest
-from rag.parse import Node, ParseError, Tree, lead_in, parse_corpus
+from rag.parse import ParseError, Tree, lead_in, parse_corpus
+from rag.review import DOCUMENT, context, link
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "corpus" / "manifest.yaml"
 QUESTIONS = ROOT / "data" / "questions.v1.jsonl"
 TEMPLATE = Path(__file__).with_suffix(".html")
 OUT = ROOT / "build" / "gold-review" / "gold-answer-review.html"
-_CONTEXT = {"article", "annex", "page"}
-# claude.ai wraps an artifact in its own document; a file opened in a browser needs one.
-_DOCUMENT = (
-    '<!doctype html><html lang="en"><head><meta charset="utf-8">'
-    '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
-    "<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>"
-    "</head><body>\n{page}\n</body></html>\n"
-)
-
-
-def link(doc: Document) -> str:
-    """Where the owner reads the document: EUR-Lex for an act, the Commission's PDF for a note."""
-    if doc.celex:
-        return f"https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:{doc.celex}"
-    return doc.url
-
-
-def context(tree: Tree, node: Node) -> Node | None:
-    """The article, annex or guidance page around a node, or None if the node is one itself."""
-    current = node
-    while current.kind not in _CONTEXT:
-        if current.parent is None:
-            return None
-        current = tree[current.parent]
-    return None if current is node else current
 
 
 def page_data(questions: list[dict], tree: Tree, docs: list[Document]) -> dict:
@@ -103,7 +79,7 @@ def main() -> int:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     page = TEMPLATE.read_text(encoding="utf-8").replace("/*__DATA__*/", data)
     if not args.artifact:
-        page = _DOCUMENT.replace("{page}", page)
+        page = DOCUMENT.replace("{page}", page)
     OUT.write_text(page, encoding="utf-8")
     print(f"{OUT.relative_to(ROOT)}: {len(questions)} questions, {len(data) // 1024} KB of data")
     return 0

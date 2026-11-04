@@ -16,12 +16,20 @@ import json
 import sys
 from pathlib import Path
 
-from gold_review import _DOCUMENT, context, link
-
 from rag.corpus import CorpusError, load_manifest
-from rag.faithfulness import answers, assign, select, sentences, validate_labels
+from rag.faithfulness import (
+    answers,
+    assign,
+    build_id,
+    by_id,
+    quote_spans,
+    select,
+    sentences,
+    validate_labels,
+)
 from rag.parse import ParseError, lead_in, parse_corpus
 from rag.questions import validate
+from rag.review import DOCUMENT, context, link
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "corpus" / "manifest.yaml"
@@ -51,17 +59,39 @@ def load() -> tuple:
 
 
 def page_data(tree, docs, questions, logs) -> dict:
-    """What the page shows. Model names and run files stay out of it: answers are A and B."""
-    by_id = {q.id: q for q in questions}
-    docs_by_id = {doc.id: doc for doc in docs}
+    """What the page shows. Model names and run files stay out of it: answers are A and B.
+
+    Each cited node's text comes in pieces, [text, quoted], with the answer's quotes found by
+    `quote_spans` the way the answer check found them.
+    """
+    question_of = {q.id: q for q in questions}
+    doc_of = {doc.id: doc for doc in docs}
     chosen = select(questions, logs)
     letters = assign(chosen, list(logs))
-    entries = {run: {e["id"]: e for e in log["answers"]} for run, log in logs.items()}
+    entries = {run: by_id(log) for run, log in logs.items()}
     items, nodes = [], {}
     for qid in chosen:
-        q = by_id[qid]
+        q = question_of[qid]
         for letter, run in letters[qid].items():
             verdict = entries[run][qid]["verdict"]
+            quotes: dict[str, list[str]] = {}
+            for citation in verdict["citations"]:
+                quotes.setdefault(citation["node_id"], []).append(citation["quote"])
+            cited = []
+            for node_id, node_quotes in quotes.items():
+                text = tree.full_text(node_id)
+                spans, missing = quote_spans(text, node_quotes)
+                cited.append(
+                    {"node_id": node_id, "pieces": _pieces(text, spans), "missing": missing}
+                )
+                node = tree[node_id]
+                doc = doc_of[node.doc_id]
+                nodes[node_id] = {
+                    "path": list(node.heading_path),
+                    "lead_in": lead_in(tree, node, context(tree, node)),
+                    "link": link(doc),
+                    "is_note": not doc.celex,
+                }
             items.append(
                 {
                     "key": f"{qid}-{letter}",
@@ -70,23 +100,26 @@ def page_data(tree, docs, questions, logs) -> dict:
                     "question": q.question,
                     "type": q.type,
                     "sentences": sentences(verdict["answer"]),
-                    "citations": [
-                        {"node_id": c["node_id"], "quote": c["quote"]} for c in verdict["citations"]
-                    ],
+                    "cited": cited,
                 }
             )
-            for citation in verdict["citations"]:
-                node_id = citation["node_id"]
-                node = tree[node_id]
-                doc = docs_by_id[node.doc_id]
-                nodes[node_id] = {
-                    "path": list(node.heading_path),
-                    "text": tree.full_text(node_id),
-                    "lead_in": lead_in(tree, node, context(tree, node)),
-                    "link": link(doc),
-                    "is_note": not doc.celex,
-                }
-    return {"items": items, "nodes": nodes}
+    return {"build": build_id(chosen, letters, logs), "items": items, "nodes": nodes}
+
+
+def _pieces(text: str, spans: list[list[int]]) -> list[list]:
+    """`text` cut into [piece, quoted] at the spans, which may overlap."""
+    pieces, last = [], 0
+    for start, end in spans:
+        if end <= last:
+            continue
+        start = max(start, last)
+        if start > last:
+            pieces.append([text[last:start], False])
+        pieces.append([text[start:end], True])
+        last = end
+    if last < len(text):
+        pieces.append([text[last:], False])
+    return pieces
 
 
 def write_page(artifact: bool) -> int:
@@ -94,45 +127,53 @@ def write_page(artifact: bool) -> int:
     text = json.dumps(data, ensure_ascii=False).replace("<", "\\u003c")
     page = TEMPLATE.read_text(encoding="utf-8").replace("/*__DATA__*/", text)
     if not artifact:
-        page = _DOCUMENT.replace("{page}", page)
+        page = DOCUMENT.replace("{page}", page)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(page, encoding="utf-8")
     print(f"{OUT.relative_to(ROOT)}: {len(data['items'])} answers, {len(text) // 1024} KB of data")
     return 0
 
 
-def expected(questions, logs) -> dict:
-    return answers(select(questions, logs), logs)
-
-
 def apply(path: Path) -> int:
-    """Turn the page's exported verdicts into the labels file, refusing an unfinished export."""
+    """Turn the page's exported labels into the labels file, refusing an unfinished export or
+    one made on a page built from other answers."""
     _, _, questions, logs = load()
     chosen = select(questions, logs)
     letters = assign(chosen, list(logs))
     texts = answers(chosen, logs)
-    reviews = json.loads(path.read_text(encoding="utf-8"))["reviews"]
-    rows, problems = [], []
+    export = json.loads(path.read_text(encoding="utf-8"))
+    build = build_id(chosen, letters, logs)
+    if export.get("build") != build:
+        print(
+            f"error: {path.name} was saved from a page built from other answers "
+            f"({export.get('build')}, not {build}); rebuild the page and label again",
+            file=sys.stderr,
+        )
+        return 1
+    reviews = export["reviews"]
+    keys = {f"{qid}-{letter}" for qid in chosen for letter in letters[qid]}
+    problems = [f"{key}: not one of the chosen answers" for key in sorted(set(reviews) - keys)]
+    rows = []
     for qid in chosen:
         for letter, run in letters[qid].items():
             key = f"{qid}-{letter}"
             review = reviews.get(key) or {}
             verdict, index = review.get("verdict"), review.get("sentence")
-            if verdict not in VERDICTS:
-                problems.append(f"{key}: no verdict")
-                continue
-            if verdict == "unsupported" and not isinstance(index, int):
-                problems.append(f"{key}: not supported, but no first unsupported sentence")
-                continue
             parts = sentences(texts[qid, run])
             unsupported = verdict == "unsupported"
+            if verdict not in VERDICTS:
+                problems.append(f"{key}: no label")
+                continue
+            if unsupported and not (type(index) is int and 0 <= index < len(parts)):
+                problems.append(f"{key}: not supported, but no first unsupported sentence")
+                continue
             rows.append(
                 {
                     "question_id": qid,
                     "run": run,
                     "supported": not unsupported,
                     "first_unsupported": index if unsupported else None,
-                    "sentence": parts[index] if unsupported and 0 <= index < len(parts) else None,
+                    "sentence": parts[index] if unsupported else None,
                     "note": str(review.get("note") or "").strip(),
                 }
             )
@@ -156,7 +197,8 @@ def check() -> int:
         print(f"{path}: not labelled yet (#82)")
         return 0
     _, _, questions, logs = load()
-    labels, errors = validate_labels(LABELS.read_text(encoding="utf-8"), expected(questions, logs))
+    text = LABELS.read_text(encoding="utf-8")
+    labels, errors = validate_labels(text, answers(select(questions, logs), logs))
     for error in errors:
         print(f"{path}: {error}", file=sys.stderr)
     if errors:

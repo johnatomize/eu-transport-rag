@@ -3,7 +3,16 @@ from pathlib import Path
 
 import pytest
 
-from rag.faithfulness import QUOTAS, answers, assign, select, sentences, validate_labels
+from rag.faithfulness import (
+    QUOTAS,
+    answers,
+    assign,
+    build_id,
+    quote_spans,
+    select,
+    sentences,
+    validate_labels,
+)
 from rag.questions import Question, validate
 
 ROOT = Path(__file__).parents[1]
@@ -57,6 +66,21 @@ def test_sentences_keep_a_numbered_item_with_its_text():
         "1. Under the dial.",
         "2. Between the dials.",
     ]
+
+
+@pytest.mark.parametrize(
+    ("text", "first"),
+    [
+        ("The weekly limit is 56. It applies to all drivers.", "The weekly limit is 56."),
+        ("This is set out in Article 6. Breaks follow.", "This is set out in Article 6."),
+        ("See Annex I. It lists them.", "See Annex I."),
+        ("The answer is no. It does not apply.", "The answer is no."),
+        ("You get 34 hours. 56 is the weekly limit.", "You get 34 hours."),
+    ],
+)
+def test_sentences_split_after_a_number_letter_or_word_ending_a_sentence(text, first):
+    assert sentences(text)[0] == first
+    assert len(sentences(text)) == 2
 
 
 def test_sentences_split_before_a_quoted_or_bracketed_start():
@@ -189,3 +213,23 @@ def test_validate_labels_rejects_a_second_label_for_one_answer():
     text = "\n".join([row("haiku"), row("opus"), row("haiku")])
     _, errors = validate_labels(text, EXPECTED)
     assert any("already labelled on line 1" in e for e in errors), errors
+
+
+# --- quote_spans and build_id ------------------------------------------------------------------
+
+
+def test_quote_spans_match_as_the_answer_check_does():
+    text = "The driver\u2019s  daily\ndriving time \u2013 9 hours."
+    spans, missing = quote_spans(text, ["driver's daily driving time - 9 hours", "not there"])
+    assert missing == ["not there"]
+    assert [text[s:e] for s, e in spans] == ["driver\u2019s  daily\ndriving time \u2013 9 hours"]
+
+
+def test_build_id_changes_with_the_answers_and_the_letters():
+    logs = {"a": log(entry("q001")), "b": log(entry("q001", "Other."))}
+    letters = {"q001": {"A": "a", "B": "b"}}
+    first = build_id(["q001"], letters, logs)
+    assert build_id(["q001"], letters, logs) == first
+    assert build_id(["q001"], {"q001": {"A": "b", "B": "a"}}, logs) != first
+    changed = {"a": log(entry("q001", "Changed.")), "b": logs["b"]}
+    assert build_id(["q001"], letters, changed) != first

@@ -169,6 +169,9 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
     </div>
     <span class="sync" id="sync">Connecting to saved labels…</span>
     <button class="tool" id="export" type="button" title="Copy every label as JSON, to hand to Claude">Copy labels</button>
+    <button class="tool" id="save-file" type="button" hidden>Save labels file</button>
+    <button class="tool" id="load-file" type="button" hidden>Load labels file</button>
+    <input type="file" id="load-input" accept="application/json,.json" hidden>
     <button class="list-toggle" id="list-toggle" type="button" aria-expanded="false" aria-controls="list">All answers</button>
   </div>
 </header>
@@ -198,9 +201,12 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
   };
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  // Labels are kept under the build's fingerprint, so a page built from other answers never
+  // picks up labels made on this one.
+  const PREFIX = "fl:" + DATA.build + ":";
   const store = {
-    get(k) { try { return JSON.parse(localStorage.getItem("fl:" + k)); } catch { return null; } },
-    set(k, v) { try { localStorage.setItem("fl:" + k, JSON.stringify(v)); } catch {} },
+    get(k) { try { return JSON.parse(localStorage.getItem(PREFIX + k)); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(PREFIX + k, JSON.stringify(v)); } catch {} },
   };
   const ui = Object.assign({ current: ITEMS[0].key }, store.get("ui") || {});
   if (!ITEMS.some(i => i.key === ui.current)) ui.current = ITEMS[0].key;
@@ -209,29 +215,10 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
   const LOCAL = !(window.claude && typeof window.claude.use === "function");
   let db = null, canWrite = false, loaded = false;
   const chains = new Map(), noteTimers = new Map();
+  const COLLECTION = "labels-" + DATA.build;
   const labelOf = k => labels.get(k) || {};
   const done = k => { const l = labelOf(k); return l.verdict === "supported" || (l.verdict === "unsupported" && Number.isInteger(l.sentence)); };
   const setSync = (text, warn) => { const el = $("sync"); el.textContent = text; el.classList.toggle("warn", !!warn); };
-
-  // A quote is word for word in its node's text, but line breaks and spaces may differ.
-  function highlight(text, quotes) {
-    const ranges = [];
-    const missing = [];
-    for (const q of quotes) {
-      const words = q.trim().split(/\s+/).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-      const m = words.length ? new RegExp(words.join("\\s+")).exec(text) : null;
-      if (m) ranges.push([m.index, m.index + m[0].length]); else missing.push(q);
-    }
-    ranges.sort((a, b) => a[0] - b[0]);
-    let out = "", last = 0;
-    for (const [s, e] of ranges) {
-      if (e <= last) continue;
-      const from = Math.max(s, last);
-      out += esc(text.slice(last, from)) + "<mark>" + esc(text.slice(from, e)) + "</mark>";
-      last = e;
-    }
-    return { html: out + esc(text.slice(last)), missing };
-  }
 
   function renderCounts() {
     let ok = 0, bad = 0;
@@ -255,23 +242,21 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
     if (cur) cur.scrollIntoView({ block: "nearest" });
   }
 
-  function nodeCard(id, quotes) {
-    const n = DATA.nodes[id];
-    const h = highlight(n.text, quotes);
+  function nodeCard(c) {
+    const id = c.node_id, n = DATA.nodes[id];
+    const text = c.pieces.map(([t, quoted]) => quoted ? `<mark>${esc(t)}</mark>` : esc(t)).join("");
     return `<article class="node">
       <div class="node-head"><span class="node-id">${esc(id)}</span><span class="node-path">${esc(n.path.join(" › "))}</span>
         <a href="${esc(n.link)}" target="_blank" rel="noopener">${n.is_note ? "Open the PDF" : "Open on EUR-Lex"} ↗</a></div>
       ${n.lead_in ? `<p class="law lead-in">${esc(n.lead_in)}</p>` : ""}
-      <p class="law">${h.html}</p>
-      ${h.missing.length ? `<div class="quote-missing">Quoted but not found as written above: “${esc(h.missing.join("” · “"))}”</div>` : ""}
+      <p class="law">${text}</p>
+      ${c.missing.length ? `<div class="quote-missing">Quoted but not found above: “${esc(c.missing.join("” · “"))}”</div>` : ""}
     </article>`;
   }
 
   function renderDetail() {
     const item = ITEMS.find(i => i.key === ui.current);
     const pos = ITEMS.indexOf(item);
-    const byNode = new Map();
-    for (const c of item.citations) { if (!byNode.has(c.node_id)) byNode.set(c.node_id, []); byNode.get(c.node_id).push(c.quote); }
     $("detail").innerHTML = `
       <div class="head">
         <span class="qid">${item.question_id} · answer ${item.letter}</span>
@@ -297,8 +282,8 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
           `<li><button type="button" data-s="${i}" aria-pressed="false"><span class="n">${i + 1}</span><span>${esc(s)}</span></button></li>`).join("")}</ol>
       </section>
       <section class="section">
-        <div class="label">Cited text · ${byNode.size} passage${byNode.size > 1 ? "s" : ""}, quotes highlighted</div>
-        ${[...byNode].map(([id, qs]) => nodeCard(id, qs)).join("")}
+        <div class="label">Cited text · ${item.cited.length} passage${item.cited.length > 1 ? "s" : ""}, quotes highlighted</div>
+        ${item.cited.map(nodeCard).join("")}
       </section>
       <section class="verdict" aria-label="Your label">
         <div class="verdict-buttons">
@@ -346,7 +331,7 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
     const body = { verdict: prev.verdict || null, sentence: Number.isInteger(prev.sentence) ? prev.sentence : null, note: prev.note || "", ...patch, at: new Date().toISOString() };
     labels.set(key, body);
     if (LOCAL) { store.set("labels", Object.fromEntries(labels)); return Promise.resolve(); }
-    const run = () => db.doc("labels/" + key).set(body);
+    const run = () => db.doc(COLLECTION + "/" + key).set(body);
     const chain = (chains.get(key) || Promise.resolve()).then(run, run);
     chains.set(key, chain.catch(() => {}));
     return chain.catch(() => {
@@ -429,7 +414,7 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
       const l = labels.get(i.key);
       if (l && (l.verdict || l.note)) out[i.key] = { verdict: l.verdict || null, sentence: Number.isInteger(l.sentence) ? l.sentence : null, note: l.note || "", at: l.at || null };
     }
-    return JSON.stringify({ exported_at: new Date().toISOString(), reviews: out }, null, 2);
+    return JSON.stringify({ exported_at: new Date().toISOString(), build: DATA.build, reviews: out }, null, 2);
   }
   $("export").addEventListener("click", () => {
     for (const k of [...noteTimers.keys()]) flushNote(k);
@@ -443,13 +428,51 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
     } catch { fallback(); }
   });
   $("export-close").addEventListener("click", () => { $("export-panel").hidden = true; });
+  // A note typed just before the page closes is saved, not lost with its timer.
+  const flushAll = () => { for (const k of [...noteTimers.keys()]) flushNote(k); };
+  window.addEventListener("pagehide", flushAll);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushAll(); });
   const measure = () => document.documentElement.style.setProperty("--top-h", $("top").offsetHeight + "px");
   window.addEventListener("resize", measure);
+
+  // Opened as a file: labels live in this browser, with a file to back them up and hand over.
+  $("save-file").addEventListener("click", () => {
+    for (const k of [...noteTimers.keys()]) flushNote(k);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([exportJson()], { type: "application/json" }));
+    a.download = `faithfulness-labels-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    setSync(`Saved ${a.download}`);
+  });
+  $("load-file").addEventListener("click", () => $("load-input").click());
+  $("load-input").addEventListener("change", async e => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    let incoming;
+    try { incoming = JSON.parse(await file.text()).reviews; } catch { incoming = null; }
+    if (!incoming || typeof incoming !== "object") { setSync(`${file.name} isn't a labels file. Pick a file saved from this page.`, true); return; }
+    let taken = 0, kept = 0;
+    for (const [k, l] of Object.entries(incoming)) {
+      if (!ITEMS.some(i => i.key === k) || !l || typeof l !== "object") continue;
+      const mine = labels.get(k);
+      // Keep whichever label is newer, so loading an old file never undoes later work.
+      if (mine && mine.at && (!l.at || l.at <= mine.at)) { kept++; continue; }
+      labels.set(k, { verdict: l.verdict === "supported" || l.verdict === "unsupported" ? l.verdict : null,
+        sentence: Number.isInteger(l.sentence) ? l.sentence : null, note: String(l.note || ""), at: l.at || null });
+      taken++;
+    }
+    store.set("labels", Object.fromEntries(labels));
+    setSync(`Loaded ${taken} label${taken === 1 ? "" : "s"} from ${file.name}` + (kept ? `; kept ${kept} newer here` : ""));
+    renderAll();
+  });
 
   if (LOCAL) {
     for (const [k, l] of Object.entries(store.get("labels") || {})) if (ITEMS.some(i => i.key === k)) labels.set(k, l);
     canWrite = loaded = true;
-    setSync("Labels are kept in this browser. Copy them often.");
+    $("save-file").hidden = $("load-file").hidden = false;
+    setSync("Labels are kept in this browser. Save a labels file now and then as a backup.");
   }
   renderAll(); measure();
 
@@ -458,19 +481,20 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 2px; padd
     window.claude.use("db").then(d => {
       if (!d) { clearTimeout(timeout); setSync("Labels can't be loaded in this view.", true); loaded = true; renderVerdict(false); return; }
       db = d;
-      db.collection("labels").onSnapshot(snap => {
+      db.collection(COLLECTION).onSnapshot(snap => {
         clearTimeout(timeout);
         labels.clear();
         for (const doc of snap.docs) labels.set(doc.id, doc.data());
         for (const [k, t] of noteTimers) labels.set(k, { ...labelOf(k), note: t.value });
         if (!loaded) {
-          loaded = canWrite = true;
+          loaded = true;
           setSync("Saved labels loaded");
-          window.claude.use("user").then(u => {
-            if (!u || !u.can) return;
-            Promise.resolve(u.can("data.write")).then(v => { if (v === false) { canWrite = false; renderVerdict(false); } });
-          }).catch(() => {});
           renderAll();
+          // Writing turns on only once the viewer is known to be allowed to write.
+          window.claude.use("user").then(u => u && u.can ? u.can("data.write") : null).catch(() => null).then(v => {
+            canWrite = v !== false;
+            renderVerdict(false);
+          });
         } else { renderCounts(); renderList(); renderVerdict(false); }
       }, () => { clearTimeout(timeout); setSync("Lost the connection to saved labels. Reload the page.", true); canWrite = false; renderVerdict(false); });
     }).catch(() => { clearTimeout(timeout); setSync("Labels can't be loaded in this view.", true); loaded = true; renderVerdict(false); });

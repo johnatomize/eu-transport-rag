@@ -26,13 +26,16 @@ The labels stay out of the judge's prompt and its development, so that the agree
 in #83 is honest.
 """
 
+import hashlib
 import json
 import random
 import re
+import unicodedata
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from rag.questions import Question
+from rag.validate import normalise
 
 # 15 questions, spread over the answerable types roughly as the dev split is.
 QUOTAS = {
@@ -56,9 +59,12 @@ _FIELDS = {
     "note": str,
 }
 
-# A full stop ends a sentence unless it ends one of these, a lone letter or a number ("2."
-# starting a list item), and the next sentence starts with a capital, a digit or an opening mark.
-_ABBREVIATIONS = {"art", "arts", "no", "nos", "para", "paras", "reg", "dir", "e.g", "i.e", "cf"}
+# A sentence ends after . ! or ? when the next starts with a capital, a digit or an opening
+# mark. A full stop doesn't end one after an abbreviation that is always one, after an
+# abbreviation that is one before a number ("Art. 6", "No. 165/2014"; but "the answer is no."),
+# or after a list item's own number or letter, alone at the start ("2. Between the dials").
+_ABBREVIATIONS = {"e.g", "i.e", "cf", "reg", "dir"}
+_BEFORE_NUMBER = {"art", "arts", "no", "nos", "para", "paras", "p", "pp"}
 _BOUNDARY = re.compile(r"(?<=[.!?])([\"'”’)\]]*)\s+(?=[\"“‘(\[]?[A-Z0-9])")
 
 
@@ -79,16 +85,60 @@ def sentences(text: str) -> list[str]:
         start = 0
         for match in _BOUNDARY.finditer(line):
             end = match.start() + len(match.group(1))
-            words = line[start:end].split()
-            last = words[-1].strip("\"'“‘([.!?").lower() if words else ""
-            if line[end - 1 : end] != "." or (
-                last not in _ABBREVIATIONS and len(last) > 1 and not last.isdigit()
-            ):
+            if line[end - 1 : end] != "." or _ends(line[start:end], line[match.end()]):
                 out.append(line[start:end].strip())
                 start = match.end()
         if line[start:].strip():
             out.append(line[start:].strip())
     return out
+
+
+def _ends(sentence: str, following: str) -> bool:
+    """Whether a full stop at the end of `sentence`, before the character `following`, ends it."""
+    words = sentence.split()
+    last = words[-1].strip("\"'“‘([.!?").lower() if words else ""
+    if last in _ABBREVIATIONS or (last in _BEFORE_NUMBER and following.isdigit()):
+        return False
+    is_marker = last.isdigit() or (len(last) == 1 and last.isalpha())
+    return not (len(words) == 1 and is_marker)
+
+
+def by_id(log: Mapping) -> dict:
+    """A run log's entries by question ID."""
+    return {e["id"]: e for e in log["answers"]}
+
+
+def build_id(question_ids: Sequence[str], letters: Mapping, logs: Mapping[str, Mapping]) -> str:
+    """A short fingerprint of what the page shows: the questions, the letters and the answers.
+
+    The page keeps labels under it and puts it in its export, so labels made on a page built
+    from other answers are never applied to these.
+    """
+    record = [
+        [qid, letters[qid], [by_id(logs[r])[qid]["verdict"]["answer"] for r in sorted(logs)]]
+        for qid in question_ids
+    ]
+    digest = hashlib.sha256(json.dumps(record, ensure_ascii=False).encode()).hexdigest()
+    return digest[:12]
+
+
+def quote_spans(text: str, quotes: Sequence[str]) -> tuple[list[list[int]], list[str]]:
+    """Where each quote lies in `text`, as [start, end] offsets, and the quotes not found.
+
+    Matched the way the answer check matched them (`rag.validate.normalise`): spacing, invisible
+    characters and typography such as curly quotes and dashes don't matter.
+    """
+    flat, starts = normalise(text)
+    spans, missing = [], []
+    for quote in quotes:
+        wanted, _ = normalise(unicodedata.normalize("NFC", quote))
+        wanted = wanted.strip()
+        at = flat.find(wanted) if wanted else -1
+        if at < 0:
+            missing.append(quote)
+        else:
+            spans.append([starts[at], starts[at + len(wanted) - 1] + 1])
+    return sorted(spans), missing
 
 
 def _answered(entry: Mapping | None) -> bool:
@@ -110,7 +160,7 @@ def select(
     first, then drawn from the rest with a seed per type, so changing one quota leaves the
     other types' draws alone.
     """
-    entries = [{e["id"]: e for e in log["answers"]} for log in logs.values()]
+    entries = [by_id(log) for log in logs.values()]
     qualify = [
         q
         for q in questions
@@ -149,7 +199,7 @@ def answers(question_ids: Sequence[str], logs: Mapping[str, Mapping]) -> dict:
     """The answer text of each selected answer, {(question_id, run): text}."""
     out = {}
     for run, log in logs.items():
-        entries = {e["id"]: e for e in log["answers"]}
+        entries = by_id(log)
         for qid in question_ids:
             out[qid, run] = entries[qid]["verdict"]["answer"]
     return out

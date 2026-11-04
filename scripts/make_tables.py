@@ -46,10 +46,13 @@ def main(argv: list[str] | None = None) -> int:
     if errors:
         print(f"error: {QUESTIONS.name} is not valid; run `make questions`", file=sys.stderr)
         return 1
-    answer_logs = [
-        (path.name, json.loads(path.read_text(encoding="utf-8")))
-        for path in sorted(ANSWER_RUNS.glob("*.json"))
-    ]
+    answer_logs = []
+    for path in sorted(ANSWER_RUNS.glob("*.json")):
+        try:
+            answer_logs.append((path.name, json.loads(path.read_text(encoding="utf-8"))))
+        except (OSError, ValueError) as e:
+            print(f"error: can't read {path.relative_to(ROOT)}: {e}", file=sys.stderr)
+            return 1
     try:
         tables = {OUT: retrieval(runs, questions, tree)}
     except ValueError as e:
@@ -60,7 +63,7 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
-    counts = {OUT: len(runs), ANSWERS_OUT: len(answer_logs)}
+    counts = {OUT: len(runs), ANSWERS_OUT: len(answer_logs)}  # unfinished ones are listed too
     if args.check:
         stale = [p for p, t in tables.items() if not p.exists() or p.read_text("utf-8") != t]
         for p in stale:

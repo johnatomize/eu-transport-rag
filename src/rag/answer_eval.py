@@ -33,10 +33,10 @@ all scoring needs. The rules, recorded in docs/DECISIONS.md ("how an answer run 
 - **Intervals** are 95%: Wilson for shares of questions, a seeded percentile bootstrap over
   questions for means. Each measure is given overall, by phrasing and by type.
 - **Paired comparison** of two runs on the same questions (#81): a question is *right* when it
-  has key facts and is correct, or is unanswerable and refused; answerable questions without
-  key facts are left out. The questions one run gets right and the other doesn't are counted
-  both ways, and an exact two-sided sign test says how likely a split at least that lopsided
-  would be if neither run were better.
+  has key facts and is correct, or is unanswerable and refused. Answerable questions without
+  key facts, and questions whose call got no reply in either run, are left out. The questions
+  one run gets right and the other doesn't are counted both ways, and an exact two-sided sign
+  test says how likely a split at least that lopsided would be if neither run were better.
 
 The test split is scored only when asked for explicitly, as in `retrieval_eval`.
 """
@@ -82,7 +82,12 @@ class AnswerScore:
 
     @property
     def right(self) -> bool | None:
-        """Correct, or an unanswerable question refused; None when code can't tell (#81)."""
+        """Correct, or an unanswerable question refused; None when code can't tell (#81).
+
+        A call that got no reply is None too: a failed request says nothing about the setup.
+        """
+        if self.outcome == NO_REPLY:
+            return None
         if self.correct is not None:
             return self.correct
         if not self.answerable:
@@ -213,6 +218,12 @@ def score(
 # --- A run ---------------------------------------------------------------------------------
 
 
+def missing_questions(log: Mapping, questions: Sequence[Question]) -> list[str]:
+    """The questions of the log's split it has neither a reply nor a failed call for."""
+    done = {e["id"] for e in log["answers"]} | {f["id"] for f in log["failed"]}
+    return [q.id for q in questions if q.split == log["config"]["split"] and q.id not in done]
+
+
 def _shares(scores: Sequence[AnswerScore]) -> dict[str, list[bool]]:
     """For each share in SHARES, whether each question it is taken over counts."""
     answerable = [s for s in scores if s.answerable]
@@ -289,7 +300,7 @@ def evaluate(
             raise ValueError(f"the run log has {failed['id']} both answered and failed")
         entries[failed["id"]] = None
     wanted = {q.id for q in chosen}
-    missing = sorted(wanted - entries.keys())
+    missing = missing_questions(log, questions)
     extra = sorted(entries.keys() - wanted)
     if missing:
         raise ValueError(
@@ -349,12 +360,11 @@ def compare(a: AnswerEvaluation, b: AnswerEvaluation) -> Paired:
     """Compare two runs question by question on whether each got it right (`AnswerScore.right`)."""
     if a.split != b.split:
         raise ValueError(f"can't pair a {a.split} run with a {b.split} run")
-    b_by_id = {s.question_id: s for s in b.scores}
     if [s.question_id for s in a.scores] != [s.question_id for s in b.scores]:
         raise ValueError("the two runs don't answer the same questions")
     counts = {(True, True): 0, (True, False): 0, (False, True): 0, (False, False): 0}
-    for s in a.scores:
-        pair = (s.right, b_by_id[s.question_id].right)
+    for s, t in zip(a.scores, b.scores, strict=True):
+        pair = (s.right, t.right)
         if None in pair:
             continue
         counts[pair] += 1

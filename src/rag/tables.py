@@ -17,6 +17,7 @@ from rag.answer_eval import (
     AnswerEvaluation,
     AnswerGroup,
     compare,
+    missing_questions,
 )
 from rag.answer_eval import evaluate as evaluate_answers
 from rag.chunk import STRATEGIES, Chunk
@@ -210,22 +211,41 @@ BREAKDOWNS = (("correct", "Correct"), ("citation_recall", "Citation recall"))
 SPLIT_NAMES = {"dev": "Dev split", "test": "Test split"}
 
 
+# Settings besides the model and retrieval that make two runs different versions of the system.
+_OTHER_SETTINGS = (("effort", "effort"), ("max_output_tokens", "max output"),
+                   ("prompt_version", "prompt"))  # fmt: skip
+
+
 def run_label(config: Mapping) -> str:
-    """A run's name in the tables, from its settings: "opus-5-5, hybrid paragraph top 5"."""
+    """A run's short name in the tables, from its settings: "opus-5-5, hybrid paragraph top 5"."""
     retrieval = dict(config["retrieval"])
     named = [retrieval.pop("retriever"), retrieval.pop("strategy"), f"top {retrieval.pop('k')}"]
     named += [f"{key} {value}" for key, value in retrieval.items()]
     return f"{config['model'].removeprefix('claude-')}, {' '.join(map(str, named))}"
 
 
+def _full_label(config: Mapping) -> str:
+    """The short name with every other setting, for runs whose short names are the same."""
+    others = ", ".join(f"{title} {config[key]}" for key, title in _OTHER_SETTINGS)
+    return f"{run_label(config)}, {others}"
+
+
 def is_base(config: Mapping) -> bool:
     return config["model"] == BASE["model"] and dict(config["retrieval"]) == BASE["retrieval"]
 
 
-def unfinished(log: Mapping, questions: Sequence[Question]) -> list[str]:
-    """The questions of the log's split it has neither an answer nor a failed call for."""
-    done = {e["id"] for e in log["answers"]} | {f["id"] for f in log["failed"]}
-    return [q.id for q in questions if q.split == log["config"]["split"] and q.id not in done]
+def _check_shape(file: str, log: Mapping) -> None:
+    """Refuse a log that isn't an answer run log, before anything reads its settings."""
+    try:
+        config = log["config"]
+        fields = [config["model"], config["split"], config["retrieval"]["strategy"],
+                  config["retrieval"]["retriever"], config["retrieval"]["k"], log["answers"],
+                  log["failed"], log["run"]["commit"], log["paid"]["cost_usd"]]  # fmt: skip
+        fields += [config[key] for key, _ in _OTHER_SETTINGS]
+    except (KeyError, TypeError) as e:
+        raise ValueError(f"{file} is not an answer run log: it has no {e}") from None
+    if config["split"] not in SPLITS:
+        raise ValueError(f"{file} is a run on the {config['split']!r} questions")
 
 
 def _value(metric: Metric, places: int) -> str:
@@ -357,38 +377,70 @@ def answers(
 ) -> str:
     """The answer results of the run logs `(file name, log)`, as one Markdown document.
 
-    Runs are grouped by split, dev first, the base setup first within each and then by file
-    name. A run that hasn't answered every question of its split is listed, not scored. The
+    Runs are grouped by split, dev first, the base setup first within each (its latest run, if
+    there are several) and then by file name. Runs are named by model and retrieval, with their
+    other settings added where two names would be the same; two runs with the same settings on
+    one split are refused. A run that hasn't answered every question of its split is listed,
+    not scored. The
     test split is scored here, for checkpoint G's final table (design §C). `chunks` gives the
     chunks of each strategy; by default each strategy a run used is cut from `tree`.
     """
-    if not logs:
-        raise ValueError("no answer run logs to make tables from")
+    for file, log in logs:
+        _check_shape(file, log)
     chunks = dict(chunks or {})  # strategy -> chunks, cut once each
-    done: dict[str, list[tuple[str, Mapping, AnswerEvaluation]]] = {s: [] for s in SPLITS}
+
+    def nodes(strategy: str) -> dict[str, tuple[str, ...]]:
+        if strategy not in chunks:
+            if strategy not in STRATEGIES:
+                raise ValueError(f"no chunking strategy {strategy!r}")
+            chunks[strategy] = STRATEGIES[strategy](tree)
+        return {c.id: c.node_ids for c in chunks[strategy]}
+
+    # Within a split the base setup comes first, its latest run if there are several, then the
+    # others by file name, which starts with the time the run began.
+    def order(item: tuple[str, Mapping]) -> tuple:
+        file, log = item
+        return (log["config"]["split"], not is_base(log["config"]), file)
+
+    finished: dict[str, list[tuple[str, Mapping]]] = {s: [] for s in SPLITS}
     partial: list[tuple[str, Mapping, int]] = []
-    files: dict[str, str] = {}
-    for file, log in sorted(logs, key=lambda item: (not is_base(item[1]["config"]), item[0])):
-        config = log["config"]
-        name = run_label(config)
-        if config["split"] not in SPLITS:
-            raise ValueError(f"{file} is a run on the {config['split']!r} questions")
-        left = unfinished(log, questions)
+    for file, log in sorted(logs, key=order):
+        known = nodes(log["config"]["retrieval"]["strategy"])
+        stale = sorted({c for e in log["answers"] for c in e["retrieved"] if c not in known})
+        if stale:
+            raise ValueError(
+                f"{file} shows chunks {', '.join(stale)}, which chunking the corpus now "
+                "doesn't give; was it made from another parse?"
+            )
+        left = missing_questions(log, questions)
         if left:
             partial.append((file, log, len(left)))
-            continue
-        key = (config["split"], name)
-        if key in files:
-            raise ValueError(
-                f"{files[key]} and {file} are both {name} on the {config['split']} split"
-            )
-        files[key] = file
-        strategy = config["retrieval"]["strategy"]
-        if strategy not in chunks:
-            chunks[strategy] = STRATEGIES[strategy](tree)
-        nodes_of = {c.id: c.node_ids for c in chunks[strategy]}
-        ev = evaluate_answers(log, questions, tree, nodes_of, allow_test=True)
-        done[config["split"]].append((name, log, ev))
+        else:
+            finished[log["config"]["split"]].append((file, log))
+
+    done: dict[str, list[tuple[str, Mapping, AnswerEvaluation]]] = {s: [] for s in SPLITS}
+    files: dict[tuple[str, str], str] = {}
+    for split, runs in finished.items():
+        bases = [i for i, (_, log) in enumerate(runs) if is_base(log["config"])]
+        if len(bases) > 1:  # the latest base run is the base; the others follow it in time
+            runs.insert(0, runs.pop(bases[-1]))
+        seen: dict[str, str] = {}
+        short = [run_label(log["config"]) for _, log in runs]
+        for (file, log), label in zip(runs, short, strict=True):
+            config = log["config"]
+            settings = _full_label(config)
+            if settings in seen:
+                raise ValueError(
+                    f"{' and '.join(sorted((seen[settings], file)))} are both {settings} on "
+                    f"the {split} "
+                    "split; keep the one to score and move the other out of runs/generation/"
+                )
+            seen[settings] = file
+            name = label if short.count(label) == 1 else _full_label(config)
+            files[(split, name)] = file
+            nodes_of = nodes(config["retrieval"]["strategy"])
+            ev = evaluate_answers(log, questions, tree, nodes_of, allow_test=True)
+            done[split].append((name, log, ev))
     words = {s: {c.id: len(c.text.split()) for c in cs} for s, cs in chunks.items()}
 
     lines = [
@@ -405,18 +457,23 @@ def answers(
         "over every answerable question. **Refusal accuracy**: unanswerable questions refused. "
         "**False refusals**: answerable questions refused. **Not answered reliably**: the reply "
         "failed the check, so the reader was told it could not be answered reliably. Cost, "
-        "seconds and tokens are per question with a reply; words shown is the length of the "
-        "passages put in each prompt, headings included.",
+        "seconds and tokens are per question with a reply. Words shown is the length of the "
+        "text of the passages put in each prompt, headings included, counted as in the "
+        "retrieval results; the input tokens also count the instructions and the passages' "
+        "markup.",
     ]
+    if not logs:
+        lines += ["", "No answer runs yet."]
     for split in SPLITS:
         if done[split]:
             lines += _split_section(split, done[split], words)
 
-    lines += ["", "## Runs", ""]
-    lines += _header(["Run", "Split", "Effort", "Prompt", "Commit", "Log", "Paid (US$)"], 6)
-    for split in SPLITS:
-        for name, log, _ in done[split]:
-            lines.append(_run_row(name, log, files[(split, name)]))
+    if any(done.values()):
+        lines += ["", "## Runs", ""]
+        lines += _header(["Run", "Split", "Effort", "Prompt", "Commit", "Log", "Paid (US$)"], 6)
+        for split in SPLITS:
+            for name, log, _ in done[split]:
+                lines.append(_run_row(name, log, files[(split, name)]))
     if partial:
         lines += ["", "Not scored, because they don't answer every question of their split:", ""]
         for file, log, left in partial:

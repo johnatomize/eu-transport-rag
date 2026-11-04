@@ -24,6 +24,7 @@ def settle(run: dict, model="claude-opus-5-5", k=5, **retrieval) -> dict:
     run["config"] = {
         "model": model,
         "effort": "medium",
+        "max_output_tokens": 4000,
         "prompt_version": "abc123",
         "retrieval": {"retriever": "hybrid", "strategy": "paragraph", "k": k, **retrieval},
         "split": run["config"]["split"],
@@ -118,7 +119,7 @@ def test_each_run_is_compared_with_the_base_setup():
     paired = section(text, "### Paired comparisons")
     assert "against the base setup (opus-5-5, hybrid paragraph top 5)" in paired
     (row,) = rows(paired, "opus-5-5, hybrid paragraph top 3")
-    assert row[2:] == ["3", "1", "1", "2", "0.625"]
+    assert row[2:] == ["3", "1", "1", "1", "0.625"]  # q006 got no reply in the base run
     assert "1 comparison on this split" in paired and "Bonferroni" not in paired
 
 
@@ -147,6 +148,19 @@ def test_two_runs_of_the_same_setup_on_one_split_are_refused():
         table(("a.json", BASE), ("c.json", BASE))
 
 
+def test_runs_differing_only_in_other_settings_are_named_by_them():
+    newer = copy.deepcopy(BASE)
+    newer["config"]["prompt_version"] = "def456"
+    text = table(("a.json", BASE), ("b.json", newer))
+    names = [r[0] for r in rows(section(text, "### Quality"), "opus-5-5")]
+    # The latest base run is the base, and comes first.
+    assert names == [
+        "opus-5-5, hybrid paragraph top 5, effort medium, max output 4000, prompt def456",
+        "opus-5-5, hybrid paragraph top 5, effort medium, max output 4000, prompt abc123",
+    ]
+    assert "against the base setup (opus-5-5, hybrid paragraph top 5, effort medium" in text
+
+
 def test_test_runs_get_their_own_section_after_dev():
     test_run = settle(log([entry("q100")], split="test"))
     text = table(("t.json", test_run), ("a.json", BASE))
@@ -165,3 +179,27 @@ def test_a_typed_question_log_is_refused():
 def test_the_table_is_reproducible():
     logs = (("a.json", BASE), ("b.json", BETTER))
     assert table(*logs) == table(*reversed(logs))
+
+
+def test_without_runs_the_table_says_so():
+    assert table().endswith("No answer runs yet.\n")
+
+
+def test_a_log_that_is_not_an_answer_run_log_is_refused():
+    broken = copy.deepcopy(BASE)
+    del broken["config"]["retrieval"]
+    with pytest.raises(ValueError, match="x.json is not an answer run log: it has no 'retrieval'"):
+        table(("x.json", broken))
+
+
+def test_an_unknown_strategy_is_refused():
+    other = settle(RUN)
+    other["config"]["retrieval"]["strategy"] = "window-300-50"
+    with pytest.raises(ValueError, match="no chunking strategy 'window-300-50'"):
+        table(("x.json", other))
+
+
+def test_an_unfinished_run_from_another_parse_is_refused():
+    partial = settle(log([entry("q001", retrieved=("p:9(9)",))]))
+    with pytest.raises(ValueError, match="p.json shows chunks p:9\\(9\\)"):
+        table(("p.json", partial))

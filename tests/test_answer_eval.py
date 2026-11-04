@@ -387,7 +387,9 @@ def test_right_is_correct_or_an_unanswerable_question_refused():
     unanswerable = question(gold=())
     assert score(unanswerable, entry(answerable=False), TREE, NODES_OF).right is True
     assert score(unanswerable, entry(), TREE, NODES_OF).right is False
-    assert score(unanswerable, None, TREE, NODES_OF).right is False
+    # A call that got no reply says nothing about the setup, answerable or not.
+    assert score(unanswerable, None, TREE, NODES_OF).right is None
+    assert score(question(), None, TREE, NODES_OF).right is None
 
 
 def test_two_runs_are_compared_question_by_question():
@@ -408,8 +410,9 @@ def test_two_runs_are_compared_question_by_question():
     a = evaluate(other, QUESTIONS, TREE, NODES_OF)
     b = evaluate(RUN, QUESTIONS, TREE, NODES_OF)
     c = compare(a, b)
-    assert (c.wins, c.losses, c.both_right, c.both_wrong) == (3, 1, 1, 2)
-    assert c.n == 7 and c.p == pytest.approx(sign_test(3, 1)) == pytest.approx(0.625)
+    # q006 got no reply in RUN, so it is left out with q003.
+    assert (c.wins, c.losses, c.both_right, c.both_wrong) == (3, 1, 1, 1)
+    assert c.n == 6 and c.p == pytest.approx(sign_test(3, 1)) == pytest.approx(0.625)
     flipped = compare(b, a)
     assert (flipped.wins, flipped.losses, flipped.p) == (1, 3, c.p)
 

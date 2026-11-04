@@ -63,10 +63,10 @@ ask: ## Answer one typed question: make ask Q="…" shows the passages and cost;
 vector-index: db-up ## Load chunks and their cached vectors into local pgvector: make vector-index [STRATEGY=paragraph]
 	uv run --locked python scripts/vector_index.py $(if $(STRATEGY),--strategy $(STRATEGY),)
 
-tables: ## Rebuild results/retrieval.md from the run logs alone
+tables: ## Rebuild results/retrieval.md and results/answers.md from the run logs alone
 	uv run --locked python scripts/make_tables.py
 
-tables-check: ## Fail if results/retrieval.md doesn't match the run logs
+tables-check: ## Fail if a results table doesn't match the run logs
 	uv run --locked python scripts/make_tables.py --check
 
 questions: ## Validate data/questions.v1.jsonl against its schema and the parsed corpus, and count it

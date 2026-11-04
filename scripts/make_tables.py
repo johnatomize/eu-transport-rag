@@ -1,14 +1,17 @@
-"""Build the results tables from the committed run logs, without running retrieval.
+"""Build the results tables from the committed run logs, without retrieving or calling a model.
 
-    make_tables.py           write results/retrieval.md (`make tables`)
-    make_tables.py --check   fail if results/retrieval.md differs from what would be written
+    make_tables.py           write results/retrieval.md and results/answers.md (`make tables`)
+    make_tables.py --check   fail if either differs from what would be written
 
-Refuses a run log made from another version of the questions or the corpus manifest, or whose
-chunks differ from what the parser and chunking code give now. That check cuts the corpus
-again, but nothing is retrieved.
+Refuses a retrieval run log made from another version of the questions or the corpus manifest,
+or whose chunks differ from what the parser and chunking code give now; and an answer run log
+that shows a chunk the corpus no longer gives. That check cuts the corpus again, but nothing is
+retrieved. The answer table scores the test split too, once its run exists: it is checkpoint
+G's final table (design §C).
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -16,13 +19,15 @@ from rag.corpus import CorpusError, load_manifest
 from rag.parse import ParseError, parse_corpus
 from rag.questions import validate
 from rag.runlog import StaleRunError, check_chunks, load
-from rag.tables import retrieval
+from rag.tables import answers, retrieval
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "corpus" / "manifest.yaml"
 QUESTIONS = ROOT / "data" / "questions.v1.jsonl"
 RUNS = ROOT / "runs" / "retrieval"
+ANSWER_RUNS = ROOT / "runs" / "generation"
 OUT = ROOT / "results" / "retrieval.md"
+ANSWERS_OUT = ROOT / "results" / "answers.md"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -41,21 +46,38 @@ def main(argv: list[str] | None = None) -> int:
     if errors:
         print(f"error: {QUESTIONS.name} is not valid; run `make questions`", file=sys.stderr)
         return 1
+    answer_logs = []
+    for path in sorted(ANSWER_RUNS.glob("*.json")):
+        try:
+            answer_logs.append((path.name, json.loads(path.read_text(encoding="utf-8"))))
+        except (OSError, ValueError) as e:
+            print(f"error: can't read {path.relative_to(ROOT)}: {e}", file=sys.stderr)
+            return 1
     try:
-        table = retrieval(runs, questions, tree)
+        tables = {OUT: retrieval(runs, questions, tree)}
     except ValueError as e:
         print(f"error: {e}; run `make retrieval-runs`", file=sys.stderr)
         return 1
-    path = OUT.relative_to(ROOT)
+    try:
+        tables[ANSWERS_OUT] = answers(answer_logs, questions, tree)
+    except ValueError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    counts = {OUT: len(runs), ANSWERS_OUT: len(answer_logs)}  # unfinished ones are listed too
     if args.check:
-        if not OUT.exists() or OUT.read_text(encoding="utf-8") != table:
+        stale = [p for p, t in tables.items() if not p.exists() or p.read_text("utf-8") != t]
+        for p in stale:
+            path = p.relative_to(ROOT)
             print(f"error: {path} doesn't match the run logs; run `make tables`", file=sys.stderr)
+        if stale:
             return 1
-        print(f"{path} matches the {len(runs)} run logs")
+        for p in tables:
+            print(f"{p.relative_to(ROOT)} matches the {counts[p]} run logs")
         return 0
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(table, encoding="utf-8")
-    print(f"wrote {path} from {len(runs)} run logs")
+    for p, table in tables.items():
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(table, encoding="utf-8")
+        print(f"wrote {p.relative_to(ROOT)} from {counts[p]} run logs")
     return 0
 
 

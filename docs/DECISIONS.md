@@ -2,6 +2,18 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-04: how two answer runs are compared
+
+**Decision** (#81): `results/answers.md` compares runs question by question, with an exact two-sided sign test, in `src/rag/answer_eval.py` and `src/rag/tables.py`.
+
+- **A question is right** when it has key facts and the answer is correct, or it is unanswerable and was refused. Answerable questions without key facts are left out, since code can't tell whether their answers are right (decision of the same day on what G measures); on the test split the owner's grades (#88) can add them later. A question whose call got no reply in either run is left out too: a failed or expired request says nothing about which version is better, and it is counted in its own column.
+- **Each run is compared with the base setup** (Opus 5.5, hybrid search over paragraph chunks, top 5), since each dev version changes one thing from it; if it was run more than once, the latest run is the base. A split without the base run compares every pair.
+- **The sign test** counts the questions only one run gets right, both ways, and gives the chance of a split at least that lopsided if neither run were better. Questions both get right or both get wrong say nothing and are only shown.
+- **Many comparisons:** a note under the table gives their number and the Bonferroni threshold (0.05 divided by it), so one small p among several isn't over-read. No correction is applied to the p values themselves.
+- **Runs are named by their settings**, such as "opus-5-5, hybrid paragraph top 5", with effort, output limit and prompt version added when two runs would otherwise share a name. Two finished runs with all the same settings on one split are refused, so a rerun must replace the earlier log rather than sit beside it. A run that hasn't answered every question of its split is listed but not scored.
+
+**Alternatives:** comparing every pair of the seven dev runs (the base, five versions and Haiku), 21 tests of which the six against the base answer the design's questions; counting correctness alone, which would leave out whether a version still refuses the 10 unanswerable questions; McNemar's chi-squared test, which approximates the same sign test badly at the small counts seen here.
+
 ## 2026-11-04: how an answer run is scored
 
 **Decision** (#80): the rules `src/rag/answer_eval.py` follows to score an answer run log, without calling a model.

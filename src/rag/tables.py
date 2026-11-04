@@ -1,13 +1,28 @@
 """Results tables, rebuilt from run logs alone (`make tables`).
 
-Nothing here retrieves anything: each run log is scored with `rag.retrieval_eval` against the
-question set and the parsed corpus, and the tables are written as Markdown to `results/`.
+Nothing here retrieves anything or calls a model: each retrieval run log is scored with
+`rag.retrieval_eval`, and each answer run log with `rag.answer_eval`, against the question set
+and the parsed corpus, and the tables are written as Markdown to `results/`.
 """
 
 from collections.abc import Mapping, Sequence
 
+from rag.answer_eval import (
+    ANSWERED,
+    GENERATION,
+    NO_REPLY,
+    REFUSED,
+    RETRIEVAL,
+    UNRELIABLE,
+    AnswerEvaluation,
+    AnswerGroup,
+    compare,
+    missing_questions,
+)
+from rag.answer_eval import evaluate as evaluate_answers
+from rag.chunk import STRATEGIES, Chunk
 from rag.parse import Tree
-from rag.questions import TYPES, Question
+from rag.questions import PHRASINGS, SPLITS, TYPES, Question
 from rag.retrieval_eval import CUTOFF, Evaluation, Metric, evaluate
 from rag.runlog import rankings
 
@@ -169,3 +184,308 @@ def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree
             )
         )
     return "\n".join(lines) + "\n"
+
+
+# --- Answers -------------------------------------------------------------------------------
+
+# The setup the other versions each change one thing from (design §G, DECISIONS 2026-11-04).
+BASE = {
+    "model": "claude-opus-5-5",
+    "retrieval": {"retriever": "hybrid", "strategy": "paragraph", "k": 5},
+}
+QUALITY = (
+    ("correct", "Correct"),
+    ("citation_precision", "Citation precision"),
+    ("citation_recall", "Citation recall"),
+    ("refusal_accuracy", "Refusal accuracy"),
+    ("false_refusals", "False refusals"),
+    ("unreliable", "Not answered reliably"),
+)
+COST = (
+    ("cost_usd", "Cost (US$)", 4),
+    ("seconds", "Seconds", 1),
+    ("input_tokens", "Input tokens", 0),
+    ("output_tokens", "Output tokens", 0),
+)
+BREAKDOWNS = (("correct", "Correct"), ("citation_recall", "Citation recall"))
+SPLIT_NAMES = {"dev": "Dev split", "test": "Test split"}
+
+
+# Settings besides the model and retrieval that make two runs different versions of the system.
+_OTHER_SETTINGS = (("effort", "effort"), ("max_output_tokens", "max output"),
+                   ("prompt_version", "prompt"))  # fmt: skip
+
+
+def run_label(config: Mapping) -> str:
+    """A run's short name in the tables, from its settings: "opus-5-5, hybrid paragraph top 5"."""
+    retrieval = dict(config["retrieval"])
+    named = [retrieval.pop("retriever"), retrieval.pop("strategy"), f"top {retrieval.pop('k')}"]
+    named += [f"{key} {value}" for key, value in retrieval.items()]
+    return f"{config['model'].removeprefix('claude-')}, {' '.join(map(str, named))}"
+
+
+def _full_label(config: Mapping) -> str:
+    """The short name with every other setting, for runs whose short names are the same."""
+    others = ", ".join(f"{title} {config[key]}" for key, title in _OTHER_SETTINGS)
+    return f"{run_label(config)}, {others}"
+
+
+def is_base(config: Mapping) -> bool:
+    return config["model"] == BASE["model"] and dict(config["retrieval"]) == BASE["retrieval"]
+
+
+def _check_shape(file: str, log: Mapping) -> None:
+    """Refuse a log that isn't an answer run log, before anything reads its settings."""
+    try:
+        config = log["config"]
+        fields = [config["model"], config["split"], config["retrieval"]["strategy"],
+                  config["retrieval"]["retriever"], config["retrieval"]["k"], log["answers"],
+                  log["failed"], log["run"]["commit"], log["paid"]["cost_usd"]]  # fmt: skip
+        fields += [config[key] for key, _ in _OTHER_SETTINGS]
+    except (KeyError, TypeError) as e:
+        raise ValueError(f"{file} is not an answer run log: it has no {e}") from None
+    if config["split"] not in SPLITS:
+        raise ValueError(f"{file} is a run on the {config['split']!r} questions")
+
+
+def _value(metric: Metric, places: int) -> str:
+    if places == 0:
+        return f"{metric.value:,.0f} ({metric.low:,.0f}–{metric.high:,.0f})"
+    return f"{metric.value:.{places}f} ({metric.low:.{places}f}–{metric.high:.{places}f})"
+
+
+def _maybe(group: AnswerGroup, metric: str, places: int = 2) -> str:
+    return _value(group.metrics[metric], places) if metric in group.metrics else "–"
+
+
+def words_shown(log: Mapping, words: Mapping[str, int]) -> float:
+    """The mean number of words in the passages each question's prompt held, prefix included."""
+    shown = [sum(words[c] for c in entry["retrieved"]) for entry in log["answers"]]
+    return sum(shown) / len(shown) if shown else 0.0
+
+
+def _split_section(
+    split: str,
+    runs: Sequence[tuple[str, Mapping, AnswerEvaluation]],
+    words: Mapping[str, Mapping[str, int]],
+) -> list[str]:
+    names = [name for name, _, _ in runs]
+    groups = {name: {g.group: g for g in ev.groups} for name, _, ev in runs}
+    first = groups[names[0]]
+    everyone = first["all"]
+    answerable = sum(s.answerable for s in runs[0][2].scores)
+    lines = [
+        "",
+        f"## {SPLIT_NAMES[split]}",
+        "",
+        f"{everyone.n} questions: {everyone.over.get('correct', 0)} with key facts, "
+        f"{answerable - everyone.over.get('correct', 0)} answerable without, and "
+        f"{everyone.n - answerable} unanswerable.",
+        "",
+        "### Quality",
+        "",
+    ]
+    lines += _header(["Run", *(title for _, title in QUALITY)])
+    for name in names:
+        lines.append(_row([name, *(_maybe(groups[name]["all"], key) for key, _ in QUALITY)]))
+
+    lines += ["", "### Cost and speed per question", ""]
+    lines += _header(["Run", *(title for _, title, _ in COST), "Words shown"])
+    for name, log, _ in runs:
+        cells = [_maybe(groups[name]["all"], key, places) for key, _, places in COST]
+        shown = words_shown(log, words[log["config"]["retrieval"]["strategy"]])
+        lines.append(_row([name, *cells, f"{shown:,.0f}"]))
+
+    lines += [
+        "",
+        "### What happened to each question",
+        "",
+        "Retrieval misses and generation errors split the questions that went wrong: an "
+        "answerable question not answered correctly, or an unanswerable one answered. A miss "
+        "had no gold passage among those shown; an error had one.",
+        "",
+    ]
+    titles = ["Answered", "Refused", "Not reliable", "No reply", "Retrieval misses",
+              "Generation errors"]  # fmt: skip
+    lines += _header(["Run", *titles])
+    keys = (ANSWERED, REFUSED, UNRELIABLE, NO_REPLY, RETRIEVAL, GENERATION)
+    for name in names:
+        lines.append(_row([name, *(groups[name]["all"].counts[k] for k in keys)]))
+
+    for metric, title in BREAKDOWNS:
+        for kinds, by in ((PHRASINGS, "phrasing"), (TYPES, "question type")):
+            rows = [k for k in kinds if k in first and metric in first[k].metrics]
+            if not rows:
+                continue
+            lines += ["", f"### {title} by {by}", ""]
+            lines += _header([by.capitalize(), "n", *names])
+            for kind in rows:
+                cells = [_maybe(groups[name][kind], metric) for name in names]
+                lines.append(_row([kind, first[kind].over[metric], *cells]))
+
+    lines += _paired(runs)
+    return lines
+
+
+def _paired(runs: Sequence[tuple[str, Mapping, AnswerEvaluation]]) -> list[str]:
+    if len(runs) < 2:
+        return []
+    bases = [i for i, (_, log, _) in enumerate(runs) if is_base(log["config"])]
+    if bases:
+        base = runs[bases[0]]
+        pairs = [(run, base) for run in runs if run is not base]
+        against = f"the base setup ({base[0]})"
+    else:
+        pairs = [(a, b) for i, a in enumerate(runs) for b in runs[i + 1 :]]
+        against = "each other"
+    lines = [
+        "",
+        "### Paired comparisons",
+        "",
+        f"Each run against {against}, question by question. A question counts as right when "
+        "it has key facts and is answered correctly, or is unanswerable and refused; "
+        "answerable questions without key facts are left out. p is the exact two-sided sign "
+        "test on the questions only one run gets right.",
+        "",
+    ]
+    titles = ["Run", "Against", "Only this right", "Only that right", "Both right",
+              "Both wrong", "p"]  # fmt: skip
+    lines += _header(titles, 2)
+    for (name, _, ev), (other, _, other_ev) in pairs:
+        c = compare(ev, other_ev)
+        lines.append(
+            _row([name, other, c.wins, c.losses, c.both_right, c.both_wrong, f"{c.p:.3f}"])
+        )
+    m = len(pairs)
+    note = (
+        f"{m} comparison{'s' if m != 1 else ''} on this split. Even if no run were better than "
+        "another, each comparison would come out below p = 0.05 one time in twenty"
+    )
+    if m > 1:
+        note += (
+            f", so with {m} of them a single small p is weak evidence; a p below "
+            f"{0.05 / m:.4f} (0.05 / {m}, Bonferroni) holds up when they are taken together"
+        )
+    return [*lines, "", note + "."]
+
+
+def answers(
+    logs: Sequence[tuple[str, Mapping]],
+    questions: Sequence[Question],
+    tree: Tree,
+    chunks: Mapping[str, Sequence[Chunk]] | None = None,
+) -> str:
+    """The answer results of the run logs `(file name, log)`, as one Markdown document.
+
+    Runs are grouped by split, dev first, the base setup first within each (its latest run, if
+    there are several) and then by file name. Runs are named by model and retrieval, with their
+    other settings added where two names would be the same; two runs with the same settings on
+    one split are refused. A run that hasn't answered every question of its split is listed,
+    not scored. The
+    test split is scored here, for checkpoint G's final table (design §C). `chunks` gives the
+    chunks of each strategy; by default each strategy a run used is cut from `tree`.
+    """
+    for file, log in logs:
+        _check_shape(file, log)
+    chunks = dict(chunks or {})  # strategy -> chunks, cut once each
+
+    def nodes(strategy: str) -> dict[str, tuple[str, ...]]:
+        if strategy not in chunks:
+            if strategy not in STRATEGIES:
+                raise ValueError(f"no chunking strategy {strategy!r}")
+            chunks[strategy] = STRATEGIES[strategy](tree)
+        return {c.id: c.node_ids for c in chunks[strategy]}
+
+    # Within a split the base setup comes first, its latest run if there are several, then the
+    # others by file name, which starts with the time the run began.
+    def order(item: tuple[str, Mapping]) -> tuple:
+        file, log = item
+        return (log["config"]["split"], not is_base(log["config"]), file)
+
+    finished: dict[str, list[tuple[str, Mapping]]] = {s: [] for s in SPLITS}
+    partial: list[tuple[str, Mapping, int]] = []
+    for file, log in sorted(logs, key=order):
+        known = nodes(log["config"]["retrieval"]["strategy"])
+        stale = sorted({c for e in log["answers"] for c in e["retrieved"] if c not in known})
+        if stale:
+            raise ValueError(
+                f"{file} shows chunks {', '.join(stale)}, which chunking the corpus now "
+                "doesn't give; was it made from another parse?"
+            )
+        left = missing_questions(log, questions)
+        if left:
+            partial.append((file, log, len(left)))
+        else:
+            finished[log["config"]["split"]].append((file, log))
+
+    done: dict[str, list[tuple[str, Mapping, AnswerEvaluation]]] = {s: [] for s in SPLITS}
+    files: dict[tuple[str, str], str] = {}
+    for split, runs in finished.items():
+        bases = [i for i, (_, log) in enumerate(runs) if is_base(log["config"])]
+        if len(bases) > 1:  # the latest base run is the base; the others follow it in time
+            runs.insert(0, runs.pop(bases[-1]))
+        seen: dict[str, str] = {}
+        short = [run_label(log["config"]) for _, log in runs]
+        for (file, log), label in zip(runs, short, strict=True):
+            config = log["config"]
+            settings = _full_label(config)
+            if settings in seen:
+                raise ValueError(
+                    f"{' and '.join(sorted((seen[settings], file)))} are both {settings} on "
+                    f"the {split} "
+                    "split; keep the one to score and move the other out of runs/generation/"
+                )
+            seen[settings] = file
+            name = label if short.count(label) == 1 else _full_label(config)
+            files[(split, name)] = file
+            nodes_of = nodes(config["retrieval"]["strategy"])
+            ev = evaluate_answers(log, questions, tree, nodes_of, allow_test=True)
+            done[split].append((name, log, ev))
+    words = {s: {c.id: len(c.text.split()) for c in cs} for s, cs in chunks.items()}
+
+    lines = [
+        "# Answer results",
+        "",
+        "Generated by `make tables` from the run logs in `runs/generation/`; don't edit by hand.",
+        "",
+        "Each cell is the mean with its 95% interval: Wilson for shares of questions, a "
+        'bootstrap over questions for the others. Rules in `docs/DECISIONS.md` ("how an answer '
+        'run is scored"). **Correct**: the answer passed the check and states every key fact, '
+        "over the answerable questions with key facts. **Citation precision**: the share of "
+        "an answer's cited passages that are, or lie inside, a gold passage, over the "
+        "answerable questions answered. **Citation recall**: the share of gold passages cited, "
+        "over every answerable question. **Refusal accuracy**: unanswerable questions refused. "
+        "**False refusals**: answerable questions refused. **Not answered reliably**: the reply "
+        "failed the check, so the reader was told it could not be answered reliably. Cost, "
+        "seconds and tokens are per question with a reply. Words shown is the length of the "
+        "text of the passages put in each prompt, headings included, counted as in the "
+        "retrieval results; the input tokens also count the instructions and the passages' "
+        "markup.",
+    ]
+    if not logs:
+        lines += ["", "No answer runs yet."]
+    for split in SPLITS:
+        if done[split]:
+            lines += _split_section(split, done[split], words)
+
+    if any(done.values()):
+        lines += ["", "## Runs", ""]
+        lines += _header(["Run", "Split", "Effort", "Prompt", "Commit", "Log", "Paid (US$)"], 6)
+        for split in SPLITS:
+            for name, log, _ in done[split]:
+                lines.append(_run_row(name, log, files[(split, name)]))
+    if partial:
+        lines += ["", "Not scored, because they don't answer every question of their split:", ""]
+        for file, log, left in partial:
+            lines.append(f"- `{file}`: {run_label(log['config'])}, {left} questions missing")
+    return "\n".join(lines) + "\n"
+
+
+def _run_row(name: str, log: Mapping, file: str) -> str:
+    config, meta = log["config"], log["run"]
+    commit = (meta["commit"] or "unknown")[:7] + (" + changes" if meta["dirty"] else "")
+    paid = f"{log['paid']['cost_usd']:.2f}"
+    return _row(
+        [name, config["split"], config["effort"], config["prompt_version"], commit, f"`{file}`",
+         paid]
+    )  # fmt: skip

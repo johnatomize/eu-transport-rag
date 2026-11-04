@@ -32,10 +32,16 @@ all scoring needs. The rules, recorded in docs/DECISIONS.md ("how an answer run 
   means over the questions that got one.
 - **Intervals** are 95%: Wilson for shares of questions, a seeded percentile bootstrap over
   questions for means. Each measure is given overall, by phrasing and by type.
+- **Paired comparison** of two runs on the same questions (#81): a question is *right* when it
+  has key facts and is correct, or is unanswerable and refused. Answerable questions without
+  key facts, and questions whose call got no reply in either run, are left out. The questions
+  one run gets right and the other doesn't are counted both ways, and an exact two-sided sign
+  test says how likely a split at least that lopsided would be if neither run were better.
 
 The test split is scored only when asked for explicitly, as in `retrieval_eval`.
 """
 
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
@@ -73,6 +79,20 @@ class AnswerScore:
     input_tokens: int | None
     output_tokens: int | None
     seconds: float | None
+
+    @property
+    def right(self) -> bool | None:
+        """Correct, or an unanswerable question refused; None when code can't tell (#81).
+
+        A call that got no reply is None too: a failed request says nothing about the setup.
+        """
+        if self.outcome == NO_REPLY:
+            return None
+        if self.correct is not None:
+            return self.correct
+        if not self.answerable:
+            return self.outcome == REFUSED
+        return None
 
 
 @dataclass(frozen=True)
@@ -198,6 +218,12 @@ def score(
 # --- A run ---------------------------------------------------------------------------------
 
 
+def missing_questions(log: Mapping, questions: Sequence[Question]) -> list[str]:
+    """The questions of the log's split it has neither a reply nor a failed call for."""
+    done = {e["id"] for e in log["answers"]} | {f["id"] for f in log["failed"]}
+    return [q.id for q in questions if q.split == log["config"]["split"] and q.id not in done]
+
+
 def _shares(scores: Sequence[AnswerScore]) -> dict[str, list[bool]]:
     """For each share in SHARES, whether each question it is taken over counts."""
     answerable = [s for s in scores if s.answerable]
@@ -274,7 +300,7 @@ def evaluate(
             raise ValueError(f"the run log has {failed['id']} both answered and failed")
         entries[failed["id"]] = None
     wanted = {q.id for q in chosen}
-    missing = sorted(wanted - entries.keys())
+    missing = missing_questions(log, questions)
     extra = sorted(entries.keys() - wanted)
     if missing:
         raise ValueError(
@@ -296,4 +322,53 @@ def evaluate(
         split=split,
         scores=tuple(scores),
         groups=tuple(_group(name, members, seed) for name, members in groups),
+    )
+
+
+# --- Two runs on the same questions --------------------------------------------------------
+
+
+def sign_test(wins: int, losses: int) -> float:
+    """The exact two-sided sign test: how likely a split at least this lopsided is by chance.
+
+    Under "neither is better", each question one run gets right and the other wrong is a fair
+    coin toss. Ties (both right, or both wrong) say nothing and are left out before this.
+    """
+    if wins < 0 or losses < 0:
+        raise ValueError("counts can't be negative")
+    n = wins + losses
+    if n == 0:
+        return 1.0
+    tail = sum(math.comb(n, i) for i in range(min(wins, losses) + 1)) / 2**n
+    return min(1.0, 2 * tail)
+
+
+@dataclass(frozen=True)
+class Paired:
+    wins: int  # questions the first run gets right and the second doesn't
+    losses: int  # questions the second run gets right and the first doesn't
+    both_right: int
+    both_wrong: int
+    p: float  # the exact two-sided sign test on wins and losses
+
+    @property
+    def n(self) -> int:
+        return self.wins + self.losses + self.both_right + self.both_wrong
+
+
+def compare(a: AnswerEvaluation, b: AnswerEvaluation) -> Paired:
+    """Compare two runs question by question on whether each got it right (`AnswerScore.right`)."""
+    if a.split != b.split:
+        raise ValueError(f"can't pair a {a.split} run with a {b.split} run")
+    if [s.question_id for s in a.scores] != [s.question_id for s in b.scores]:
+        raise ValueError("the two runs don't answer the same questions")
+    counts = {(True, True): 0, (True, False): 0, (False, True): 0, (False, False): 0}
+    for s, t in zip(a.scores, b.scores, strict=True):
+        pair = (s.right, t.right)
+        if None in pair:
+            continue
+        counts[pair] += 1
+    wins, losses = counts[(True, False)], counts[(False, True)]
+    return Paired(
+        wins, losses, counts[(True, True)], counts[(False, False)], sign_test(wins, losses)
     )

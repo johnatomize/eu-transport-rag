@@ -2,6 +2,19 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-04: which answers the owner labels for faithfulness, and what "supported" means
+
+**Decision** (owner, for #82): the owner labels 30 of F's dev answers on a review page, and the faithfulness judge (#83) is measured against those labels. Code in `src/rag/faithfulness.py` and `scripts/faithfulness_labels.py`.
+
+- **What "supported" means.** An answer is supported when every claim in it follows from the full text of the nodes it cites, not only the words it quotes. Simple arithmetic on cited numbers counts as supported when every number in the sum is in the cited text: in F, Opus's "at most 34 hours" for q001 follows from the quoted 90 hours over two weeks and 56 in one. Whether the answer is correct or complete is not part of the label, and saying that the passages don't cover something is not a claim. When an answer is not supported, the owner marks its first unsupported sentence.
+- **Which answers** (fixed before anyone read them for this): 15 dev questions that both of F's runs, Opus 5.5 and Haiku 5.5, answered with a reply that passed the check, and both answers to each. The owner reads each question once and compares two answers on it. The 15 are spread over the answerable types by fixed quotas: 4 single-fact, 3 exceptions, 3 version traps, 2 multi-article, 2 definitions and 1 cross-act. They are drawn with the seed `faithfulness-labels-v1`, one draw per type, from the 39 questions that qualify. q001 is always included. The draw gives q001, q002, q012, q021, q022, q023, q037, q040, q045, q050, q051, q068, q088, q095 and q097.
+- **Blind.** The page calls a question's two answers A and B, in an order drawn with the same seed, and never names the model, so that neither model is read more kindly.
+- **Sentences** are split by one function, used by the page and later by the judge, so "the first unsupported sentence" means the same to both. It splits after a full stop, question mark or exclamation mark, and at line breaks. It doesn't split after abbreviations such as "Art." and "e.g.", inside decimals, or after a list item's number.
+- **The labels** go in `data/faithfulness_labels.v1.jsonl`, one answer per line, with the run log's file name, the verdict, the first unsupported sentence's number and text, and the owner's note. `make check` passes while the file doesn't exist, and once it does, every chosen answer must be labelled exactly once and each sentence must match the answer.
+- **Kept from the judge.** The labels and the owner's notes never go into the judge's prompt or its examples. While the judge is developed, only answers outside these 30 are used, so the agreement measured in #83 is honest.
+
+**Alternatives:** 30 answers drawn without pairing, which means reading 30 questions instead of 15; choosing answers by hand to include tricky ones, which would make the agreement rate depend on that choice; showing model names, which saves nothing and risks a kinder reading of one model; strict literal support, under which the correct sum in q001 would count against the answer although the system is meant to help a driver apply the rules.
+
 ## 2026-11-04: how two answer runs are compared
 
 **Decision** (#81): `results/answers.md` compares runs question by question, with an exact two-sided sign test, in `src/rag/answer_eval.py` and `src/rag/tables.py`.

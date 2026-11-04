@@ -2,7 +2,7 @@
 # The db-* targets also need Docker with Compose and a running Colima VM (see CLAUDE.md).
 # Later checkpoints add targets (tables, deploy, destroy) and extend check.
 
-.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs embed-dry-run embed answers ask tables tables-check db-up db-check db-down test-db vector-index gitleaks-present docker-present
+.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs embed-dry-run embed answers ask tables tables-check faithfulness-labels faithfulness-review db-up db-check db-down test-db vector-index gitleaks-present docker-present
 
 help: ## List the targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
@@ -25,7 +25,7 @@ test: ## Run the test suite, without the tests that need the database
 secrets: gitleaks-present ## Scan the full git history for secrets
 	gitleaks git --redact --no-banner .
 
-check: lint test questions tables-check secrets ## Everything that must pass before a pull request
+check: lint test questions tables-check faithfulness-labels secrets ## Everything that must pass before a pull request
 
 corpus: ## Check corpus/raw against the manifest, downloading missing files
 	uv run --locked python scripts/fetch_corpus.py
@@ -68,6 +68,12 @@ tables: ## Rebuild results/retrieval.md and results/answers.md from the run logs
 
 tables-check: ## Fail if a results table doesn't match the run logs
 	uv run --locked python scripts/make_tables.py --check
+
+faithfulness-labels: ## Check data/faithfulness_labels.v1.jsonl against the answers chosen for labelling (passes before labelling)
+	uv run --locked python scripts/faithfulness_labels.py
+
+faithfulness-review: ## Build the page for labelling answers' faithfulness: build/faithfulness-review/
+	uv run --locked python scripts/faithfulness_labels.py --page $(if $(ARTIFACT),--artifact,)
 
 questions: ## Validate data/questions.v1.jsonl against its schema and the parsed corpus, and count it
 	uv run --locked python scripts/validate_questions.py

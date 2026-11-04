@@ -141,15 +141,15 @@ The Commission site rate-limits scripted downloads (HTTP 429 after about six PDF
 
 ### G. Answer evaluation and variant comparison (~4–5 h, paid, within the cap)
 - Metrics:
-  - answer correctness (exact match for numbers and durations, normalised match otherwise);
+  - answer correctness (exact match for numbers and durations; for questions without key facts, the owner's hand grades on the final test run);
   - citation precision and recall against the gold node IDs;
   - refusal accuracy on unanswerable questions, and false refusals on answerable ones;
   - faithfulness (calibrated LLM judge, agreement with hand labels reported);
   - cost, latency and tokens per question.
-- Variants:
-  - the best 2–3 retrieval setups from E;
-  - top-k = 3/5/10;
-  - with and without a reranking step (a Bedrock rerank model if available in the region, otherwise LLM reranking).
+- Variants, each changing one thing from the best setup in E (hybrid search over paragraph chunks, top 5):
+  - top-k = 3 and 10;
+  - article chunks and 200-word windows, at about the same amount of text;
+  - with a reranking step (Qwen3-Reranker 0.6B, run locally).
 - Paired comparison between variants on the same questions (sign test), and the final run on the **test split only once**.
 - `make tables` regenerates every table from the run logs.
 

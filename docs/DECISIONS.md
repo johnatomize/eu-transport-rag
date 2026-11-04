@@ -2,6 +2,17 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-04: what checkpoint G measures and which versions it compares
+
+**Decision** (owner, answering #75, #76, #77 and #78):
+
+- **Correctness without key facts is graded by the owner, on the final test run only** (#75). On every run, an answer to a question with key facts is correct when it states each key fact, matched by code after numbers are normalised (#29). The 19 answerable dev questions and 10 answerable test questions without key facts get no correctness score on the dev runs; the table relies on citation recall and faithfulness for them. On the test split, the owner grades those 10 questions' answers from each finalist by hand (about 30 verdicts), against the frozen gold answers, and the grades are stored in the repository beside the run logs, so `make tables` reads them like any log. A model never grades correctness, as the design requires.
+- **The faithfulness judge is chosen by measurement** (#76): Haiku 5.5 and Opus 5.5 both judge the owner's ~30 hand-labelled answers (#82), for under US$1 together. Haiku is used if it agrees with the owner on at least 27 of 30, otherwise Opus. Both agreement rates are reported.
+- **Reranking is done by Qwen3-Reranker 0.6B, run locally on the owner's Mac** (#77). The owner OK'd downloading it (about 1.2 GB) and running it. It is free and of the same family as the embedding model; Claude Haiku reranking can be added as an extra row for a few cents if it disappoints.
+- **The dev comparison changes one thing at a time from the best setup** (#78): hybrid search over paragraph chunks with the top 5, already answered by Opus 5.5 in F. Five new Opus 5.5 runs on the 60 dev questions: top 3; top 10; article chunks; 200-word windows; and with reranking. The chunkings are compared at about the same amount of text (about 1,350 words: 10 paragraphs, 3 articles or 6 windows). F's Haiku run is an extra row. The best three then answer the 40 test questions once. Estimated at US$5–9 in total with judging, through the half-price batch service (#79).
+
+**Alternatives:** a judge comparing every answer with its gold answer, which covers every question but lets a model grade correctness; the design's full grid of 18 versions, about US$15 even at half price, which would leave too little of the US$20 cap for the test run; a Bedrock rerank model, likely blocked by the project's Bedrock limits in Stockholm.
+
 ## 2026-11-03: asking one question with `make ask`
 
 **Decision** (#65; running the local model for each question was OK'd by the owner in a working session): `make ask Q="…"` runs retrieval, the prompt, the model and the check for one typed question. It is a free dry run unless `RUN=1` is given, and paid questions follow the answer client's rules (decision of the same day below).

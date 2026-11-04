@@ -2,6 +2,16 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-04: matching key facts
+
+**Decision** (#29): `src/rag/keyfacts.py` decides by code whether an answer states a key fact. The answer and the fact are both broken into words and numbers, with numbers and units spelled one way, and the fact's words must appear in the answer in order, as whole words.
+
+- **What is forgiven:** number words up to the hundreds ("seven calendar days", "fifty-six hours", "four and a half hours", "a hundred km"), with "half an hour" as `0.5 hours` and "an hour and a half" as `1.5 hours`, never `1 hour`; "a" or "an" before a unit ("within an hour"), except after "once", "twice", "times" or another unit, where it is a rate ("twice a week", "9 hours a day"); the act's decimal comma (`7,5 tonnes`), a thousands comma and `½`; a number joined to its unit ("a 45-minute break"); units in the singular or plural, short ("9h", "45 mins") or spelled out ("kilometres" for `km`); times with a colon (`00:00`); dates written month first or with an ordinal ("July 1st, 2026"), while an ordinal elsewhere ("the 4th week") is not a count; leading and trailing zeros. Dashes, quote marks and invisible characters are handled as in the check of every answer.
+- **What is not:** a different unit ("9 minutes" for `9 hours`), a number that only contains the fact's digits ("19 hours", "4.5 hours" for `5 hours`), and any other word. "six hours in a row" doesn't state `6 consecutive hours`, and "four weekly rests" doesn't state `4 weekly rest periods`. Forgiving synonyms would need a list that grows with each answer seen, and the gold facts are frozen.
+- **On F's two dev runs** (#66), a plain substring match found every key fact in 27 of the 56 answered questions that have key facts; this match finds them in 51. Of the five left, two answers really leave figures out (Opus says the weekly working-time limits are "not in these passages", and Haiku gives the one-hour extension without the two-hour one), and three say them in other words: "four weekly rests" (both models, q091) and "six hours in a row" (Opus, q060). Those three count as not correct, so correctness errs low, never high.
+
+**Alternatives:** a plain substring match, which missed 24 of those 51 answers; matching only a fact's number and unit and ignoring its other words, which would accept "4 weeks" for `4 consecutive weeks`; a model comparing the answer with the gold answer, which the owner ruled out for correctness (decision of the same day above).
+
 ## 2026-11-04: what checkpoint G measures and which versions it compares
 
 **Decision** (owner, answering #75, #76, #77 and #78):

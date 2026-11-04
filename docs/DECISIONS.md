@@ -2,6 +2,21 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-04: how an answer run is scored
+
+**Decision** (#80): the rules `src/rag/answer_eval.py` follows to score an answer run log, without calling a model.
+
+- **What the reader saw:** each question ends as an answer that passed the check, a refusal that passed it, "could not answer reliably" (the reply failed the check), or no reply (the call failed, which happens when a request in a half-price batch fails or expires; a direct run stops at its first failed call). A run that has nothing for some question of its split is refused, so an unfinished run is never compared with finished ones.
+- **Correctness** is scored on answerable questions with key facts: correct when the answer passed the check and states every key fact. A refusal, an unreliable answer or a missing reply counts as not correct.
+- **A citation finds a gold node when it cites that node or a node inside it**, and not when it cites a node above it. The check has already made sure each quote is word for word in the cited node's own text. So a quote from point (b) of 561/2006 Art. 8(6) lies inside a gold Art. 8(6), while a citation of Art. 13(1) for a gold point 13(1)(r) quotes the paragraph's own words, its lead-in, which the gold leaves out (decision of 2026-10-29). This is retrieval evaluation's rule, applied to the quoted words.
+- **Precision** is the share of an answer's distinct cited nodes that find a gold node, averaged over the answerable questions that were answered; a node quoted twice counts once. **Recall** is the share of gold nodes found, averaged over every answerable question, so a refusal finds none. Precision reads strictly: the gold is the smallest node that holds the answer, so citing the next paragraph for context, as Opus often does, lowers it even when that paragraph is relevant. Whether a citation supports its claim is the faithfulness judge's job (#83).
+- **Refusal accuracy** is the share of unanswerable questions refused; **false refusals** the share of answerable questions refused. "Could not answer reliably" and no reply are their own shares, counted as neither.
+- **Tracing:** an answerable question that is not correct, refused, unreliable or without a reply is a *retrieval miss* when none of its gold nodes was among the chunks the model was shown (a chunk holds a gold node when it holds it or a node inside it), and a *generation error* when at least one was. An unanswerable question answered is a generation error. An answer to a question without key facts is not traced, since code can't tell whether it is right; the owner's hand grades of the test answers to those questions (#88) will be read in with the tables. A question whose call got no reply is not traced either, since the log doesn't say what search found.
+- **Cost, tokens and seconds** are means over the questions that got a reply, unreliable ones included, since they were paid for.
+- **Intervals:** 95%, Wilson for shares and a seeded percentile bootstrap over questions for means, reusing retrieval evaluation's code; every measure is given overall, by phrasing and by type. A test run is scored only with the explicit flag.
+
+**Alternatives:** counting a citation of the node above a gold node as finding it, which would credit a quote of a lead-in; recall over answered questions only, which would let a system that refuses more look better; counting each quote rather than each cited node in precision.
+
 ## 2026-11-04: matching key facts
 
 **Decision** (#29): `src/rag/keyfacts.py` decides by code whether an answer states a key fact. The answer and the fact are both broken into words and numbers, with numbers and units spelled one way, and the fact's words must appear in the answer in order, as whole words.

@@ -108,6 +108,18 @@ Checkpoints A–E are built and reviewed by the owner; D, the keyword retrieval 
   - **The one failed check** (Haiku, q091, two reduced weekly rests in a row abroad): five of six quotes were right, but one quoted point (b) of 561/2006 Art. 8(6) under the ID of paragraph 8(6) itself. The check refused the whole answer, as designed (the cost of citing the most specific node, in `DECISIONS.md`).
   - **Estimate against the real counts:** the API counted 163,562 input tokens a run, 27% more than the estimate's 128,374 and within its 50% margin. Output was well under the 1,000 tokens an answer the estimate expects, and no answer reached the 4,000 limit. Nothing was throttled or retried.
   - **The test split was not used.**
+- **Scoring answer runs (#80):** `src/rag/answer_eval.py` scores any answer run log against the question set, without calling a model: correctness by key facts matched with numbers normalised (#29), citation precision and recall against the gold nodes, refusal accuracy, false refusals, "could not answer reliably", and cost, tokens and seconds per question, each with a 95% interval, overall, by phrasing and by type; every question that went wrong is traced to retrieval or to generation (rules in `DECISIONS.md`). Tests on hand-built run logs cover each measure, a citation inside and above a gold node, a run with a question missing, twice or from another split, and the test split refused without its flag. Scored again, F's two dev runs give the counts above and the same seven retrieval misses, the questions both models refused because search never found their gold passage:
+
+  | | Haiku 5.5 | Opus 5.5 |
+  | --- | ---: | ---: |
+  | Correct, of the 31 answerable questions with key facts | 0.81 (0.64–0.91) | 0.84 (0.67–0.93) |
+  | Citation precision, over answers given | 0.83 (0.74–0.91) | 0.61 (0.53–0.69) |
+  | Citation recall, over the 50 answerable questions | 0.73 (0.60–0.84) | 0.80 (0.69–0.90) |
+  | Refusal accuracy, 10 unanswerable questions | 1.00 (0.72–1.00) | 1.00 (0.72–1.00) |
+  | False refusals, 50 answerable questions | 0.20 (0.11–0.33) | 0.16 (0.08–0.29) |
+  | Went wrong: retrieval misses, generation errors | 7, 5 | 7, 4 |
+
+  Opus's lower precision comes from citing neighbouring paragraphs for context, such as Art. 6(2) beside the gold Art. 6(3) for the two-week driving limit. Next, `make tables` will build these into a committed results table from the run logs, with a paired test of whether one run beats another (#81).
 
 ## Spend log
 

@@ -119,7 +119,8 @@ Checkpoints A–E are built and reviewed by the owner; D, the keyword retrieval 
   | False refusals, 50 answerable questions | 0.20 (0.11–0.33) | 0.16 (0.08–0.29) |
   | Went wrong: retrieval misses, generation errors | 7, 5 | 7, 4 |
 
-  Opus's lower precision comes from citing neighbouring paragraphs for context, such as Art. 6(2) beside the gold Art. 6(3) for the two-week driving limit. Next, `make tables` will build these into a committed results table from the run logs, with a paired test of whether one run beats another (#81).
+  Opus's lower precision comes from citing neighbouring paragraphs for context, such as Art. 6(2) beside the gold Art. 6(3) for the two-week driving limit.
+- **Answer results table and paired comparison (#81):** `make tables` now also builds `results/answers.md` from the answer run logs alone: a row per run for quality (the measures above) and for cost, seconds, tokens and words of passages shown per question, what happened to each question with its retrieval misses and generation errors, correctness and citation recall by phrasing and by type, and a paired comparison of each run with the base setup (Opus 5.5, hybrid search over paragraph chunks, top 5), with an exact two-sided sign test and a note on how many comparisons were made (rule in `DECISIONS.md`). The sign test gives E's known values: 8 to 0 is 0.0078, 4 to 1 is 0.375, 5 to 2 is 0.453. A run that hasn't answered every question is listed, not scored. `make check` fails when either table no longer matches its logs. On F's two dev runs, Haiku gets right 1 question Opus doesn't and Opus 2 that Haiku doesn't (p = 1.0): on these 41 questions the two models can't be told apart. Faithfulness joins the table with the judge (#83), and the owner's hand grades with the test run (#88).
 
 ## Spend log
 

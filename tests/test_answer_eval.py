@@ -11,8 +11,10 @@ from rag.answer_eval import (
     RETRIEVAL,
     UNRELIABLE,
     chunk_nodes,
+    compare,
     evaluate,
     score,
+    sign_test,
 )
 from rag.parse import Node, Tree
 from rag.questions import Question, validate
@@ -352,3 +354,68 @@ def test_f_dev_runs_give_the_counts_in_progress(
     # passages are retrieval misses.
     misses = {s.question_id for s in ev.scores if s.trace == RETRIEVAL}
     assert misses == {"q024", "q025", "q029", "q036", "q048", "q063", "q064"}
+
+
+# --- Paired comparison ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("wins", "losses", "p"),
+    [
+        (8, 0, 2 / 2**8),  # E's hybrid against BM25 over paragraph chunks: 0.0078
+        (0, 8, 2 / 2**8),
+        (4, 1, 0.375),  # E's article chunks
+        (5, 2, 0.453125),  # E's windows
+        (3, 3, 1.0),
+        (0, 0, 1.0),
+        (10, 2, 2 * (1 + 12 + 66) / 2**12),
+    ],
+)
+def test_the_sign_test_gives_known_binomial_values(wins, losses, p):
+    assert sign_test(wins, losses) == pytest.approx(p)
+
+
+def test_the_sign_test_refuses_negative_counts():
+    with pytest.raises(ValueError):
+        sign_test(-1, 3)
+
+
+def test_right_is_correct_or_an_unanswerable_question_refused():
+    assert score(question(), entry(answer="Nine hours."), TREE, NODES_OF).right is True
+    assert score(question(), entry(answer="Ten hours."), TREE, NODES_OF).right is False
+    assert score(question(key_facts=()), entry(), TREE, NODES_OF).right is None
+    unanswerable = question(gold=())
+    assert score(unanswerable, entry(answerable=False), TREE, NODES_OF).right is True
+    assert score(unanswerable, entry(), TREE, NODES_OF).right is False
+    assert score(unanswerable, None, TREE, NODES_OF).right is False
+
+
+def test_two_runs_are_compared_question_by_question():
+    # RUN gets right q001 and q007; this one gets right q001, q004, q005 and q008, and still
+    # answers q003, which has no key facts and is left out.
+    other = log(
+        [
+            entry("q001", answer="9 hours"),
+            entry("q002", answer="10 hours"),
+            entry("q003"),
+            entry("q004"),
+            entry("q005"),
+            entry("q006", answer="Ten hours."),
+            entry("q007"),
+            entry("q008", answerable=False),
+        ]
+    )
+    a = evaluate(other, QUESTIONS, TREE, NODES_OF)
+    b = evaluate(RUN, QUESTIONS, TREE, NODES_OF)
+    c = compare(a, b)
+    assert (c.wins, c.losses, c.both_right, c.both_wrong) == (3, 1, 1, 2)
+    assert c.n == 7 and c.p == pytest.approx(sign_test(3, 1)) == pytest.approx(0.625)
+    flipped = compare(b, a)
+    assert (flipped.wins, flipped.losses, flipped.p) == (1, 3, c.p)
+
+
+def test_runs_on_different_splits_are_not_compared():
+    dev = evaluate(RUN, QUESTIONS, TREE, NODES_OF)
+    test = evaluate(log([entry("q100")], split="test"), QUESTIONS, TREE, NODES_OF, allow_test=True)
+    with pytest.raises(ValueError, match="can't pair a dev run with a test run"):
+        compare(dev, test)

@@ -1,7 +1,10 @@
 """Build the results tables from the committed run logs, without retrieving or calling a model.
 
-    make_tables.py           write results/retrieval.md and results/answers.md (`make tables`)
-    make_tables.py --check   fail if either differs from what would be written
+    make_tables.py           write the results tables (`make tables`)
+    make_tables.py --check   fail if any differs from what would be written
+
+The tables are results/retrieval.md, results/answers.md, and results/faithfulness_judge.md,
+which compares each calibration run of the faithfulness judge with the owner's labels.
 
 Refuses a retrieval run log made from another version of the questions or the corpus manifest,
 or whose chunks differ from what the parser and chunking code give now; and an answer run log
@@ -16,10 +19,12 @@ import sys
 from pathlib import Path
 
 from rag.corpus import CorpusError, load_manifest
+from rag.faithfulness import LABELLED_RUNS, select, validate_labels
+from rag.faithfulness import answers as labelled_answers
 from rag.parse import ParseError, parse_corpus
 from rag.questions import validate
 from rag.runlog import StaleRunError, check_chunks, load
-from rag.tables import answers, retrieval
+from rag.tables import answers, judge_calibration, retrieval
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "corpus" / "manifest.yaml"
@@ -28,6 +33,9 @@ RUNS = ROOT / "runs" / "retrieval"
 ANSWER_RUNS = ROOT / "runs" / "generation"
 OUT = ROOT / "results" / "retrieval.md"
 ANSWERS_OUT = ROOT / "results" / "answers.md"
+JUDGE_RUNS = ROOT / "runs" / "judge"
+LABELS = ROOT / "data" / "faithfulness_labels.v1.jsonl"
+JUDGE_OUT = ROOT / "results" / "faithfulness_judge.md"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -63,7 +71,14 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
-    counts = {OUT: len(runs), ANSWERS_OUT: len(answer_logs)}  # unfinished ones are listed too
+    try:
+        judge_logs = calibration_logs()
+        tables[JUDGE_OUT] = judge_table(judge_logs, dict(answer_logs), questions)
+    except (OSError, ValueError, KeyError) as e:
+        print(f"error: the faithfulness judge's table: {e}", file=sys.stderr)
+        return 1
+    # unfinished runs are listed too
+    counts = {OUT: len(runs), ANSWERS_OUT: len(answer_logs), JUDGE_OUT: len(judge_logs)}
     if args.check:
         stale = [p for p, t in tables.items() if not p.exists() or p.read_text("utf-8") != t]
         for p in stale:
@@ -79,6 +94,36 @@ def main(argv: list[str] | None = None) -> int:
         p.write_text(table, encoding="utf-8")
         print(f"wrote {p.relative_to(ROOT)} from {counts[p]} run logs")
     return 0
+
+
+def calibration_logs() -> list[tuple[str, dict]]:
+    """The judge's calibration run logs, by file name, which starts with the time."""
+    logs = []
+    for path in sorted(JUDGE_RUNS.glob("calibration-*.json")):
+        log = json.loads(path.read_text(encoding="utf-8"))
+        if log["config"]["kind"] != "calibration":
+            raise ValueError(f"{path.name} is named as a calibration run but isn't one")
+        logs.append((path.name, log))
+    return logs
+
+
+def judge_table(
+    judge_logs: list[tuple[str, dict]], answer_logs: dict[str, dict], questions: list
+) -> str:
+    """The judge's calibration table, from its runs and the owner's labels.
+
+    The labels must label exactly the answers chosen for labelling, as `make check` requires.
+    """
+    if not LABELS.exists():
+        if judge_logs:
+            raise ValueError(f"calibration runs but no {LABELS.name}")
+        return judge_calibration([], [], {})
+    labelled_logs = {name: answer_logs[name] for name in LABELLED_RUNS}
+    texts = labelled_answers(select(questions, labelled_logs), labelled_logs)
+    labels, errors = validate_labels(LABELS.read_text(encoding="utf-8"), texts)
+    if errors:
+        raise ValueError(f"{LABELS.name} is not valid; run `make faithfulness-labels`")
+    return judge_calibration(judge_logs, labels, texts)
 
 
 if __name__ == "__main__":

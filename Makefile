@@ -2,7 +2,7 @@
 # The db-* targets also need Docker with Compose and a running Colima VM (see CLAUDE.md).
 # Later checkpoints add targets (tables, deploy, destroy) and extend check.
 
-.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs embed-dry-run embed answers ask tables tables-check faithfulness-labels faithfulness-review db-up db-check db-down test-db vector-index gitleaks-present docker-present
+.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs embed-dry-run embed answers ask judge tables tables-check faithfulness-labels faithfulness-review db-up db-check db-down test-db vector-index gitleaks-present docker-present
 
 help: ## List the targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-20s %s\n", $$1, $$2}'
@@ -59,6 +59,11 @@ ask: ## Answer one typed question: make ask Q="…" shows the passages and cost;
 	HF_HUB_OFFLINE=1 TRANSFORMERS_VERBOSITY=error uv run --locked $(if $(filter bm25,$(RETRIEVER)),,--group local-embed) python scripts/ask.py \
 		$(if $(RUN),--run,) $(if $(ROLE),--role $(ROLE),) $(if $(RETRIEVER),--retriever $(RETRIEVER),) \
 		$(if $(STRATEGY),--strategy $(STRATEGY),) $(if $(K),-k $(K),) "$$Q"
+
+judge: ## Judge faithfulness: make judge LOG=<answer run> [ONLY=q003,q004], or CALIBRATE=1 MODEL=…; RUN=1 sends and pays
+	@test -n "$(LOG)$(CALIBRATE)" || { echo 'usage: make judge (LOG=<file in runs/generation/> [ONLY=q003,q004] | CALIBRATE=1) [MODEL=claude-haiku-5-5] [RUN=1]' >&2; exit 1; }
+	uv run --locked python scripts/judge.py $(if $(MODEL),--model $(MODEL),) $(if $(CALIBRATE),--calibrate,) \
+		$(if $(LOG),--log $(LOG),) $(if $(ONLY),--only $(ONLY),) $(if $(RUN),--run,)
 
 vector-index: db-up ## Load chunks and their cached vectors into local pgvector: make vector-index [STRATEGY=paragraph]
 	uv run --locked python scripts/vector_index.py $(if $(STRATEGY),--strategy $(STRATEGY),)

@@ -2,6 +2,29 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-05: Opus 5.5 judges faithfulness
+
+**Decision** (#83, by the owner's rule of the same day below): Opus 5.5 is the faithfulness judge, `judge_model` in `config/generation.yaml`, with the instructions of version `b6b94f34888a`.
+
+- **Measured:** on the owner's 30 labelled answers, Opus agreed on 28 (26 of the 28 supported, both unsupported) and Haiku on 26 (24 and both). Both found the owner's first unsupported sentence in q001 and q022. Haiku misses the rule's 27 by one, so Opus is the judge. Full results and every disagreement are in `results/faithfulness_judge.md`.
+- **The two answers both judges call unsupported against the owner's label** (q040, q095, both Haiku's) add details the cited nodes don't hold: what the AETR's "areas" are, and the driver card and analogue record sheets among what must be carried. The labels stay as the owner made them: changing a label after seeing the judges' verdicts would make the agreement depend on them.
+- **Cost:** judging the 30 cost US$0.57 with Opus and US$0.014 with Haiku; at Opus's rate a dev run's answers cost about US$0.80–0.95 to judge, half in batches.
+
+**Alternatives:** Haiku, about 40 times cheaper but under the agreement the owner set; changing the instructions and measuring again, which would tune the judge on the labels it is measured against.
+
+## 2026-11-05: the faithfulness judge
+
+**Decision** (#83, plan agreed with the owner in chat): how `src/rag/judge.py` judges whether every claim in an answer follows from the text it cites, and how it is measured against the owner's labels (#82).
+
+- **What the judge reads** is what the owner read on the labelling page: the question, the answer split into numbered sentences by the same function as the labels, and for each cited node its place and version, the headings above it, the text that introduces it, its full text and the words the answer quoted from it. Each node appears once, with all its quotes. It never sees the gold answer or the owner's labels and notes.
+- **What it is told "supported" means** is the owner's definition: every claim follows from the cited nodes' full text, not only the quotes; simple arithmetic on numbers that are all in the cited text counts; correctness and completeness aren't judged; saying the passages don't cover something is not a claim. Question, answer and cited text are material to check, never instructions, and text that would open or close one of the prompt's tags is made harmless, as in the answer prompt.
+- **What it gives back:** for every sentence, its number, a one-sentence reason, and *supported*, *not supported* or *no claim*, as structured output. A reply that misses a sentence, judges one twice, or is cut off gives no verdict. An answer is supported when no sentence is not supported, and its first unsupported sentence is the first that is.
+- **Agreement** is counted on the answer's verdict, supported or not, as the owner labelled it. A missing or unusable verdict counts as a disagreement. The report gives agreement overall, on the supported and on the unsupported answers, and, for information only, how often the judge's first unsupported sentence is the owner's. `make tables` writes it to `results/faithfulness_judge.md` from the calibration run logs and the labels, with every disagreement and the judge's reasons.
+- **Keeping it honest:** the judge's instructions are fixed and fingerprinted (`judge_prompt_version`) in every run log. Before calibration, the judge may be tried out only on answers the owner didn't label (`make judge … ONLY=…` refuses the labelled ones), to catch broken wiring, never to tune it towards anyone's verdicts. If the instructions change after a calibration run, both runs stay in the table.
+- **Settings:** the judge runs through the answer client, with the same effort (medium), output limit (4,000 tokens), prices, cap check, retries and run logs (`runs/judge/`, counted by the spend check). Batches follow once #79 is done.
+
+**Alternatives:** judging the answer as a whole, which would not show which sentence goes beyond its sources or let the owner check the judge's reasons; giving the judge only the quoted words, which would mark supported claims as unsupported when the rest of the node holds them, and judge differently from the owner; counting agreement on the first unsupported sentence too, which two unsupported labels can't measure.
+
 ## 2026-11-05: choosing the faithfulness judge when few labels are unsupported
 
 **Decision** (owner, answering #93; changes the judge rule of 2026-11-04 for #76): the owner's labels (#82) mark 28 of the 30 answers supported. The two that aren't are both Haiku's: q001, which names a 56-hour weekly limit the cited text doesn't contain, and q022, which uses the Annex D country codes without citing Annex D. A judge that called every answer supported would agree on 28 of 30 and pass the old rule.

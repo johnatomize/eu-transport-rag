@@ -47,7 +47,18 @@ QUOTAS = {
     "cross_act": 1,
 }
 ALWAYS = ("q001",)
+# F's two dev runs in runs/generation/, both with the same prompt and retrieval setup (hybrid,
+# paragraphs, top 5), whose answers are labelled.
+LABELLED_RUNS = (
+    "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+    "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+)
 SEED = "faithfulness-labels-v1"
+# A sentence's verdict, from the faithfulness judge (`rag.judge`).
+SUPPORTED = "supported"
+NOT_SUPPORTED = "not_supported"
+NO_CLAIM = "no_claim"
+VERDICTS = (SUPPORTED, NOT_SUPPORTED, NO_CLAIM)
 LETTERS = ("A", "B")
 
 _FIELDS = {
@@ -270,3 +281,85 @@ def _verdict_problems(row: Mapping, parts: Sequence[str]) -> list[str]:
     if sentence != parts[index]:
         return [f"sentence: is not sentence {index} of the answer, {parts[index]!r}"]
     return []
+
+
+# --- The judge against the labels (#83) ----------------------------------------------------
+
+# The rule for choosing the judge (docs/DECISIONS.md, 2026-11-05): Haiku 5.5 if it agrees with
+# the owner on at least 27 of the 30 answers and calls every answer the owner found unsupported
+# unsupported; otherwise Opus 5.5.
+MIN_AGREEMENT = 27
+
+
+@dataclass(frozen=True)
+class Disagreement:
+    label: Label
+    judged: Mapping | None  # the judgement's run log entry; None when it has no usable verdict
+
+
+@dataclass(frozen=True)
+class Agreement:
+    """How one calibration run of the judge compares with the owner's labels."""
+
+    labels: int
+    agreed: int
+    supported: int  # labels that say supported
+    supported_agreed: int
+    unsupported: int  # labels that say not supported
+    unsupported_agreed: int  # of those, the judge called not supported too
+    same_first: int  # of those, the judge's first unsupported sentence is the owner's
+    disagreements: tuple[Disagreement, ...]
+
+    @property
+    def passes(self) -> bool:
+        """Whether the judge meets the rule: enough agreement, every unsupported answer caught."""
+        return self.agreed >= MIN_AGREEMENT and self.unsupported_agreed == self.unsupported
+
+
+def agreement(labels: Sequence[Label], judge_log: Mapping, texts: Mapping) -> Agreement:
+    """Compare a calibration run's judgements with the owner's labels.
+
+    `texts` maps (question_id, run) to the labelled answer's text, as `answers` gives it; each
+    judgement must have judged that text's sentences, or `ValueError` is raised. A label with no
+    judgement, or one the judge's reply couldn't be read for, counts as a disagreement.
+    """
+    judged: dict[tuple[str, str], Mapping] = {}
+    for e in judge_log["judgements"]:
+        key = (e["id"], e["answer_run"])
+        if key in judged:
+            raise ValueError(f"{key[0]} in {key[1]}: judged twice in one run")
+        judged[key] = e
+    if stray := sorted(set(judged) - {(lb.question_id, lb.run) for lb in labels}):
+        raise ValueError(f"judgements of answers that aren't labelled: {stray}")
+    agreed = supported_agreed = unsupported_agreed = same_first = 0
+    disagreements = []
+    for label in labels:
+        entry = judged.get((label.question_id, label.run))
+        if entry is not None and entry["sentences"] != sentences(
+            texts[label.question_id, label.run]
+        ):
+            raise ValueError(f"{label.question_id} in {label.run}: judged another answer's text")
+        verdict = entry["verdict"] if entry is not None else None
+        if verdict is None or not verdict["ok"]:
+            disagreements.append(Disagreement(label, entry))
+            continue
+        if verdict["supported"] != label.supported:
+            disagreements.append(Disagreement(label, entry))
+            continue
+        agreed += 1
+        if label.supported:
+            supported_agreed += 1
+        else:
+            unsupported_agreed += 1
+            same_first += verdict["first_unsupported"] == label.first_unsupported
+    supported = sum(lb.supported for lb in labels)
+    return Agreement(
+        labels=len(labels),
+        agreed=agreed,
+        supported=supported,
+        supported_agreed=supported_agreed,
+        unsupported=len(labels) - supported,
+        unsupported_agreed=unsupported_agreed,
+        same_first=same_first,
+        disagreements=tuple(disagreements),
+    )

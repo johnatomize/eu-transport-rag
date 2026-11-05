@@ -121,6 +121,21 @@ Checkpoints A–E are built and reviewed by the owner; D, the keyword retrieval 
 
   Opus's lower precision comes from citing neighbouring paragraphs for context, such as Art. 6(2) beside the gold Art. 6(3) for the two-week driving limit.
 - **Answer results table and paired comparison (#81):** `make tables` now also builds `results/answers.md` from the answer run logs alone: a row per run for quality (the measures above) and for cost, seconds, tokens and words of passages shown per question, what happened to each question with its retrieval misses and generation errors, correctness and citation recall by phrasing and by type, and a paired comparison of each run with the base setup (Opus 5.5, hybrid search over paragraph chunks, top 5), with an exact two-sided sign test and a note on how many comparisons were made (rule in `DECISIONS.md`). The sign test gives E's known values: 8 to 0 is 0.0078, 4 to 1 is 0.375, 5 to 2 is 0.453. A run that hasn't answered every question is listed, not scored. `make check` fails when either table no longer matches its logs. On F's two dev runs, Haiku gets right 1 question Opus doesn't and Opus 2 that Haiku doesn't (p = 1.0): on these 41 questions the two models can't be told apart. Faithfulness joins the table with the judge (#83), and the owner's hand grades with the test run (#88).
+- **Faithfulness judge (#83):** `make judge` has a model check, sentence by sentence, whether each claim in an answer follows from the full text of the nodes it cites (`src/rag/judge.py`; how it works in `DECISIONS.md`). It reads what the owner read when labelling, never the gold answer or the labels, and gives each sentence *supported*, *not supported* or *no claim* with a one-sentence reason. Dry run, cap check, retries and run logs (`runs/judge/`) work as for answers. `make tables` writes `results/faithfulness_judge.md`, comparing each calibration run with the owner's 30 labels and listing every disagreement with the judge's reasons.
+  - **Try-out** on four answers the owner didn't label (q005 and q006 from both F runs, Haiku judging): every reply fit the format and judged every sentence, and all four answers were called supported, as they read. The instructions were left unchanged (version `b6b94f34888a`).
+  - **Calibration**, both judges on the owner's 30 labelled answers with the same instructions:
+
+    | | Haiku 5.5 | Opus 5.5 |
+    | --- | ---: | ---: |
+    | Agreement with the owner | 26 of 30 | 28 of 30 |
+    | On the 28 answers the owner found supported | 24 | 26 |
+    | On the 2 the owner found unsupported (q001, q022) | 2 | 2 |
+    | Same first unsupported sentence as the owner | 2 of 2 | 2 of 2 |
+    | Cost of judging the 30 | US$0.014 | US$0.57 |
+
+  - **Opus 5.5 is the judge**, by the owner's rule: Haiku caught both unsupported answers but agreed on 26, one short of 27. Opus is now `judge_model` in `config/generation.yaml`.
+  - **Where the judges disagree with the owner:** both called two of Haiku's answers not supported that the owner found supported. On q040 the answer calls the areas the AETR doesn't cover "EU/EEA-type areas", which the cited Art. 2(3) doesn't say; on q095 it lists the driver card and analogue record sheets among what a driver must carry, while the cited Art. 36(2)(ii) names only manual records and printouts. Haiku also flagged two sentences that only describe the sources' versions (q051, q068).
+  - **Estimate against the real counts:** the API counted 72,968 input tokens for the 30, 24% more than the estimate and within its margin; output averaged about 450 tokens a judgement against the 1,500 assumed. At Opus's rate, judging one dev run's 40 to 50 answers costs about US$0.80–0.95, half that in batches (#79).
 
 ## Spend log
 
@@ -135,3 +150,6 @@ The owner upgraded the AWS project from the Free plan (US$100 of credits until 2
 | 2026-10-27 | Project start | 0.00 | 0.00 |
 | 2026-11-03 | Dev answers with Claude Haiku 5.5, 60 questions (#66): `2026-11-03T20-59-15Z-claude-haiku-5-5.json`, 163,562 input and 37,766 output tokens | 0.0352 | 0.0352 |
 | 2026-11-03 | Dev answers with Claude Opus 5.5, 60 questions (#66): `2026-11-03T21-03-51Z-claude-opus-5-5.json`, 163,562 input and 28,603 output tokens | 1.2263 | 1.2615 |
+| 2026-11-05 | Faithfulness judge try-out with Claude Haiku 5.5, 4 unlabelled answers (#83, cap US$3 approved by the owner): `try-2026-11-05T20-47-27Z-claude-haiku-5-5.json` and `try-2026-11-05T20-47-37Z-claude-haiku-5-5.json`, 7,723 input and 1,250 output tokens | 0.0014 | 1.2629 |
+| 2026-11-05 | Faithfulness judge calibration with Claude Haiku 5.5, 30 labelled answers (#83): `calibration-2026-11-05T20-47-52Z-claude-haiku-5-5.json`, 72,968 input and 13,258 output tokens | 0.0139 | 1.2768 |
+| 2026-11-05 | Faithfulness judge calibration with Claude Opus 5.5, 30 labelled answers (#83): `calibration-2026-11-05T20-49-11Z-claude-opus-5-5.json`, 72,968 input and 13,870 output tokens | 0.5693 | 1.8461 |

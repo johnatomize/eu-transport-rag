@@ -2,6 +2,15 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-05: choosing the faithfulness judge when few labels are unsupported
+
+**Decision** (owner, answering #93; changes the judge rule of 2026-11-04 for #76): the owner's labels (#82) mark 28 of the 30 answers supported. The two that aren't are both Haiku's: q001, which names a 56-hour weekly limit the cited text doesn't contain, and q022, which uses the Annex D country codes without citing Annex D. A judge that called every answer supported would agree on 28 of 30 and pass the old rule.
+
+- **The rule:** Haiku 5.5 is the judge if it agrees with the owner on at least 27 of 30 answers *and* marks both q001's and q022's Haiku answers unsupported. Otherwise Opus 5.5 is the judge.
+- **What is reported:** both judges' agreement overall, on the 28 supported answers and on the 2 unsupported ones, each given separately. The results say that two unsupported answers are a thin test of whether a judge catches them.
+
+**Alternatives:** keeping the old rule, which can't tell a useful judge from one that always says yes; labelling more answers by the same fixed draw, about an hour of the owner's reading per 15 questions for perhaps one or two more unsupported answers; picking likely-unsupported answers by hand, which would make the agreement rate depend on the choice.
+
 ## 2026-11-04: how two answer runs are compared
 
 **Decision** (#81): `results/answers.md` compares runs question by question, with an exact two-sided sign test, in `src/rag/answer_eval.py` and `src/rag/tables.py`.
@@ -44,7 +53,7 @@ Choices made along the way, with the reason and the alternatives considered. New
 **Decision** (owner, answering #75, #76, #77 and #78):
 
 - **Correctness without key facts is graded by the owner, on the final test run only** (#75). On every run, an answer to a question with key facts is correct when it states each key fact, matched by code after numbers are normalised (#29). The 19 answerable dev questions and 10 answerable test questions without key facts get no correctness score on the dev runs; the table relies on citation recall and faithfulness for them. On the test split, the owner grades those 10 questions' answers from each finalist by hand (about 30 verdicts), against the frozen gold answers, and the grades are stored in the repository beside the run logs, so `make tables` reads them like any log. A model never grades correctness, as the design requires.
-- **The faithfulness judge is chosen by measurement** (#76): Haiku 5.5 and Opus 5.5 both judge the owner's ~30 hand-labelled answers (#82), for under US$1 together. Haiku is used if it agrees with the owner on at least 27 of 30, otherwise Opus. Both agreement rates are reported.
+- **The faithfulness judge is chosen by measurement** (#76): Haiku 5.5 and Opus 5.5 both judge the owner's ~30 hand-labelled answers (#82), for under US$1 together. Haiku is used if it agrees with the owner on at least 27 of 30, otherwise Opus. Both agreement rates are reported. (Tightened on 2026-11-05, above: Haiku must also catch both unsupported answers.)
 - **Reranking is done by Qwen3-Reranker 0.6B, run locally on the owner's Mac** (#77). The owner OK'd downloading it (about 1.2 GB) and running it. It is free and of the same family as the embedding model; Claude Haiku reranking can be added as an extra row for a few cents if it disappoints.
 - **The dev comparison changes one thing at a time from the best setup** (#78): hybrid search over paragraph chunks with the top 5, already answered by Opus 5.5 in F. Five new Opus 5.5 runs on the 60 dev questions: top 3; top 10; article chunks; 200-word windows; and with reranking. The chunkings are compared at about the same amount of text (about 1,350 words: 10 paragraphs, 3 articles or 6 windows). F's Haiku run is an extra row. The best three then answer the 40 test questions once. Estimated at US$5–9 in total with judging, through the half-price batch service (#79).
 

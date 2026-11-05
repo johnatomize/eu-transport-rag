@@ -1,0 +1,30 @@
+{"question_id": "q001", "run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json", "supported": false, "first_unsupported": 1, "sentence": "This is a cap on combined driving across the two weeks, separate from the 56-hour limit for a single week.", "note": "The answer mentions 56-hour limit for a single week, but nothing in the cited text says anything about a single week or why it would be 56 hours."}
+{"question_id": "q001", "run": "2026-11-03T21-03-51Z-claude-opus-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q002", "run": "2026-11-03T21-03-51Z-claude-opus-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q002", "run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q012", "run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q012", "run": "2026-11-03T21-03-51Z-claude-opus-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q021", "run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q021", "run": "2026-11-03T21-03-51Z-claude-opus-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q022", "run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json", "supported": false, "first_unsupported": 0, "sentence": "Write the country code (nation code from the Annex D table, e.g. B for Belgium, D for Germany) at the beginning of your first stop after the border, or at the port or station of arrival if you crossed on a ferry or train.", "note": "Answer mentions country codes from Annex D table and country codes B for Belgium and D for Germany. This is correct, but the actual Annex D table where this information is found is not among the cited text."}
+{"question_id": "q022", "run": "2026-11-03T21-03-51Z-claude-opus-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q023", "run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q023", "run": "2026-11-03T21-03-51Z-claude-opus-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q037", "run": "2026-11-03T21-03-51Z-claude-opus-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q037", "run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q040", "run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q040", "run": "2026-11-03T21-03-51Z-claude-opus-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q045", "run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q045", "run": "2026-11-03T21-03-51Z-claude-opus-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q050", "run": "2026-11-03T21-03-51Z-claude-opus-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q050", "run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q051", "run": "2026-11-03T21-03-51Z-claude-opus-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q051", "run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q068", "run": "2026-11-03T21-03-51Z-claude-opus-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q068", "run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q088", "run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q088", "run": "2026-11-03T21-03-51Z-claude-opus-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q095", "run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q095", "run": "2026-11-03T21-03-51Z-claude-opus-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q097", "run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}
+{"question_id": "q097", "run": "2026-11-03T21-03-51Z-claude-opus-5-5.json", "supported": true, "first_unsupported": null, "sentence": null, "note": ""}

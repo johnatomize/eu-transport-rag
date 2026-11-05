@@ -23,6 +23,7 @@ supported, not supported, or no claim. An answer is supported when no sentence i
 Choices and reasons: "the faithfulness judge" in docs/DECISIONS.md.
 """
 
+import copy
 import hashlib
 import json
 from collections.abc import Mapping, Sequence
@@ -31,17 +32,12 @@ from functools import cached_property
 
 from rag.corpus import Document
 from rag.embed_estimate import estimate_tokens
-from rag.faithfulness import sentences
+from rag.faithfulness import NOT_SUPPORTED, VERDICTS, sentences
 from rag.generate import Estimate, Reply, RunResult, failed_stop
 from rag.generation_config import GenerationConfig
 from rag.parse import Tree, lead_in
 from rag.prompt import Prompt, attribute, citation_label, tag_escaper
 from rag.review import context
-
-SUPPORTED = "supported"
-NOT_SUPPORTED = "not_supported"
-NO_CLAIM = "no_claim"
-VERDICTS = (SUPPORTED, NOT_SUPPORTED, NO_CLAIM)
 
 SYSTEM = """\
 You check answers about EU road transport law against the passages they cite: driving times, \
@@ -102,6 +98,9 @@ JUDGE_SCHEMA = {
 }
 # The API adds its own instructions for a JSON schema; counted as in `rag.generate`.
 SCHEMA_TOKENS = 2 * estimate_tokens(json.dumps(JUDGE_SCHEMA)) + 200
+# A judgement, thinking included, for the expected cost only: a reason for each of about five
+# sentences on top of the thinking an answer takes. The cap check uses max_output_tokens.
+EXPECTED_OUTPUT_TOKENS = 1500
 
 _TAGS = ("question", "answer", "sentence", "cited", "node", "heading", "context", "text", "quote")
 _escape = tag_escaper(_TAGS)
@@ -283,12 +282,12 @@ def read_reply(reply: Reply, call: JudgeCall) -> dict:
     """The judge's reply as a run log verdict. `ok` is False when it can't be read."""
     stopped = failed_stop(reply)
     if stopped:
-        return {**BLANK, "problems": [stopped]}
+        return {**copy.deepcopy(BLANK), "problems": [stopped]}
     assert reply.text is not None
     try:
         judgement = parse_judgement(reply.text, len(call.sentences))
     except JudgeFormatError as e:
-        return {**BLANK, "problems": [str(e)]}
+        return {**copy.deepcopy(BLANK), "problems": [str(e)]}
     return {
         "ok": True,
         "supported": judgement.supported,

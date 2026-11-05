@@ -11,8 +11,11 @@ the same checks as `make answers`: prices read in the last 7 days, the most the 
 within the approved cap, no prompt over max_prompt_tokens, and ANTHROPIC_API_KEY set.
 
 The judge reads the question, the answer sentence by sentence and the full text of each cited
-node (`rag.judge`), never the gold answer or the owner's labels. `--only` refuses the labelled
-answers, so trying the judge out never shows it, or whoever builds it, how it does on them.
+node (`rag.judge`), never the gold answer or the owner's labels. `--calibrate` judges the
+answers the labels file names, after checking it names the chosen answers, and doesn't read
+the verdicts. The labelled answers, recognised by their text, are judged only by `--calibrate`
+until a calibration run exists, and never by `--only`, so trying the judge out never shows it,
+or whoever builds it, how it does on them.
 
 A paid run writes its log to runs/judge/, named `calibration-…`, `try-…` or `run-…` by what it
 judged. `make tables` compares each calibration run with the owner's labels in
@@ -27,7 +30,7 @@ import sys
 from pathlib import Path
 
 from rag.corpus import CorpusError, load_manifest
-from rag.faithfulness import LABELLED_RUNS, assign, by_id, select
+from rag.faithfulness import LABELLED_RUNS, answers, by_id, select, validate_labels
 from rag.generate import (
     AnthropicClient,
     GenerateError,
@@ -45,6 +48,7 @@ from rag.generation_config import GenerationConfigError
 from rag.generation_config import load_generation_config as load_generation
 from rag.judge import (
     BLANK,
+    EXPECTED_OUTPUT_TOKENS,
     JUDGE_SCHEMA,
     head,
     judgeable,
@@ -62,6 +66,7 @@ MANIFEST = ROOT / "corpus" / "manifest.yaml"
 QUESTIONS = ROOT / "data" / "questions.v1.jsonl"
 CONFIG = ROOT / "config" / "generation.yaml"
 ANSWER_RUNS = ROOT / "runs" / "generation"
+LABELS = ROOT / "data" / "faithfulness_labels.v1.jsonl"
 RUNS = ROOT / "runs" / "judge"
 ENV = ROOT / ".env"
 
@@ -97,21 +102,19 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         labelled_logs = {name: read_log(name) for name in LABELLED_RUNS}
-        chosen = select(questions, labelled_logs)
+        texts = answers(select(questions, labelled_logs), labelled_logs)
         if args.calibrate:
             kind, answer_runs = "calibration", list(LABELLED_RUNS)
-            picked = [
-                (run, by_id(labelled_logs[run])[qid])
-                for qid, letters in assign(chosen, list(LABELLED_RUNS)).items()
-                for run in sorted(letters.values())
-            ]
+            picked = [(run, by_id(labelled_logs[run])[qid]) for qid, run in labelled_keys(texts)]
         else:
             kind, answer_runs = ("try" if args.only else "run"), [args.log]
-            picked = pick(args.log, args.only, chosen)
+            labelled = {(qid, text) for (qid, _), text in texts.items()}
+            calibrated = any(RUNS.glob("calibration-*.json"))
+            picked = pick(args.log, args.only, labelled, calibrated)
         calls = [make_call(question_of[e["id"]], e, run, tree, docs) for run, e in picked]
         if not calls:
             raise ValueError("no answer to judge")
-        e = estimate(calls, config, args.model)
+        e = estimate(calls, config, args.model, EXPECTED_OUTPUT_TOKENS)
     except (OSError, ValueError, KeyError, GenerateError) as err:
         print(f"error: {err}", file=sys.stderr)
         return 1
@@ -207,22 +210,46 @@ def read_log(name: str) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def pick(log_name: str, only: str | None, chosen: list[str]) -> list[tuple[str, dict]]:
+def labelled_keys(texts: dict[tuple[str, str], str]) -> list[tuple[str, str]]:
+    """The (question_id, run) of every labelled answer, from the labels file, in its order.
+
+    The file must label exactly the chosen answers (`texts`), checked as `make check` checks
+    it; its verdicts are not read here.
+    """
+    if not LABELS.exists():
+        raise ValueError(f"no {LABELS.name}: the owner's labels come first (#82)")
+    labels, errors = validate_labels(LABELS.read_text(encoding="utf-8"), texts)
+    if errors:
+        raise ValueError(f"{LABELS.name} is not valid; run `make faithfulness-labels`")
+    return [(label.question_id, label.run) for label in labels]
+
+
+def pick(
+    log_name: str, only: str | None, labelled: set[tuple[str, str]], calibrated: bool
+) -> list[tuple[str, dict]]:
     """The answers of an answer run to judge: those that passed the check, or with `only`,
-    those questions', refusing any the owner labelled."""
+    those questions'.
+
+    An answer the owner labelled, recognised by its question and text, is refused with `only`,
+    and in a whole run until a calibration run exists.
+    """
     entries = by_id(read_log(log_name))
-    if not only:
-        return [(log_name, e) for e in entries.values() if judgeable(e)]
-    wanted = [i.strip() for i in only.split(",") if i.strip()]
-    if log_name in LABELLED_RUNS and (kept := [q for q in wanted if q in chosen]):
+    if only:
+        wanted = [i.strip() for i in only.split(",") if i.strip()]
+        if twice := sorted({q for q in wanted if wanted.count(q) > 1}):
+            raise ValueError(f"--only names {', '.join(twice)} more than once")
+        for qid in wanted:
+            if qid not in entries or not judgeable(entries[qid]):
+                raise ValueError(f"{qid}: not an answer that passed the check in {log_name}")
+        out = [(log_name, entries[qid]) for qid in wanted]
+    else:
+        out = [(log_name, e) for e in entries.values() if judgeable(e)]
+    kept = [e["id"] for _, e in out if (e["id"], e["verdict"]["answer"]) in labelled]
+    if kept and (only or not calibrated):
         raise ValueError(
-            f"{', '.join(kept)}: labelled by the owner, so judged only with --calibrate"
+            f"{', '.join(kept)}: answers the owner labelled, judged only with --calibrate"
+            + ("" if only else " until a calibration run exists")
         )
-    out = []
-    for qid in wanted:
-        if qid not in entries or not judgeable(entries[qid]):
-            raise ValueError(f"{qid}: not an answer that passed the check in {log_name}")
-        out.append((log_name, entries[qid]))
     return out
 
 

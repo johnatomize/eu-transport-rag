@@ -7,15 +7,19 @@ from pathlib import Path
 import pytest
 
 from rag.corpus import load_manifest
-from rag.faithfulness import LABELLED_RUNS, Label, agreement
+from rag.faithfulness import (
+    LABELLED_RUNS,
+    NO_CLAIM,
+    NOT_SUPPORTED,
+    SUPPORTED,
+    Label,
+    agreement,
+)
 from rag.generate import Reply, send_all
 from rag.generation_config import Price
 from rag.judge import (
     BLANK,
     JUDGE_SCHEMA,
-    NO_CLAIM,
-    NOT_SUPPORTED,
-    SUPPORTED,
     JudgeFormatError,
     build_judge_prompt,
     head,
@@ -26,6 +30,7 @@ from rag.judge import (
 )
 from rag.prompt import SYSTEM as ANSWER_SYSTEM
 from rag.prompt import Prompt
+from rag.questions import validate
 from rag.tables import judge_calibration
 
 ROOT = Path(__file__).parents[1]
@@ -261,6 +266,7 @@ def judge_log(*judgements, model="claude-haiku-5-5") -> dict:
         "config": {"model": model, "judge_prompt_version": "abc123def456"},
         "paid": {"cost_usd": 0.0123},
         "failed": [],
+        "error": None,
         "judgements": list(judgements),
     }
 
@@ -338,6 +344,15 @@ def test_an_unfinished_run_is_not_held_to_the_rule():
     log = judge_log(judgement("q1", "a-claude-opus-5-5.json", SUPPORTED, SUPPORTED))
     table = judge_calibration([("calibration-x.json", log)], LABELS, TEXTS)
     assert "| unfinished |" in table
+    stopped = judge_log(*(judgement(lb.question_id, lb.run, SUPPORTED, SUPPORTED) for lb in LABELS))
+    stopped["error"] = "OSError: disk full"
+    assert "| unfinished |" in judge_calibration([("calibration-x.json", stopped)], LABELS, TEXTS)
+
+
+def test_an_answer_judged_twice_in_one_run_is_refused():
+    twice = judgement("q1", "a-claude-opus-5-5.json", SUPPORTED, SUPPORTED)
+    with pytest.raises(ValueError, match="judged twice"):
+        agreement(LABELS, judge_log(twice, twice), TEXTS)
 
 
 # --- The script ---------------------------------------------------------------------------
@@ -374,7 +389,7 @@ def test_a_dry_run_of_the_calibration_shows_the_30_answers_and_sends_nothing(
 def test_trying_the_judge_out_refuses_the_labelled_answers(script, capsys):
     args = ["--model", "claude-haiku-5-5", "--log", LABELLED_RUNS[1], "--only", "q005,q001"]
     assert script.main(args) == 1
-    assert "q001: labelled by the owner" in capsys.readouterr().err
+    assert "q001: answers the owner labelled" in capsys.readouterr().err
     args[-1] = "q005,q006"
     assert script.main(args) == 0
     assert "Judging 2 answers (try)" in capsys.readouterr().out
@@ -397,3 +412,60 @@ def test_a_paid_run_writes_its_log(script, monkeypatch, tmp_path, capsys):
     assert log["config"]["judge_prompt_version"] == prompt_version()
     assert [j["id"] for j in log["judgements"]] == ["q005", "q006"]
     assert log["paid"]["cost_usd"] > 0
+
+
+def test_a_whole_labelled_run_waits_for_calibration_even_under_another_name(
+    script, capsys, tmp_path, monkeypatch
+):
+    copy = tmp_path / "generation" / "copy-claude-haiku-5-5.json"
+    copy.parent.mkdir()
+    copy.write_text((ROOT / "runs" / "generation" / LABELLED_RUNS[1]).read_text())
+    real = script.read_log
+
+    def read_log(name):
+        return json.loads(copy.read_text()) if name == copy.name else real(name)
+
+    monkeypatch.setattr(script, "read_log", read_log)
+    for name in (LABELLED_RUNS[1], copy.name):
+        assert script.main(["--model", "claude-haiku-5-5", "--log", name]) == 1
+        assert "until a calibration run exists" in capsys.readouterr().err
+    (tmp_path / "judge").mkdir()
+    (tmp_path / "judge" / "calibration-x-claude-haiku-5-5.json").write_text("{}")
+    assert script.main(["--model", "claude-haiku-5-5", "--log", copy.name]) == 0
+    assert "(run)" in capsys.readouterr().out
+
+
+def test_only_refuses_a_question_named_twice(script, capsys):
+    args = ["--model", "claude-haiku-5-5", "--log", LABELLED_RUNS[1], "--only", "q005,q005"]
+    assert script.main(args) == 1
+    assert "more than once" in capsys.readouterr().err
+
+
+def test_calibration_judges_the_answers_the_labels_file_names_and_needs_it(
+    script, capsys, tmp_path, monkeypatch
+):
+    rows = (ROOT / "data" / "faithfulness_labels.v1.jsonl").read_text().splitlines()
+    short = tmp_path / "labels.jsonl"
+    short.write_text("\n".join(rows[:-1]) + "\n")
+    for labels, problem in ((tmp_path / "missing.jsonl", "no missing.jsonl"),
+                            (short, "labels.jsonl is not valid")):  # fmt: skip
+        monkeypatch.setattr(script, "LABELS", labels)
+        assert script.main(["--model", "claude-haiku-5-5", "--calibrate"]) == 1
+        assert problem in capsys.readouterr().err
+
+
+def test_the_table_refuses_labels_that_leave_a_chosen_answer_out(tree, tmp_path, monkeypatch):
+    spec = importlib.util.spec_from_file_location(
+        "tables_script", ROOT / "scripts" / "make_tables.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    rows = (ROOT / "data" / "faithfulness_labels.v1.jsonl").read_text().splitlines()
+    short = tmp_path / "labels.jsonl"
+    short.write_text("\n".join(r for r in rows if '"q022"' not in r) + "\n")
+    monkeypatch.setattr(module, "LABELS", short)
+    questions, _ = validate((ROOT / "data" / "questions.v1.jsonl").read_text(), tree)
+    logs = {n: json.loads((ROOT / "runs" / "generation" / n).read_text()) for n in LABELLED_RUNS}
+    with pytest.raises(ValueError, match="not valid"):
+        module.judge_table([], logs, questions)

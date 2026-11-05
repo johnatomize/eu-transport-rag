@@ -19,7 +19,8 @@ import sys
 from pathlib import Path
 
 from rag.corpus import CorpusError, load_manifest
-from rag.faithfulness import by_id, validate_labels
+from rag.faithfulness import LABELLED_RUNS, select, validate_labels
+from rag.faithfulness import answers as labelled_answers
 from rag.parse import ParseError, parse_corpus
 from rag.questions import validate
 from rag.runlog import StaleRunError, check_chunks, load
@@ -72,7 +73,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     try:
         judge_logs = calibration_logs()
-        tables[JUDGE_OUT] = judge_table(judge_logs, dict(answer_logs))
+        tables[JUDGE_OUT] = judge_table(judge_logs, dict(answer_logs), questions)
     except (OSError, ValueError, KeyError) as e:
         print(f"error: the faithfulness judge's table: {e}", file=sys.stderr)
         return 1
@@ -106,21 +107,20 @@ def calibration_logs() -> list[tuple[str, dict]]:
     return logs
 
 
-def judge_table(judge_logs: list[tuple[str, dict]], answer_logs: dict[str, dict]) -> str:
-    """The judge's calibration table, from its runs and the owner's labels."""
+def judge_table(
+    judge_logs: list[tuple[str, dict]], answer_logs: dict[str, dict], questions: list
+) -> str:
+    """The judge's calibration table, from its runs and the owner's labels.
+
+    The labels must label exactly the answers chosen for labelling, as `make check` requires.
+    """
     if not LABELS.exists():
         if judge_logs:
             raise ValueError(f"calibration runs but no {LABELS.name}")
         return judge_calibration([], [], {})
-    text = LABELS.read_text(encoding="utf-8")
-    rows = [json.loads(line) for line in text.splitlines() if line.strip()]
-    texts = {
-        (r["question_id"], r["run"]): by_id(answer_logs[r["run"]])[r["question_id"]]["verdict"][
-            "answer"
-        ]
-        for r in rows
-    }
-    labels, errors = validate_labels(text, texts)
+    labelled_logs = {name: answer_logs[name] for name in LABELLED_RUNS}
+    texts = labelled_answers(select(questions, labelled_logs), labelled_logs)
+    labels, errors = validate_labels(LABELS.read_text(encoding="utf-8"), texts)
     if errors:
         raise ValueError(f"{LABELS.name} is not valid; run `make faithfulness-labels`")
     return judge_calibration(judge_logs, labels, texts)

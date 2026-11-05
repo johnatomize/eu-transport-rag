@@ -24,8 +24,14 @@ from rag.answer_eval import (
 )
 from rag.answer_eval import evaluate as evaluate_answers
 from rag.chunk import STRATEGIES, Chunk
-from rag.faithfulness import MIN_AGREEMENT, Disagreement, Label, agreement, sentences
-from rag.judge import NOT_SUPPORTED
+from rag.faithfulness import (
+    MIN_AGREEMENT,
+    NOT_SUPPORTED,
+    Disagreement,
+    Label,
+    agreement,
+    sentences,
+)
 from rag.parse import Tree
 from rag.questions import PHRASINGS, SPLITS, TYPES, Question
 from rag.retrieval_eval import CUTOFF, Evaluation, Metric, evaluate
@@ -557,7 +563,7 @@ def judge_calibration(
     for file, log in logs:
         config = log["config"]
         result = agreement(labels, log, texts)
-        finished = len(log["judgements"]) == len(labels) and not log["failed"]
+        finished = len(log["judgements"]) == len(labels) and not (log["failed"] or log["error"])
         results.append((file, config, result, finished))
         rule = ("yes" if result.passes else "no") if finished else "unfinished"
         out.append(

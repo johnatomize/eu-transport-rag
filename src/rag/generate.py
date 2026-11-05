@@ -130,6 +130,7 @@ class Estimate:
     max_output_tokens: int
     model: str
     price: Price
+    expected_per_call: int = EXPECTED_OUTPUT_TOKENS  # output tokens a call, thinking included
 
     @property
     def padded_input(self) -> int:
@@ -137,7 +138,7 @@ class Estimate:
 
     @property
     def expected_output(self) -> int:
-        return math.ceil(self.calls * EXPECTED_OUTPUT_TOKENS * MARGIN)
+        return math.ceil(self.calls * self.expected_per_call * MARGIN)
 
     @property
     def expected_usd(self) -> float:
@@ -149,7 +150,12 @@ class Estimate:
         return cost_usd(self.padded_input, self.calls * self.max_output_tokens, self.price)
 
 
-def estimate(calls: Sequence[Sendable], config: GenerationConfig, model: str) -> Estimate:
+def estimate(
+    calls: Sequence[Sendable],
+    config: GenerationConfig,
+    model: str,
+    expected_per_call: int = EXPECTED_OUTPUT_TOKENS,
+) -> Estimate:
     if model not in config.prices:
         raise GenerateError(f"{model} has no price in config/generation.yaml")
     counts = [c.input_tokens for c in calls]
@@ -160,6 +166,7 @@ def estimate(calls: Sequence[Sendable], config: GenerationConfig, model: str) ->
         max_output_tokens=config.max_output_tokens,
         model=model,
         price=config.prices[model],
+        expected_per_call=expected_per_call,
     )
 
 
@@ -207,7 +214,7 @@ def estimate_report(e: Estimate, unit: str = "answer") -> str:
     return (
         f"{calls}: about {e.input_tokens:,} input tokens, {e.padded_input:,} with a "
         f"{MARGIN - 1:.0%} margin.\n"
-        f"Expected cost, at {EXPECTED_OUTPUT_TOKENS:,} output tokens {article(unit)} {unit} plus "
+        f"Expected cost, at {e.expected_per_call:,} output tokens {article(unit)} {unit} plus "
         f"the margin: US${e.expected_usd:.4f}.\n"
         f"Most it can cost, every {unit} at {e.max_output_tokens:,} output tokens: "
         f"US${e.most_usd:.4f}. The cap check uses this figure."

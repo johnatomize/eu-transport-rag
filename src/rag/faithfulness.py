@@ -54,6 +54,11 @@ LABELLED_RUNS = (
     "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
 )
 SEED = "faithfulness-labels-v1"
+# A sentence's verdict, from the faithfulness judge (`rag.judge`).
+SUPPORTED = "supported"
+NOT_SUPPORTED = "not_supported"
+NO_CLAIM = "no_claim"
+VERDICTS = (SUPPORTED, NOT_SUPPORTED, NO_CLAIM)
 LETTERS = ("A", "B")
 
 _FIELDS = {
@@ -318,7 +323,12 @@ def agreement(labels: Sequence[Label], judge_log: Mapping, texts: Mapping) -> Ag
     judgement must have judged that text's sentences, or `ValueError` is raised. A label with no
     judgement, or one the judge's reply couldn't be read for, counts as a disagreement.
     """
-    judged = {(e["id"], e["answer_run"]): e for e in judge_log["judgements"]}
+    judged: dict[tuple[str, str], Mapping] = {}
+    for e in judge_log["judgements"]:
+        key = (e["id"], e["answer_run"])
+        if key in judged:
+            raise ValueError(f"{key[0]} in {key[1]}: judged twice in one run")
+        judged[key] = e
     if stray := sorted(set(judged) - {(lb.question_id, lb.run) for lb in labels}):
         raise ValueError(f"judgements of answers that aren't labelled: {stray}")
     agreed = supported_agreed = unsupported_agreed = same_first = 0

@@ -2,6 +2,7 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+
 ## 2026-11-05: choosing the faithfulness judge when few labels are unsupported
 
 **Decision** (owner, answering #93; changes the judge rule of 2026-11-04 for #76): the owner's labels (#82) mark 28 of the 30 answers supported. The two that aren't are both Haiku's: q001, which names a 56-hour weekly limit the cited text doesn't contain, and q022, which uses the Annex D country codes without citing Annex D. A judge that called every answer supported would agree on 28 of 30 and pass the old rule.

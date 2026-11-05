@@ -4,6 +4,8 @@
 #
 # build_model answers while F is built and debugged, when many cheap runs are useful.
 # scored_model writes every answer that G scores, and is the model the results table reports.
+# judge_model judges faithfulness (#83): chosen by the owner's rule after both judges were
+# measured against the owner's 30 labels (docs/DECISIONS.md, results/faithfulness_judge.md).
 #
 # Prices are US$ per million tokens from Anthropic's pricing page
 # (https://platform.claude.com/docs/en/about-claude/pricing), read on prices_read_on. The batch
@@ -20,6 +22,7 @@
 provider: anthropic
 build_model: claude-haiku-5-5
 scored_model: claude-opus-5-5
+judge_model: claude-opus-5-5
 effort: medium
 max_output_tokens: 4000
 max_prompt_tokens: 100000

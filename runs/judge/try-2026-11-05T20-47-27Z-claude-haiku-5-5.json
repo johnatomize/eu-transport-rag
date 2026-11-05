@@ -1,0 +1,119 @@
+{
+ "run": {
+  "created": "2026-11-05T20:47:27+00:00",
+  "commit": "d4df35c5b85b5cdf6ec32c54864115ab95573a1c",
+  "dirty": false
+ },
+ "config": {
+  "model": "claude-haiku-5-5",
+  "effort": "medium",
+  "max_output_tokens": 4000,
+  "judge_prompt_version": "b6b94f34888a",
+  "price_usd_per_million": {
+   "input": 0.1,
+   "output": 0.5
+  },
+  "prices_read_on": "2026-11-03",
+  "kind": "try",
+  "answer_runs": [
+   "2026-11-03T20-59-15Z-claude-haiku-5-5.json"
+  ]
+ },
+ "estimate": {
+  "calls": 2,
+  "input_tokens": 2536,
+  "padded_input_tokens": 3804,
+  "expected_usd": 0.00263,
+  "most_usd": 0.00438
+ },
+ "paid": {
+  "calls": 2,
+  "input_tokens": 3018,
+  "output_tokens": 350,
+  "cost_usd": 0.000477
+ },
+ "error": null,
+ "failed": [],
+ "judgements": [
+  {
+   "id": "q005",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "The maximum weekly driving time is 56 hours, and it must not result in the maximum weekly working time under Directive 2002/15/EC being exceeded."
+   ],
+   "estimated_input_tokens": 1111,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The claim that maximum weekly driving time is 56 hours and must not result in the maximum weekly working time under Directive 2002/15/EC being exceeded matches Article 6(2) text exactly.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The claim that maximum weekly driving time is 56 hours and must not result in the maximum weekly working time under Directive 2002/15/EC being exceeded matches Article 6(2) text exactly."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1309,
+    "output_tokens": 98,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0001799,
+   "seconds": 2.76,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSKVySt4idkXADowTVh"
+  },
+  {
+   "id": "q006",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "You need a break of at least 45 minutes, uninterrupted, after 4.5 hours of driving, unless you take a rest period instead.",
+    "The 45 minutes can be split into a break of at least 15 minutes followed by a break of at least 30 minutes, spread so the rules are still met.",
+    "For an occasional passenger service, it can instead be two breaks of at least 15 minutes each."
+   ],
+   "estimated_input_tokens": 1425,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The cited Article 7 states that after 4.5 hours of driving a driver must take an uninterrupted break of at least 45 minutes unless taking a rest period, which matches the claim.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Article 7 says the 45-minute break may be replaced by at least 15 minutes followed by at least 30 minutes, distributed so as to comply with the first paragraph, which matches the claim.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Article 7 provides that for an occasional passenger service the break may be replaced by two breaks of at least 15 minutes each, distributed to comply with the rule.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The cited Article 7 states that after 4.5 hours of driving a driver must take an uninterrupted break of at least 45 minutes unless taking a rest period, which matches the claim."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 7 says the 45-minute break may be replaced by at least 15 minutes followed by at least 30 minutes, distributed so as to comply with the first paragraph, which matches the claim."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Article 7 provides that for an occasional passenger service the break may be replaced by two breaks of at least 15 minutes each, distributed to comply with the rule."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1709,
+    "output_tokens": 252,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0002969,
+   "seconds": 1.93,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSKh4SjogjrTDjsd5ok"
+  }
+ ]
+}

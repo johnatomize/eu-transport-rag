@@ -1,0 +1,1726 @@
+{
+ "run": {
+  "created": "2026-11-05T20:47:52+00:00",
+  "commit": "d4df35c5b85b5cdf6ec32c54864115ab95573a1c",
+  "dirty": false
+ },
+ "config": {
+  "model": "claude-haiku-5-5",
+  "effort": "medium",
+  "max_output_tokens": 4000,
+  "judge_prompt_version": "b6b94f34888a",
+  "price_usd_per_million": {
+   "input": 0.1,
+   "output": 0.5
+  },
+  "prices_read_on": "2026-11-03",
+  "kind": "calibration",
+  "answer_runs": [
+   "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "2026-11-03T20-59-15Z-claude-haiku-5-5.json"
+  ]
+ },
+ "estimate": {
+  "calls": 30,
+  "input_tokens": 58743,
+  "padded_input_tokens": 88115,
+  "expected_usd": 0.042562,
+  "most_usd": 0.068811
+ },
+ "paid": {
+  "calls": 30,
+  "input_tokens": 72968,
+  "output_tokens": 13258,
+  "cost_usd": 0.013926
+ },
+ "error": null,
+ "failed": [],
+ "judgements": [
+  {
+   "id": "q001",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "You may not drive more than 90 hours in total during any two consecutive weeks.",
+    "This is a cap on combined driving across the two weeks, separate from the 56-hour limit for a single week."
+   ],
+   "estimated_input_tokens": 1126,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The claim that driving may not exceed 90 hours in total during any two consecutive weeks matches Article 6(3), which says the total accumulated driving time during any two consecutive weeks shall not exceed 90 hours.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"The claim that the two-week cap is separate from a 56-hour single-week limit is not in the cited Article 6(3) text, which only states the 90-hour two-week limit and does not mention a 56-hour weekly limit.\",\"verdict\":\"not_supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": false,
+    "first_unsupported": 1,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The claim that driving may not exceed 90 hours in total during any two consecutive weeks matches Article 6(3), which says the total accumulated driving time during any two consecutive weeks shall not exceed 90 hours."
+     },
+     {
+      "sentence": 1,
+      "verdict": "not_supported",
+      "reason": "The claim that the two-week cap is separate from a 56-hour single-week limit is not in the cited Article 6(3) text, which only states the 90-hour two-week limit and does not mention a 56-hour weekly limit."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1325,
+    "output_tokens": 200,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0002325,
+   "seconds": 1.94,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSMNiwhskuSjz3HEJhU"
+  },
+  {
+   "id": "q001",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "Over any two consecutive weeks, your total driving time must not go above 90 hours.",
+    "Within that, no single week may go over 56 hours of driving.",
+    "Your weekly driving also must not push you past the maximum weekly working time set by Directive 2002/15/EC.",
+    "So if you drive 56 hours in one week, you can drive at most 34 hours in the week before or after it."
+   ],
+   "estimated_input_tokens": 1337,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The claim that total driving over any two consecutive weeks must not exceed 90 hours is stated directly in Article 6(3) of Regulation 561/2006.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"The claim that no single week may exceed 56 hours of driving is stated in Article 6(2) of Regulation 561/2006.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Article 6(2) states that weekly driving must not result in the maximum weekly working time under Directive 2002/15/EC being exceeded, matching this sentence.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"The arithmetic 90 minus 56 gives 34 hours for the adjacent week, which follows from the 90-hour two-week cap and the 56-hour weekly cap; but the claim that the 34 hours applies to the week before or after is a fair consequence of the two-week rule since any two consecutive weeks are capped at 90 hours.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The claim that total driving over any two consecutive weeks must not exceed 90 hours is stated directly in Article 6(3) of Regulation 561/2006."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "The claim that no single week may exceed 56 hours of driving is stated in Article 6(2) of Regulation 561/2006."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Article 6(2) states that weekly driving must not result in the maximum weekly working time under Directive 2002/15/EC being exceeded, matching this sentence."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "The arithmetic 90 minus 56 gives 34 hours for the adjacent week, which follows from the 90-hour two-week cap and the 56-hour weekly cap; but the claim that the 34 hours applies to the week before or after is a fair consequence of the two-week rule since any two consecutive weeks are capped at 90 hours."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1661,
+    "output_tokens": 357,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0003446,
+   "seconds": 2.65,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSMWch5xVcKch3YXekQ"
+  },
+  {
+   "id": "q002",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "'Daily driving time' is all the driving you add up between the end of one daily rest period and the start of the next daily rest period, or between a daily rest period and a weekly rest period.",
+    "It counts driving both inside the EU and in non-EU (third) countries.",
+    "As a rule it may not exceed 9 hours, but you may extend it to at most 10 hours no more than twice in a week."
+   ],
+   "estimated_input_tokens": 1549,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The definition in Article 4(k) states daily driving time is the total accumulated driving time between the end of one daily rest period and the beginning of the following daily rest period, or between a daily rest period and a weekly rest period, matching the answer.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Article 6(4) says daily and weekly driving times include all driving time on the territory of the Community or of a third country, so counting driving inside the EU and in third countries is supported.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Article 6(1) states daily driving time shall not exceed nine hours, extendable to at most 10 hours not more than twice during the week, which matches the answer.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The definition in Article 4(k) states daily driving time is the total accumulated driving time between the end of one daily rest period and the beginning of the following daily rest period, or between a daily rest period and a weekly rest period, matching the answer."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 6(4) says daily and weekly driving times include all driving time on the territory of the Community or of a third country, so counting driving inside the EU and in third countries is supported."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Article 6(1) states daily driving time shall not exceed nine hours, extendable to at most 10 hours not more than twice during the week, which matches the answer."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1918,
+    "output_tokens": 260,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0003218,
+   "seconds": 1.63,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSMi2nmaTZRkgWHE6jo"
+  },
+  {
+   "id": "q002",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "Daily driving time means the total accumulated driving time between the end of one daily rest period and the beginning of the following daily rest period, or between a daily rest period and a weekly rest period."
+   ],
+   "estimated_input_tokens": 1199,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The sentence restates the definition of 'daily driving time' in Article 4(k): total accumulated driving time between the end of one daily rest period and the beginning of the following daily rest period, or between a daily rest period and a weekly rest period.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The sentence restates the definition of 'daily driving time' in Article 4(k): total accumulated driving time between the end of one daily rest period and the beginning of the following daily rest period, or between a daily rest period and a weekly rest period."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1380,
+    "output_tokens": 109,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0001925,
+   "seconds": 1.43,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSMpx1YvNsSJUiE3pMq"
+  },
+  {
+   "id": "q012",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "Apply not later than 15 working days before the expiry date of your driver card, to the competent authorities of the Member State of your normal residence."
+   ],
+   "estimated_input_tokens": 1153,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The claim that the driver must apply not later than 15 working days before expiry, to the competent authorities of the Member State of normal residence, is stated directly in Article 28(1).\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The claim that the driver must apply not later than 15 working days before expiry, to the competent authorities of the Member State of normal residence, is stated directly in Article 28(1)."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1329,
+    "output_tokens": 88,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0001769,
+   "seconds": 1.02,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSMw48Gh3gizZ6kKRFx"
+  },
+  {
+   "id": "q012",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "Apply to the competent authorities of the Member State where you normally live no later than 15 working days before your card expires.",
+    "If you apply within that deadline, the authority must supply the new card before the expiry date."
+   ],
+   "estimated_input_tokens": 1355,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The claim that the driver must apply to the competent authorities of the Member State of normal residence no later than 15 working days before expiry is stated directly in Article 28(1).\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Article 28(3) says the competent authority shall supply a new card before the expiry date provided the request was sent within the Article 28(1) time limits, which matches the conditional claim.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The claim that the driver must apply to the competent authorities of the Member State of normal residence no later than 15 working days before expiry is stated directly in Article 28(1)."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 28(3) says the competent authority shall supply a new card before the expiry date provided the request was sent within the Article 28(1) time limits, which matches the conditional claim."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1615,
+    "output_tokens": 165,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.000244,
+   "seconds": 1.76,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSN1QZqdALkxSGqsXxp"
+  },
+  {
+   "id": "q021",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "The transport undertaking must have the tachograph repaired by an approved fitter or workshop as soon as circumstances permit.",
+    "If the vehicle cannot return to the undertaking's premises within one week, counted from the day of the breakdown or of discovering the faulty operation, the repair must be carried out en route instead."
+   ],
+   "estimated_input_tokens": 1423,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The claim that the undertaking must have the tachograph repaired by an approved fitter or workshop as soon as circumstances permit matches the first subparagraph of Article 37(1).\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"The claim that if the vehicle cannot return to the undertaking's premises within one week, counted from the breakdown or discovery of defective operation, the repair must be carried out en route matches the second subparagraph of Article 37(1).\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The claim that the undertaking must have the tachograph repaired by an approved fitter or workshop as soon as circumstances permit matches the first subparagraph of Article 37(1)."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "The claim that if the vehicle cannot return to the undertaking's premises within one week, counted from the breakdown or discovery of defective operation, the repair must be carried out en route matches the second subparagraph of Article 37(1)."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1676,
+    "output_tokens": 186,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0002606,
+   "seconds": 1.62,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSN8yyFZpTNgkbuGsaR"
+  },
+  {
+   "id": "q021",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "Your company must get the tachograph repaired by an approved fitter or workshop as soon as circumstances allow.",
+    "If the vehicle cannot get back to the company's premises within one week, counted from the day of the breakdown or the day the fault was discovered, the repair must be done en route, for example abroad.",
+    "If the fault is not fixed under these rules, the authorities may ban use of the vehicle, where national law allows this."
+   ],
+   "estimated_input_tokens": 1488,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"Article 37(1) says the transport undertaking must have the tachograph repaired by an approved fitter or workshop as soon as circumstances permit, which matches the claim.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"The article says that if the vehicle cannot return to the premises within one week from the breakdown or discovery of the fault, the repair is carried out en route; the 'for example abroad' is an illustration of en route repair and does not add a condition not in the text.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"The article says Member State measures shall give authorities power to prohibit use of the vehicle where the fault has not been remedied, in so far as national legislation allows, which matches the claim.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "Article 37(1) says the transport undertaking must have the tachograph repaired by an approved fitter or workshop as soon as circumstances permit, which matches the claim."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "The article says that if the vehicle cannot return to the premises within one week from the breakdown or discovery of the fault, the repair is carried out en route; the 'for example abroad' is an illustration of en route repair and does not add a condition not in the text."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "The article says Member State measures shall give authorities power to prohibit use of the vehicle where the fault has not been remedied, in so far as national legislation allows, which matches the claim."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1764,
+    "output_tokens": 267,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0003099,
+   "seconds": 2.31,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSNFuwMeoZzhtTvVB4g"
+  },
+  {
+   "id": "q022",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "Write the country code (nation code from the Annex D table, e.g. B for Belgium, D for Germany) at the beginning of your first stop after the border, or at the port or station of arrival if you crossed on a ferry or train.",
+    "Preferred place (Option 1): under the inner time dial, just underneath the time you stopped or arrived, and under the reference line if one is marked.",
+    "If there is no room there, use Option 2: between the inner and outer time dials, to the left of the reference line, without damaging the recording.",
+    "Only as a last resort (Option 3): on the back of the disc, with the time of crossing in 24-hour format (e.g. 20:30 for 8:30 pm).",
+    "Note that this placement guidance comes from Commission guidance note 10 (March 2022), which is older than the consolidated Regulation (EU) No 165/2014 (version of 31.12.2024) provided; the Regulation text provided does not specify disc placement."
+   ],
+   "estimated_input_tokens": 2726,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The claim that the code goes at the beginning of the first stop after the border, or at the port or station on a ferry or train, matches the guidance, but the examples 'B for Belgium, D for Germany' are not in the cited text, which only says Annex D recalls the nation codes.\",\"verdict\":\"not_supported\"},{\"sentence\":2,\"reason\":\"The guidance says Option 1 is under the inner time dial, just underneath the stop or arrival time, and under the reference line where one is marked.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"The guidance says Option 2, between the inner and outer time dials, left of the reference line and without damaging the recording, applies only if Option 1 is not sufficient or unavailable.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"The guidance says Option 3, on the back of the disc, is a last resort and the time of crossing should be written in 24-hour format, e.g. '20:30' for '8:30 pm'.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"The guidance note is dated March 2022, but the cited nodes say nothing about a consolidated Regulation version of 31.12.2024 or about the Regulation's silence on disc placement, so these claims are not in the cited text.\",\"verdict\":\"not_supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": false,
+    "first_unsupported": 0,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "not_supported",
+      "reason": "The claim that the code goes at the beginning of the first stop after the border, or at the port or station on a ferry or train, matches the guidance, but the examples 'B for Belgium, D for Germany' are not in the cited text, which only says Annex D recalls the nation codes."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "The guidance says Option 1 is under the inner time dial, just underneath the stop or arrival time, and under the reference line where one is marked."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "The guidance says Option 2, between the inner and outer time dials, left of the reference line and without damaging the recording, applies only if Option 1 is not sufficient or unavailable."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "The guidance says Option 3, on the back of the disc, is a last resort and the time of crossing should be written in 24-hour format, e.g. '20:30' for '8:30 pm'."
+     },
+     {
+      "sentence": 4,
+      "verdict": "not_supported",
+      "reason": "The guidance note is dated March 2022, but the cited nodes say nothing about a consolidated Regulation version of 31.12.2024 or about the Regulation's silence on disc placement, so these claims are not in the cited text."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 3375,
+    "output_tokens": 1152,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0009135,
+   "seconds": 5.48,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSNRnGfTco1U2L5iYgk"
+  },
+  {
+   "id": "q022",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "Write the country code at your first stop after the border, at the nearest possible stopping place.",
+    "If you cross by ferry or train, write it at the port or station of arrival.",
+    "On the disc, the guidance note sets this order:",
+    "1. Under the inner time dial, just under the time at which you stopped (or arrived at the port or station).",
+    "If a reference line marks where you opened the tachograph, put the code under that line.",
+    "You don't need to write the date, because the sheet already has a place for it.",
+    "2. If there isn't enough room there, write it between the inner and outer time dials, to the left of the reference line (or where one would be), without damaging existing or future recordings.",
+    "3. Only as a last resort, write it on the back of the disc, adding the crossing time in 24-hour format (for example \"20:30\").",
+    "You only need to make this entry when you enter a Member State.",
+    "Use the official nation codes, for example \"B\" for Belgium and \"D\" for Germany."
+   ],
+   "estimated_input_tokens": 3594,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The cited guidance says the symbol must be written at the beginning of the driver's first stop in that Member State, at the nearest possible stopping place at or after the border; this matches.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"The guidance states that when crossing by ferry or train, the symbol is written at the port or station of arrival.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"The guidance note does set out a sequence of options for where to write the country symbol on the disc.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"Option 1 places the country symbol under the inner time dial, just underneath the time of stopping or arrival at port/station, as stated in the guidance.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"The guidance says that where a reference line marks the opening of the tachograph, the country code should be placed under that line.\",\"verdict\":\"supported\"},{\"sentence\":6,\"reason\":\"The guidance says it is not necessary for the driver to write the date because the record sheet already has a standard place for displaying the date.\",\"verdict\":\"supported\"},{\"sentence\":7,\"reason\":\"Option 2 places the entry between the inner and outer time dials, to the left of the reference line or where one may have been recorded, without damaging existing or future recordings, as the guidance states.\",\"verdict\":\"supported\"},{\"sentence\":8,\"reason\":\"Option 3 on the back of the disc is a last resort and must include the crossing time in 24-hour format, with the example \\\"20:30\\\" given in the guidance.\",\"verdict\":\"supported\"},{\"sentence\":9,\"reason\":\"Annex D notes that a manual entry of border crossing is only required for entrance into Member States.\",\"verdict\":\"supported\"},{\"sentence\":10,\"reason\":\"The guidance says the nation codes in Annex D are to be used, and Annex A's figure shows \\\"B\\\" for Belgium and \\\"D\\\" for Germany.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The cited guidance says the symbol must be written at the beginning of the driver's first stop in that Member State, at the nearest possible stopping place at or after the border; this matches."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "The guidance states that when crossing by ferry or train, the symbol is written at the port or station of arrival."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "The guidance note does set out a sequence of options for where to write the country symbol on the disc."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "Option 1 places the country symbol under the inner time dial, just underneath the time of stopping or arrival at port/station, as stated in the guidance."
+     },
+     {
+      "sentence": 4,
+      "verdict": "supported",
+      "reason": "The guidance says that where a reference line marks the opening of the tachograph, the country code should be placed under that line."
+     },
+     {
+      "sentence": 5,
+      "verdict": "supported",
+      "reason": "The guidance says it is not necessary for the driver to write the date because the record sheet already has a standard place for displaying the date."
+     },
+     {
+      "sentence": 6,
+      "verdict": "supported",
+      "reason": "Option 2 places the entry between the inner and outer time dials, to the left of the reference line or where one may have been recorded, without damaging existing or future recordings, as the guidance states."
+     },
+     {
+      "sentence": 7,
+      "verdict": "supported",
+      "reason": "Option 3 on the back of the disc is a last resort and must include the crossing time in 24-hour format, with the example \"20:30\" given in the guidance."
+     },
+     {
+      "sentence": 8,
+      "verdict": "supported",
+      "reason": "Annex D notes that a manual entry of border crossing is only required for entrance into Member States."
+     },
+     {
+      "sentence": 9,
+      "verdict": "supported",
+      "reason": "The guidance says the nation codes in Annex D are to be used, and Annex A's figure shows \"B\" for Belgium and \"D\" for Germany."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 4680,
+    "output_tokens": 662,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.000799,
+   "seconds": 3.23,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSNqHtJGrjpu5Kaopi6"
+  },
+  {
+   "id": "q023",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "Under Regulation 561/2006, a 'break' is any period during which a driver may not carry out any driving or any other work and which is used exclusively for recuperation."
+   ],
+   "estimated_input_tokens": 1156,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The sentence states the definition of 'break' in Regulation 561/2006, which matches Article 4(d) verbatim: any period during which a driver may not carry out any driving or other work and which is used exclusively for recuperation.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The sentence states the definition of 'break' in Regulation 561/2006, which matches Article 4(d) verbatim: any period during which a driver may not carry out any driving or other work and which is used exclusively for recuperation."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1340,
+    "output_tokens": 105,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0001865,
+   "seconds": 1.0,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSP4zdt4jxaireexoDb"
+  },
+  {
+   "id": "q023",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "A 'break' is any period in which you may not drive or do any other work, and which you use only to recover.",
+    "After 4.5 hours of driving you must take an uninterrupted break of at least 45 minutes, unless you take a rest period.",
+    "You can split it into at least 15 minutes followed by at least 30 minutes.",
+    "On occasional passenger services, it can instead be two breaks of at least 15 minutes each.",
+    "In multi-manning, you may take the 45-minute break in the moving vehicle as long as you are not helping the driver.",
+    "Time spent travelling to or from a vehicle that is not at your home or your employer's base does not count as a break, unless you are on a ferry or train with access to a sleeper cabin, bunk or couchette."
+   ],
+   "estimated_input_tokens": 2000,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"Matches the Article 4(d) definition: any period during which the driver may not drive or do other work and which is used exclusively for recuperation.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Article 7 says after 4.5 hours driving an uninterrupted break of at least 45 minutes is required unless the driver takes a rest period.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Article 7 allows replacing the break with at least 15 minutes followed by at least 30 minutes.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"Article 7 allows, for occasional passenger services, two breaks of at least 15 minutes each.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"Article 7 permits a 45-minute break in a vehicle driven by another driver provided the driver taking it is not assisting the driving.\",\"verdict\":\"supported\"},{\"sentence\":6,\"reason\":\"Article 9(2) says travel to take charge of a vehicle not at the driver's home or operational centre is not counted as a break, unless on a ferry or train with a sleeper cabin, bunk or couchette; the answer's wording adds that the travel is to or from a vehicle, which matches the article's scope.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "Matches the Article 4(d) definition: any period during which the driver may not drive or do other work and which is used exclusively for recuperation."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 7 says after 4.5 hours driving an uninterrupted break of at least 45 minutes is required unless the driver takes a rest period."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Article 7 allows replacing the break with at least 15 minutes followed by at least 30 minutes."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "Article 7 allows, for occasional passenger services, two breaks of at least 15 minutes each."
+     },
+     {
+      "sentence": 4,
+      "verdict": "supported",
+      "reason": "Article 7 permits a 45-minute break in a vehicle driven by another driver provided the driver taking it is not assisting the driving."
+     },
+     {
+      "sentence": 5,
+      "verdict": "supported",
+      "reason": "Article 9(2) says travel to take charge of a vehicle not at the driver's home or operational centre is not counted as a break, unless on a ferry or train with a sleeper cabin, bunk or couchette; the answer's wording adds that the travel is to or from a vehicle, which matches the article's scope."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2524,
+    "output_tokens": 445,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0004749,
+   "seconds": 2.19,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSP9H7qwGWWz8dp1sZG"
+  },
+  {
+   "id": "q037",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "Yes, but only in limited cases.",
+    "You may go over the driving and rest limits (Articles 6 to 9) only as far as you need to reach a suitable stopping place.",
+    "This is allowed only if road safety is not put at risk and the extra driving is needed for the safety of people, the vehicle or its load.",
+    "You must write the reason by hand on the record sheet, on a tachograph printout or in the duty roster.",
+    "Do this at the latest when you arrive at the stopping place.",
+    "Any extra time must be made up with an equal period of rest, taken in one block together with a rest period, by the end of the third week after the week in question.",
+    "Commission guidance note 1 (December 2007, older than the current Regulation) says you cannot use this for reasons known before the trip started.",
+    "It must be an unexpected situation outside your control, such as a major accident, extreme weather, a road diversion or a full parking area.",
+    "Enforcers check that it is not a regular habit.",
+    "The note also says the extra driving must not shorten your breaks or your daily and weekly rest.",
+    "Separately, in exceptional circumstances you may drive up to 1 extra hour to reach your employer's operational centre or your home for a weekly rest.",
+    "You may drive up to 2 extra hours if you took an uninterrupted 30-minute break just before, and only to start a regular weekly rest there."
+   ],
+   "estimated_input_tokens": 3258,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"Claims driving on is allowed only in limited cases; Article 12 lists conditions and the exceptions, so the general 'yes, but limited' framing is consistent with the cited text.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Article 12 permits departure from Articles 6 to 9 to the extent necessary to reach a suitable stopping place, which matches the claim.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Article 12 requires road safety not to be jeopardised and the departure to be necessary for safety of persons, vehicle or load, matching the sentence.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"Article 12 requires the reason to be indicated manually on the record sheet, a printout, or the duty roster, matching the sentence.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"Article 12 says the reason must be indicated at the latest on arrival at the suitable stopping place, matching the sentence.\",\"verdict\":\"supported\"},{\"sentence\":6,\"reason\":\"Article 12 requires extension to be compensated by an equivalent rest taken en bloc with any rest period by the end of the third week following the week in question; the sentence matches.\",\"verdict\":\"supported\"},{\"sentence\":7,\"reason\":\"Guidance note 1 is dated December 2007 and states Article 12 does not authorise derogation for reasons known before the journey commenced; the note's age relative to the current Regulation is stated in its own heading.\",\"verdict\":\"supported\"},{\"sentence\":8,\"reason\":\"The guidance lists exceptional circumstances such as major traffic accidents, extreme weather, road diversions and no place at the parking area, and requires them to be unexpected and outside the driver's will; the sentence reflects this.\",\"verdict\":\"supported\"},{\"sentence\":9,\"reason\":\"The guidance says enforcers must examine the driving record history to verify the deviation is exceptional and not a regular occurrence, so checking for a regular habit is supported.\",\"verdict\":\"supported\"},{\"sentence\":10,\"reason\":\"The guidance says the deviation must not lead to a reduction of required breaks, daily and weekly rest, and time gains are not allowed, matching the sentence.\",\"verdict\":\"supported\"},{\"sentence\":11,\"reason\":\"Article 12 allows exceeding daily and weekly driving time by up to one hour in exceptional circumstances to reach the employer's operational centre or residence for a weekly rest; the sentence matches.\",\"verdict\":\"supported\"},{\"sentence\":12,\"reason\":\"Article 12 allows up to two extra hours if an uninterrupted 30-minute break was taken immediately before, to reach the operational centre or residence for a regular weekly rest; the sentence matches.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "Claims driving on is allowed only in limited cases; Article 12 lists conditions and the exceptions, so the general 'yes, but limited' framing is consistent with the cited text."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 12 permits departure from Articles 6 to 9 to the extent necessary to reach a suitable stopping place, which matches the claim."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Article 12 requires road safety not to be jeopardised and the departure to be necessary for safety of persons, vehicle or load, matching the sentence."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "Article 12 requires the reason to be indicated manually on the record sheet, a printout, or the duty roster, matching the sentence."
+     },
+     {
+      "sentence": 4,
+      "verdict": "supported",
+      "reason": "Article 12 says the reason must be indicated at the latest on arrival at the suitable stopping place, matching the sentence."
+     },
+     {
+      "sentence": 5,
+      "verdict": "supported",
+      "reason": "Article 12 requires extension to be compensated by an equivalent rest taken en bloc with any rest period by the end of the third week following the week in question; the sentence matches."
+     },
+     {
+      "sentence": 6,
+      "verdict": "supported",
+      "reason": "Guidance note 1 is dated December 2007 and states Article 12 does not authorise derogation for reasons known before the journey commenced; the note's age relative to the current Regulation is stated in its own heading."
+     },
+     {
+      "sentence": 7,
+      "verdict": "supported",
+      "reason": "The guidance lists exceptional circumstances such as major traffic accidents, extreme weather, road diversions and no place at the parking area, and requires them to be unexpected and outside the driver's will; the sentence reflects this."
+     },
+     {
+      "sentence": 8,
+      "verdict": "supported",
+      "reason": "The guidance says enforcers must examine the driving record history to verify the deviation is exceptional and not a regular occurrence, so checking for a regular habit is supported."
+     },
+     {
+      "sentence": 9,
+      "verdict": "supported",
+      "reason": "The guidance says the deviation must not lead to a reduction of required breaks, daily and weekly rest, and time gains are not allowed, matching the sentence."
+     },
+     {
+      "sentence": 10,
+      "verdict": "supported",
+      "reason": "Article 12 allows exceeding daily and weekly driving time by up to one hour in exceptional circumstances to reach the employer's operational centre or residence for a weekly rest; the sentence matches."
+     },
+     {
+      "sentence": 11,
+      "verdict": "supported",
+      "reason": "Article 12 allows up to two extra hours if an uninterrupted 30-minute break was taken immediately before, to reach the operational centre or residence for a regular weekly rest; the sentence matches."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 4067,
+    "output_tokens": 940,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0008767,
+   "seconds": 4.22,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSPJnMv1HSFT8HkHpnB"
+  },
+  {
+   "id": "q037",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "Not automatically.",
+    "Article 12 of Regulation (EC) No 561/2006 (consolidated 31.12.2024) allows a short departure from the driving and rest rules only if road safety is not jeopardised, only to the extent needed to ensure safety of persons, the vehicle or its load, and to reach a suitable stopping place.",
+    "You must record the reason manually on the tachograph record sheet, printout or duty roster at the latest on arrival at that stopping place.",
+    "The Commission guidance note 1 (December 2007) is older than the current act, so follow the act where they differ.",
+    "It says the derogation is for unexpected, unavoidable situations, not regular ones, and that you must not gain time by exceeding driving limits while looking for parking.",
+    "The passages do not say whether a traffic jam by itself qualifies, and the note says carriers should plan for regular traffic jams, so any stop-over on that ground is judged on the facts."
+   ],
+   "estimated_input_tokens": 2859,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"States a general conclusion that driving on is not automatically allowed; the cited Article 12 and guidance make the derogation conditional, so this is consistent with the text rather than a specific rule claim.\",\"verdict\":\"no_claim\"},{\"sentence\":2,\"reason\":\"Article 12 text supports that departure is allowed only if road safety is not jeopardised, to the extent necessary for safety of persons, vehicle or load, and to reach a suitable stopping place; the consolidation date is given in the node's place description.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Article 12 requires the driver to indicate the reason manually on the record sheet, printout or duty roster at the latest on arrival at the suitable stopping place.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"The guidance note is dated December 2007 and the node says it predates the 2020 Mobility Package changes, so it is older; advising to follow the act where they differ is a reasonable inference from that, though the cited text does not expressly state the precedence rule.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"Guidance note says the deviation must not be a regular occurrence, must be caused by exceptional unforeseeable circumstances, and drivers should not gain time by exceeding driving limits searching for parking; this is supported.\",\"verdict\":\"supported\"},{\"sentence\":6,\"reason\":\"The passages do not address whether a traffic jam alone qualifies, which is consistent with the cited text; the note does say carriers should plan for regular traffic jams, so the statement is supported.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "no_claim",
+      "reason": "States a general conclusion that driving on is not automatically allowed; the cited Article 12 and guidance make the derogation conditional, so this is consistent with the text rather than a specific rule claim."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 12 text supports that departure is allowed only if road safety is not jeopardised, to the extent necessary for safety of persons, vehicle or load, and to reach a suitable stopping place; the consolidation date is given in the node's place description."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Article 12 requires the driver to indicate the reason manually on the record sheet, printout or duty roster at the latest on arrival at the suitable stopping place."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "The guidance note is dated December 2007 and the node says it predates the 2020 Mobility Package changes, so it is older; advising to follow the act where they differ is a reasonable inference from that, though the cited text does not expressly state the precedence rule."
+     },
+     {
+      "sentence": 4,
+      "verdict": "supported",
+      "reason": "Guidance note says the deviation must not be a regular occurrence, must be caused by exceptional unforeseeable circumstances, and drivers should not gain time by exceeding driving limits searching for parking; this is supported."
+     },
+     {
+      "sentence": 5,
+      "verdict": "supported",
+      "reason": "The passages do not address whether a traffic jam alone qualifies, which is consistent with the cited text; the note does say carriers should plan for regular traffic jams, so the statement is supported."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 3549,
+    "output_tokens": 549,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0006294,
+   "seconds": 2.98,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSPcgdUwQTsmE8wjqVW"
+  },
+  {
+   "id": "q040",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "The AETR applies instead of Regulation 561/2006 to international road transport operations that are undertaken partly outside the EU/EEA-type areas covered by the Regulation.",
+    "For vehicles registered in the Community or in AETR contracting countries, it applies for the whole journey.",
+    "For vehicles registered in a third country that is not an AETR contracting party, it applies only to the part of the journey on the territory of the Community or of AETR contracting countries."
+   ],
+   "estimated_input_tokens": 1773,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The cited Article 2(3) says the AETR applies instead of the Regulation to international road transport undertaken in part outside the areas in paragraph 2; the answer's phrase 'EU/EEA-type areas' is a loose paraphrase of 'areas mentioned in paragraph 2', which the cited text does not describe as EU/EEA, so the characterisation of those areas is not supported.\",\"verdict\":\"not_supported\"},{\"sentence\":2,\"reason\":\"Article 2(3)(a) states that for vehicles registered in the Community or in AETR contracting countries the AETR applies for the whole journey.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Article 2(3)(b) states that for vehicles registered in a third country not an AETR contracting party, the AETR applies only for the part of the journey on the territory of the Community or AETR contracting countries.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": false,
+    "first_unsupported": 0,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "not_supported",
+      "reason": "The cited Article 2(3) says the AETR applies instead of the Regulation to international road transport undertaken in part outside the areas in paragraph 2; the answer's phrase 'EU/EEA-type areas' is a loose paraphrase of 'areas mentioned in paragraph 2', which the cited text does not describe as EU/EEA, so the characterisation of those areas is not supported."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 2(3)(a) states that for vehicles registered in the Community or in AETR contracting countries the AETR applies for the whole journey."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Article 2(3)(b) states that for vehicles registered in a third country not an AETR contracting party, the AETR applies only for the part of the journey on the territory of the Community or AETR contracting countries."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2194,
+    "output_tokens": 320,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0003794,
+   "seconds": 2.34,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSPqVZMZaohQjX3uXBb"
+  },
+  {
+   "id": "q040",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "The AETR replaces Regulation 561/2006 for international road transport operations that are carried out partly outside the areas covered by the Regulation.",
+    "It then applies as follows:",
+    "- If the vehicle is registered in the EU (Community) or in a country that is a contracting party to the AETR, the AETR applies for the whole journey.",
+    "- If the vehicle is registered in a third country that is not an AETR contracting party, the AETR applies only to the part of the journey made on EU territory or in AETR contracting countries.",
+    "The AETR rules are meant to be aligned with the Regulation, so that its main provisions still apply, through the AETR, to the part of the journey made inside the EU."
+   ],
+   "estimated_input_tokens": 1901,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"Article 2(3) says the AETR applies instead of the Regulation to international operations undertaken in part outside the areas in paragraph 2, which matches the claim.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"A lead-in to the list of cases that follow, stating no rule itself.\",\"verdict\":\"no_claim\"},{\"sentence\":3,\"reason\":\"Article 2(3)(a) states that vehicles registered in the Community or in AETR contracting countries are covered by the AETR for the whole journey.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"Article 2(3)(b) states that vehicles registered in a non-AETR third country are covered only for the part of the journey on Community or AETR contracting territory.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"The recital-type text says the AETR provisions should be aligned with the Regulation so its main provisions apply through the AETR to such vehicles for any part of the journey within the Community; this is stated as an intention ('should be aligned'), which the sentence's 'meant to be' phrasing reflects.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "Article 2(3) says the AETR applies instead of the Regulation to international operations undertaken in part outside the areas in paragraph 2, which matches the claim."
+     },
+     {
+      "sentence": 1,
+      "verdict": "no_claim",
+      "reason": "A lead-in to the list of cases that follow, stating no rule itself."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Article 2(3)(a) states that vehicles registered in the Community or in AETR contracting countries are covered by the AETR for the whole journey."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "Article 2(3)(b) states that vehicles registered in a non-AETR third country are covered only for the part of the journey on Community or AETR contracting territory."
+     },
+     {
+      "sentence": 4,
+      "verdict": "supported",
+      "reason": "The recital-type text says the AETR provisions should be aligned with the Regulation so its main provisions apply through the AETR to such vehicles for any part of the journey within the Community; this is stated as an intention ('should be aligned'), which the sentence's 'meant to be' phrasing reflects."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2369,
+    "output_tokens": 395,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0004344,
+   "seconds": 2.25,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSQ1R7heh6yBqdDovpT"
+  },
+  {
+   "id": "q045",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "A daily rest taken on a ferry or train may be interrupted no more than twice, and the interruptions may total no more than one hour.",
+    "Under the Commission guidance note, when the daily rest is split into two parts (at least 3 hours and at least 9 hours), the two-interruption limit applies to the whole daily rest period, not to each part separately.",
+    "The guidance note is older (January 2017, before the 2020 Mobility Package), so the current Regulation 561/2006 Article 9(1) governs, and the twice-and-one-hour limit in that Article matches the note.",
+    "The note's two-part point is not restated in the current Article text.",
+    "The driver must also have access to a sleeper cabin, bunk or couchette during the rest."
+   ],
+   "estimated_input_tokens": 2146,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"Article 9(1) says the rest on a ferry or train may be interrupted not more than twice by other activities not exceeding one hour in total, which matches the claim; the answer says 'a daily rest' while the Article refers to regular daily or reduced weekly rest, which is consistent enough with the stated claim.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Guidance note 6 states that where the regular daily rest is taken in two parts (at least 3 and at least 9 hours), the number of interruptions (maximum two) concerns the whole daily rest and not each part.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"The guidance note is dated January 2017 and says it predates the 2020 Mobility Package, and Article 9(1) contains the twice-and-one-hour limit; the cited text does not state that Article 9(1) 'governs' in the sense of superseding the note, but the match of the limit is shown by the text.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"The cited Article 9(1) text does not mention the two-part split of daily rest or the 3-hour and 9-hour parts, so the claim that the point is not restated there is correct.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"Article 9(1) states that during the regular daily rest or reduced weekly rest the driver shall have access to a sleeper cabin, bunk or couchette at their disposal.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "Article 9(1) says the rest on a ferry or train may be interrupted not more than twice by other activities not exceeding one hour in total, which matches the claim; the answer says 'a daily rest' while the Article refers to regular daily or reduced weekly rest, which is consistent enough with the stated claim."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Guidance note 6 states that where the regular daily rest is taken in two parts (at least 3 and at least 9 hours), the number of interruptions (maximum two) concerns the whole daily rest and not each part."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "The guidance note is dated January 2017 and says it predates the 2020 Mobility Package, and Article 9(1) contains the twice-and-one-hour limit; the cited text does not state that Article 9(1) 'governs' in the sense of superseding the note, but the match of the limit is shown by the text."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "The cited Article 9(1) text does not mention the two-part split of daily rest or the 3-hour and 9-hour parts, so the claim that the point is not restated there is correct."
+     },
+     {
+      "sentence": 4,
+      "verdict": "supported",
+      "reason": "Article 9(1) states that during the regular daily rest or reduced weekly rest the driver shall have access to a sleeper cabin, bunk or couchette at their disposal."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2713,
+    "output_tokens": 503,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0005228,
+   "seconds": 3.08,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSQB91QrsViXcro4FML"
+  },
+  {
+   "id": "q045",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "Your daily rest can be interrupted no more than twice in total.",
+    "The limit covers the whole daily rest, not each part, so you do not get two interruptions in the 3-hour part and two more in the 9-hour part.",
+    "The interruptions are for other activities such as embarking or disembarking.",
+    "Together they must not exceed 1 hour, and they must not reduce your daily rest.",
+    "During the rest you must have access to a sleeper cabin, bunk or couchette.",
+    "The point about split rest comes from a Commission guidance note from 2017, which is older than the 2020 rule changes.",
+    "The current Regulation still allows at most two interruptions totalling one hour, so the two do not conflict on this."
+   ],
+   "estimated_input_tokens": 2285,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"Claim: daily rest can be interrupted no more than twice in total; Article 9(1) says not more than twice, and guidance note 6 confirms the maximum of two concerns the whole daily rest period.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Claim: the limit covers the whole daily rest, not each part; guidance note 6 states the number of interruptions concerns the whole period of daily rest and not each part of a rest taken in two periods.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Claim: interruptions are for other activities such as embarking or disembarking; guidance note 6 gives embarking or disembarking from the ferry as examples of other activities.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"Claim: total of interruptions must not exceed 1 hour and must not reduce the daily rest; Article 9(1) sets one hour total and guidance note 6 says the time must not result in any reduction of the regular daily rest.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"Claim: during the rest the driver must have access to a sleeper cabin, bunk or couchette; Article 9(1) states this requirement for the daily rest period.\",\"verdict\":\"supported\"},{\"sentence\":6,\"reason\":\"Claim about the guidance note being from 2017 and older than the 2020 rule changes; guidance note 6 is dated January 2017 and says it predates the 2020 Mobility Package, so this is supported.\",\"verdict\":\"supported\"},{\"sentence\":7,\"reason\":\"Claim that the current Regulation still allows at most two interruptions totalling one hour; Article 9(1) in the consolidated version of 31.12.2024 says exactly this, so it is supported, and the cited text shows no conflict with the guidance.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "Claim: daily rest can be interrupted no more than twice in total; Article 9(1) says not more than twice, and guidance note 6 confirms the maximum of two concerns the whole daily rest period."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Claim: the limit covers the whole daily rest, not each part; guidance note 6 states the number of interruptions concerns the whole period of daily rest and not each part of a rest taken in two periods."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Claim: interruptions are for other activities such as embarking or disembarking; guidance note 6 gives embarking or disembarking from the ferry as examples of other activities."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "Claim: total of interruptions must not exceed 1 hour and must not reduce the daily rest; Article 9(1) sets one hour total and guidance note 6 says the time must not result in any reduction of the regular daily rest."
+     },
+     {
+      "sentence": 4,
+      "verdict": "supported",
+      "reason": "Claim: during the rest the driver must have access to a sleeper cabin, bunk or couchette; Article 9(1) states this requirement for the daily rest period."
+     },
+     {
+      "sentence": 5,
+      "verdict": "supported",
+      "reason": "Claim about the guidance note being from 2017 and older than the 2020 rule changes; guidance note 6 is dated January 2017 and says it predates the 2020 Mobility Package, so this is supported."
+     },
+     {
+      "sentence": 6,
+      "verdict": "supported",
+      "reason": "Claim that the current Regulation still allows at most two interruptions totalling one hour; Article 9(1) in the consolidated version of 31.12.2024 says exactly this, so it is supported, and the cited text shows no conflict with the guidance."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2909,
+    "output_tokens": 624,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0006029,
+   "seconds": 2.87,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSQQDpMUeELz72a2Vh1"
+  },
+  {
+   "id": "q050",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "Yes.",
+    "Under Regulation 561/2006, a transport undertaking is liable for infringements committed by its drivers, even when the infringement was committed in another Member State or a third country.",
+    "So a Swedish company can be held responsible for a rest-period infringement its driver committed in Germany.",
+    "There are some limits.",
+    "Member States may make this liability conditional on the company itself having infringed its duties under Article 10(1) and (2).",
+    "They may also consider any evidence that the company cannot reasonably be held responsible for the infringement."
+   ],
+   "estimated_input_tokens": 1468,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The answer's 'Yes' is a direct answer to whether the company can be held responsible; the cited Article 10(3) states the undertaking is liable for drivers' infringements even abroad, so the affirmative is grounded, though this is a bare answer rather than a claim about the rules.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Article 10(3) states the undertaking is liable for infringements committed by its drivers even on the territory of another Member State or a third country, which matches the claim.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Applying Article 10(3) to a Swedish company and a German infringement follows directly from the text's 'another Member State' wording.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"Says there are some limits; the cited Article 10(3) does provide conditions and evidence-based qualifications, so this lead-in is consistent with the text and states no independent rule.\",\"verdict\":\"no_claim\"},{\"sentence\":5,\"reason\":\"Article 10(3) says Member States may make liability conditional on the undertaking's infringement of paragraphs 1 and 2, which matches the claim (the answer's 'Article 10(1) and (2)' reference is what the cited paragraphs 1 and 2 refer to).\",\"verdict\":\"supported\"},{\"sentence\":6,\"reason\":\"Article 10(3) says Member States may consider evidence that the undertaking cannot reasonably be held responsible for the infringement, matching the claim.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The answer's 'Yes' is a direct answer to whether the company can be held responsible; the cited Article 10(3) states the undertaking is liable for drivers' infringements even abroad, so the affirmative is grounded, though this is a bare answer rather than a claim about the rules."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 10(3) states the undertaking is liable for infringements committed by its drivers even on the territory of another Member State or a third country, which matches the claim."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Applying Article 10(3) to a Swedish company and a German infringement follows directly from the text's 'another Member State' wording."
+     },
+     {
+      "sentence": 3,
+      "verdict": "no_claim",
+      "reason": "Says there are some limits; the cited Article 10(3) does provide conditions and evidence-based qualifications, so this lead-in is consistent with the text and states no independent rule."
+     },
+     {
+      "sentence": 4,
+      "verdict": "supported",
+      "reason": "Article 10(3) says Member States may make liability conditional on the undertaking's infringement of paragraphs 1 and 2, which matches the claim (the answer's 'Article 10(1) and (2)' reference is what the cited paragraphs 1 and 2 refer to)."
+     },
+     {
+      "sentence": 5,
+      "verdict": "supported",
+      "reason": "Article 10(3) says Member States may consider evidence that the undertaking cannot reasonably be held responsible for the infringement, matching the claim."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1728,
+    "output_tokens": 523,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0004343,
+   "seconds": 3.28,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSQcXjV9JRieadUiAKN"
+  },
+  {
+   "id": "q050",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "Yes.",
+    "Under Article 10(3) of Regulation (EC) No 561/2006, a transport undertaking is liable for infringements committed by its drivers, even if the infringement happened in another Member State such as Germany.",
+    "Germany may make the company's liability conditional on the company itself having broken the Article 10(1) or (2) rules.",
+    "Germany may also take into account evidence that the company could not reasonably be held responsible for the infringement.",
+    "The passages do not cover how Germany applies this in practice."
+   ],
+   "estimated_input_tokens": 1449,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The answer says yes; this is a direct answer to the question rather than a claim about the rules, so it states no legal rule and is a lead-in response.\",\"verdict\":\"no_claim\"},{\"sentence\":2,\"reason\":\"The cited Article 10(3) states that a transport undertaking is liable for infringements committed by its drivers even if committed in another Member State, which covers Germany and a Swedish undertaking.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"The cited text says Member States may make liability conditional on the undertaking's infringement of paragraphs 1 and 2, matching the claim about Article 10(1) or (2).\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"The cited text says Member States may consider evidence that the undertaking cannot reasonably be held responsible for the infringement, which matches the claim.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"This states that the passages do not cover how Germany applies the rule in practice, which is a statement about the scope of the cited text rather than a rule claim.\",\"verdict\":\"no_claim\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "no_claim",
+      "reason": "The answer says yes; this is a direct answer to the question rather than a claim about the rules, so it states no legal rule and is a lead-in response."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "The cited Article 10(3) states that a transport undertaking is liable for infringements committed by its drivers even if committed in another Member State, which covers Germany and a Swedish undertaking."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "The cited text says Member States may make liability conditional on the undertaking's infringement of paragraphs 1 and 2, matching the claim about Article 10(1) or (2)."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "The cited text says Member States may consider evidence that the undertaking cannot reasonably be held responsible for the infringement, which matches the claim."
+     },
+     {
+      "sentence": 4,
+      "verdict": "no_claim",
+      "reason": "This states that the passages do not cover how Germany applies the rule in practice, which is a statement about the scope of the cited text rather than a rule claim."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1708,
+    "output_tokens": 381,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0003613,
+   "seconds": 2.17,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSQrd4Agd989SWCfsaq"
+  },
+  {
+   "id": "q051",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "Generally yes.",
+    "Driving a vehicle on public roads, laden or empty, to a garage, a car wash or a fuel station counts as carriage by road under Regulation 561/2006.",
+    "This applies whether you are a temporary or a permanent driver.",
+    "There is one exception.",
+    "The rules cover drivers engaged in carrying goods or passengers by road.",
+    "If your job, by its nature, does not include transporting goods or passengers, you may fall outside the Regulation's scope.",
+    "Even then, your Member State may still apply the same rules to you under national law.",
+    "This explanation comes from a Commission note from 2012, which is older than the 2020 Mobility Package changes.",
+    "However, the current Article 1 still limits the rules to drivers engaged in carrying goods and passengers."
+   ],
+   "estimated_input_tokens": 2279,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The answer's 'Generally yes' is a direct answer to the question; it is a conclusion about applicability, which the clarification note supports in its statement that driving to a garage or washing facility falls under carriage by road.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"The note states that driving a vehicle to a garage, washing facility, or fuel station on public roads is carriage by road under Article 4(a), and the definition covers vehicles 'whether laden or not'.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"The note says the rule is valid for any driver regardless of whether employment is temporary or permanent.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"The note does describe an exception for employees whose duties by nature do not include transporting goods or passengers, so announcing one exception is consistent with the text.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"Article 1 states the rules apply to drivers engaged in carriage of goods and passengers by road, as the note also says.\",\"verdict\":\"supported\"},{\"sentence\":6,\"reason\":\"The note says employees whose functions by nature do not include transporting goods or passengers would fall outside the Regulation's scope.\",\"verdict\":\"supported\"},{\"sentence\":7,\"reason\":\"The note says nothing prevents Member States from applying the Regulation's rules to drivers not explicitly covered; the answer's phrase 'under national law' is a modest paraphrase of that, so it is supported.\",\"verdict\":\"supported\"},{\"sentence\":8,\"reason\":\"The note is dated October 2012 and the answer's description of it as older than the 2020 Mobility Package changes matches the node's stated publication date and context; however, the cited text says nothing about the 2020 changes themselves, which the answer asserts only as background from the node's place description.\",\"verdict\":\"supported\"},{\"sentence\":9,\"reason\":\"Article 1 of the consolidated Regulation limits the rules to drivers engaged in carriage of goods and passengers by road, which matches the cited text.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The answer's 'Generally yes' is a direct answer to the question; it is a conclusion about applicability, which the clarification note supports in its statement that driving to a garage or washing facility falls under carriage by road."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "The note states that driving a vehicle to a garage, washing facility, or fuel station on public roads is carriage by road under Article 4(a), and the definition covers vehicles 'whether laden or not'."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "The note says the rule is valid for any driver regardless of whether employment is temporary or permanent."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "The note does describe an exception for employees whose duties by nature do not include transporting goods or passengers, so announcing one exception is consistent with the text."
+     },
+     {
+      "sentence": 4,
+      "verdict": "supported",
+      "reason": "Article 1 states the rules apply to drivers engaged in carriage of goods and passengers by road, as the note also says."
+     },
+     {
+      "sentence": 5,
+      "verdict": "supported",
+      "reason": "The note says employees whose functions by nature do not include transporting goods or passengers would fall outside the Regulation's scope."
+     },
+     {
+      "sentence": 6,
+      "verdict": "supported",
+      "reason": "The note says nothing prevents Member States from applying the Regulation's rules to drivers not explicitly covered; the answer's phrase 'under national law' is a modest paraphrase of that, so it is supported."
+     },
+     {
+      "sentence": 7,
+      "verdict": "supported",
+      "reason": "The note is dated October 2012 and the answer's description of it as older than the 2020 Mobility Package changes matches the node's stated publication date and context; however, the cited text says nothing about the 2020 changes themselves, which the answer asserts only as background from the node's place description."
+     },
+     {
+      "sentence": 8,
+      "verdict": "supported",
+      "reason": "Article 1 of the consolidated Regulation limits the rules to drivers engaged in carriage of goods and passengers by road, which matches the cited text."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2816,
+    "output_tokens": 702,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0006326,
+   "seconds": 3.53,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSR1vPxhZUadeSe7yn1"
+  },
+  {
+   "id": "q051",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "Probably yes.",
+    "Commission Clarification 2 (October 2012) says that driving a vehicle to a garage, washing facility or fuel station on public roads counts as carriage by road, whether the vehicle is laden or not, so the driving rules can apply to that driver.",
+    "The note also says employees whose duties do not include transporting goods or passengers by road fall outside the rules.",
+    "This note predates the 2020 Mobility Package, which changed the rules, so it is older than the current act.",
+    "The current consolidated Regulation (EC) No 561/2006 text on this point (Article 4(a)) is not in the passages, so check it before relying on this."
+   ],
+   "estimated_input_tokens": 1808,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"A bare 'Probably yes' answer to whether the driving rules apply; it is a conclusion rather than a stated rule, so it makes no factual claim from the cited text beyond the answer's own judgment.\",\"verdict\":\"no_claim\"},{\"sentence\":2,\"reason\":\"The clarification note says a journey to a garage, washing facility or fuel station on public roads is carriage by road whether laden or not, and that the Regulation's rules then apply to that driver, so the claim is supported.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"The note says employees whose duties do not include transporting goods or passengers by road fall outside the Regulation's scope, which matches the claim.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"The node is dated October 2012 and described as before the 2020 Mobility Package, but the passage itself says nothing about the Mobility Package or about whether it changed the rules; the claim that the package changed these rules is not in the cited text.\",\"verdict\":\"not_supported\"},{\"sentence\":5,\"reason\":\"The sentence says the current consolidated text of Article 4(a) is not in the passages and advises checking it; it states only what the passages do not cover, so it makes no rule claim.\",\"verdict\":\"no_claim\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": false,
+    "first_unsupported": 3,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "no_claim",
+      "reason": "A bare 'Probably yes' answer to whether the driving rules apply; it is a conclusion rather than a stated rule, so it makes no factual claim from the cited text beyond the answer's own judgment."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "The clarification note says a journey to a garage, washing facility or fuel station on public roads is carriage by road whether laden or not, and that the Regulation's rules then apply to that driver, so the claim is supported."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "The note says employees whose duties do not include transporting goods or passengers by road fall outside the Regulation's scope, which matches the claim."
+     },
+     {
+      "sentence": 3,
+      "verdict": "not_supported",
+      "reason": "The node is dated October 2012 and described as before the 2020 Mobility Package, but the passage itself says nothing about the Mobility Package or about whether it changed the rules; the claim that the package changed these rules is not in the cited text."
+     },
+     {
+      "sentence": 4,
+      "verdict": "no_claim",
+      "reason": "The sentence says the current consolidated text of Article 4(a) is not in the passages and advises checking it; it states only what the passages do not cover, so it makes no rule claim."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2189,
+    "output_tokens": 436,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0004369,
+   "seconds": 2.35,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSRH1GKK3zpJdjM1bDz"
+  },
+  {
+   "id": "q068",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "Downloaded tachograph data from the vehicle unit and your driver card must be kept for at least 12 months after recording.",
+    "It must be available to an inspecting officer on request, either directly or remotely, from the company's premises.",
+    "Record sheets and printouts must be kept for at least a year after their use.",
+    "The company must give you copies of downloaded driver card data if you ask, together with printed paper versions.",
+    "Working time records must be kept for at least two years after the end of the period they cover.",
+    "Your employer must give you copies of these records on request."
+   ],
+   "estimated_input_tokens": 1954,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"Art. 10(5)(a)(ii) requires data downloaded from the vehicle unit and driver card to be kept for at least 12 months following recording, so the 12-month period is supported.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Art. 10(5)(a)(ii) says that on request of an inspecting officer the data must be accessible directly or remotely from the undertaking's premises; the answer's wording matches this.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Art. 33(2) of Regulation 165/2014 requires record sheets and printouts to be kept for at least a year after their use.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"Art. 33(2) requires the undertaking to give drivers copies of downloaded driver card data on request, together with printed paper versions.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"Directive 2002/15/EC Art. 9(b) requires working time records to be kept for at least two years after the end of the period covered.\",\"verdict\":\"supported\"},{\"sentence\":6,\"reason\":\"Art. 9(b) states employers shall upon request provide mobile workers with copies of the records of hours worked.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "Art. 10(5)(a)(ii) requires data downloaded from the vehicle unit and driver card to be kept for at least 12 months following recording, so the 12-month period is supported."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Art. 10(5)(a)(ii) says that on request of an inspecting officer the data must be accessible directly or remotely from the undertaking's premises; the answer's wording matches this."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Art. 33(2) of Regulation 165/2014 requires record sheets and printouts to be kept for at least a year after their use."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "Art. 33(2) requires the undertaking to give drivers copies of downloaded driver card data on request, together with printed paper versions."
+     },
+     {
+      "sentence": 4,
+      "verdict": "supported",
+      "reason": "Directive 2002/15/EC Art. 9(b) requires working time records to be kept for at least two years after the end of the period covered."
+     },
+     {
+      "sentence": 5,
+      "verdict": "supported",
+      "reason": "Art. 9(b) states employers shall upon request provide mobile workers with copies of the records of hours worked."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2380,
+    "output_tokens": 431,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0004535,
+   "seconds": 2.11,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSRT3zwoAooPpNxQS2H"
+  },
+  {
+   "id": "q068",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "Downloaded tachograph data: the company must keep all data downloaded from the vehicle unit and driver card for at least 12 months after it was recorded, and must make it accessible to an inspector on request.",
+    "Record sheets and printouts: keep them for at least one year after use.",
+    "Working time records of mobile workers: keep them for at least two years after the end of the period covered.",
+    "The 2002/15 Directive text is the original, never-amended version, and the other two sources are consolidated versions, so none of these is an older note that conflicts with the acts."
+   ],
+   "estimated_input_tokens": 1783,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"Article 10(5)(a)(ii) of Regulation 561/2006 requires keeping downloaded data from vehicle unit and driver card for at least 12 months following recording and making it accessible to an inspecting officer on request, which matches the claim.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Article 33(2) of Regulation 165/2014 requires keeping record sheets and printouts for at least a year after their use, matching the claim.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Article 9(b) of Directive 2002/15/EC states records of mobile workers' working time must be kept for at least two years after the end of the period covered.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"The cited nodes show the 2002/15 text as original and never amended and the other two as consolidated versions, but nothing in the cited text says anything about whether any source conflicts with or is an older note than the acts; the claim about the status of the sources is only partly stated by the place labels and the conclusion about conflicts is not in the cited text.\",\"verdict\":\"not_supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": false,
+    "first_unsupported": 3,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "Article 10(5)(a)(ii) of Regulation 561/2006 requires keeping downloaded data from vehicle unit and driver card for at least 12 months following recording and making it accessible to an inspecting officer on request, which matches the claim."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 33(2) of Regulation 165/2014 requires keeping record sheets and printouts for at least a year after their use, matching the claim."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Article 9(b) of Directive 2002/15/EC states records of mobile workers' working time must be kept for at least two years after the end of the period covered."
+     },
+     {
+      "sentence": 3,
+      "verdict": "not_supported",
+      "reason": "The cited nodes show the 2002/15 text as original and never amended and the other two as consolidated versions, but nothing in the cited text says anything about whether any source conflicts with or is an older note than the acts; the claim about the status of the sources is only partly stated by the place labels and the conclusion about conflicts is not in the cited text."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2177,
+    "output_tokens": 384,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0004097,
+   "seconds": 2.19,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSRc5iqnzRsdtqME1ux"
+  },
+  {
+   "id": "q088",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "Yes.",
+    "Under Article 9(1) of Regulation 561/2006, a reduced weekly rest taken on a ferry or train can be interrupted at most twice by other activities, such as embarking or disembarking, with those interruptions totalling no more than one hour.",
+    "You must have access to a sleeper cabin, bunk or couchette throughout the rest.",
+    "The 8-hour journey and cabin conditions in Article 9(1)(a) and (b) apply only to regular weekly rests.",
+    "The 2017 Commission guidance note 6 says the derogation does not apply to weekly rests, but it is older than the current consolidated act, which governs."
+   ],
+   "estimated_input_tokens": 2129,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The answer's 'Yes' is a direct answer to whether the reduced weekly rest can be interrupted; the cited Article 9(1) text permits interruptions for a reduced weekly rest on a ferry, so this is supported.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Article 9(1) says a regular daily or reduced weekly rest on a ferry or train may be interrupted not more than twice by other activities, not exceeding one hour in total; the text does not explicitly name embarking/disembarking, but the guidance note gives that as an example of other activities, so the claim is supported.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Article 9(1) requires that during the regular daily or reduced weekly rest the driver has access to a sleeper cabin, bunk or couchette, which matches the claim 'throughout the rest'.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"Article 9(1)(a) and (b) are expressly stated to apply 'with regard to regular weekly rest periods', so the claim that they apply only to regular weekly rests is supported by the text.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"The guidance note (January 2017) does say the derogation does not apply to weekly rests, but the claim that it is older than the current consolidated act, which governs, is a claim about legal status that the cited Article 9(1) consolidated text and the guidance's own note about the 2020 Mobility Package only partly address; the guidance's note that it predates the 2020 changes supports the age point, while the claim that the consolidated act governs is consistent with the cited consolidated version but the guidance's reliance on the 2017 date is stated in its place line.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The answer's 'Yes' is a direct answer to whether the reduced weekly rest can be interrupted; the cited Article 9(1) text permits interruptions for a reduced weekly rest on a ferry, so this is supported."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 9(1) says a regular daily or reduced weekly rest on a ferry or train may be interrupted not more than twice by other activities, not exceeding one hour in total; the text does not explicitly name embarking/disembarking, but the guidance note gives that as an example of other activities, so the claim is supported."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Article 9(1) requires that during the regular daily or reduced weekly rest the driver has access to a sleeper cabin, bunk or couchette, which matches the claim 'throughout the rest'."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "Article 9(1)(a) and (b) are expressly stated to apply 'with regard to regular weekly rest periods', so the claim that they apply only to regular weekly rests is supported by the text."
+     },
+     {
+      "sentence": 4,
+      "verdict": "supported",
+      "reason": "The guidance note (January 2017) does say the derogation does not apply to weekly rests, but the claim that it is older than the current consolidated act, which governs, is a claim about legal status that the cited Article 9(1) consolidated text and the guidance's own note about the 2020 Mobility Package only partly address; the guidance's note that it predates the 2020 changes supports the age point, while the claim that the consolidated act governs is consistent with the cited consolidated version but the guidance's reliance on the 2017 date is stated in its place line."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2721,
+    "output_tokens": 597,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0005706,
+   "seconds": 3.06,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSRmVmLRhMofNvdnr3X"
+  },
+  {
+   "id": "q088",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "Yes.",
+    "If you are travelling with your vehicle on a ferry and taking a reduced weekly rest, the rest may be interrupted no more than twice by other activities, such as getting on and off.",
+    "Together those interruptions must not exceed 1 hour in total.",
+    "During the rest you must have a sleeper cabin, bunk or couchette at your disposal.",
+    "For reduced weekly rest, the extra conditions (a crossing scheduled for 8 hours or more, with a sleeper cabin) do not apply; they apply only to regular weekly rest.",
+    "Commission guidance note 6 says this derogation does not apply to weekly rest at all.",
+    "That note dates from January 2017, before the rules changed, so follow the current Regulation, which does allow it."
+   ],
+   "estimated_input_tokens": 2767,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The answer's 'Yes' is a direct answer to whether a reduced weekly rest can be interrupted on a ferry; Article 9(1) permits interruption of a reduced weekly rest period on a ferry, so the affirmative is supported.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Article 9(1) allows a reduced weekly rest taken by a driver accompanying a vehicle on a ferry to be interrupted not more than twice by other activities, and embarking/disembarking is an example given in guidance note 6, so this is supported.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Article 9(1) states the interruptions must not exceed one hour in total, which matches the claim.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"Article 9(1) requires that during the reduced weekly rest period the driver has access to a sleeper cabin, bunk or couchette at their disposal.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"Article 9(1) restricts the extra conditions (8-hour journey and sleeper cabin) to regular weekly rest periods only, so they do not apply to reduced weekly rest.\",\"verdict\":\"supported\"},{\"sentence\":6,\"reason\":\"Guidance note 6 states that the derogation does not apply to a weekly rest period, whether reduced or regular, which is what the answer reports.\",\"verdict\":\"supported\"},{\"sentence\":7,\"reason\":\"The guidance note is dated January 2017 and the cited node says it predates the 2020 Mobility Package, but the claim that the current Regulation, which allows it, is what applies is supported by Article 9(1) in the consolidated 2024 version; the date and the rule change are stated in the cited node.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The answer's 'Yes' is a direct answer to whether a reduced weekly rest can be interrupted on a ferry; Article 9(1) permits interruption of a reduced weekly rest period on a ferry, so the affirmative is supported."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 9(1) allows a reduced weekly rest taken by a driver accompanying a vehicle on a ferry to be interrupted not more than twice by other activities, and embarking/disembarking is an example given in guidance note 6, so this is supported."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Article 9(1) states the interruptions must not exceed one hour in total, which matches the claim."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "Article 9(1) requires that during the reduced weekly rest period the driver has access to a sleeper cabin, bunk or couchette at their disposal."
+     },
+     {
+      "sentence": 4,
+      "verdict": "supported",
+      "reason": "Article 9(1) restricts the extra conditions (8-hour journey and sleeper cabin) to regular weekly rest periods only, so they do not apply to reduced weekly rest."
+     },
+     {
+      "sentence": 5,
+      "verdict": "supported",
+      "reason": "Guidance note 6 states that the derogation does not apply to a weekly rest period, whether reduced or regular, which is what the answer reports."
+     },
+     {
+      "sentence": 6,
+      "verdict": "supported",
+      "reason": "The guidance note is dated January 2017 and the cited node says it predates the 2020 Mobility Package, but the claim that the current Regulation, which allows it, is what applies is supported by Article 9(1) in the consolidated 2024 version; the date and the rule change are stated in the cited node."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 3638,
+    "output_tokens": 611,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0006693,
+   "seconds": 2.91,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSRzeHkygKWDjWiiauN"
+  },
+  {
+   "id": "q095",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "You must be able to produce records for the current day and the preceding 56 days, so 57 days in total.",
+    "For an analogue tachograph this means the record sheets for that period.",
+    "For a digital tachograph it means your driver card, plus any manual records and printouts from that period, plus record sheets for the same period when you drove an analogue vehicle."
+   ],
+   "estimated_input_tokens": 1384,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The claim that the driver must be able to produce records covering the current day and the preceding 56 days (57 days in total) matches Article 36(1)(i) and 36(2)(ii), and the arithmetic is simple.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Article 36(1)(i) says a driver of a vehicle with an analogue tachograph must produce the record sheets for the current day and the preceding 56 days, which is what this sentence states.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"The cited text covers manual records and printouts for a digital tachograph (Article 36(2)(ii)), but says nothing in the cited nodes about carrying the driver card or about record sheets for analogue vehicles driven alongside a digital tachograph, so those claims are not supported.\",\"verdict\":\"not_supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": false,
+    "first_unsupported": 2,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The claim that the driver must be able to produce records covering the current day and the preceding 56 days (57 days in total) matches Article 36(1)(i) and 36(2)(ii), and the arithmetic is simple."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 36(1)(i) says a driver of a vehicle with an analogue tachograph must produce the record sheets for the current day and the preceding 56 days, which is what this sentence states."
+     },
+     {
+      "sentence": 2,
+      "verdict": "not_supported",
+      "reason": "The cited text covers manual records and printouts for a digital tachograph (Article 36(2)(ii)), but says nothing in the cited nodes about carrying the driver card or about record sheets for analogue vehicles driven alongside a digital tachograph, so those claims are not supported."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1684,
+    "output_tokens": 747,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0005419,
+   "seconds": 4.39,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSSD87yL8rJ4riEVq3a"
+  },
+  {
+   "id": "q095",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "You must be able to show records for the current day plus the preceding 56 days whenever an authorised control officer asks.",
+    "- **Analogue tachograph:** carry your record sheets for the current day and the preceding 56 days, your driver card if you hold one, and any manual records and printouts from that same period.",
+    "- **Digital tachograph:** carry your driver card and any manual records and printouts from the current day and the preceding 56 days.",
+    "If you drove a vehicle with an analogue tachograph during that period, also carry the record sheets for it."
+   ],
+   "estimated_input_tokens": 2275,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"Article 36(1)/(2) requires producing records for the current day and preceding 56 days on an official's request; the sentence's general claim that this applies whenever a control officer asks is supported.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Article 36(1) lists for analogue tachograph drivers the record sheets for the current day and preceding 56 days, the driver card if held, and manual records and printouts from that period, matching the sentence.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Article 36(2) lists for digital tachograph drivers the driver card and manual records and printouts from the current day and preceding 56 days, matching the sentence.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"Article 36(2)(iii) requires record sheets for the same period during which the driver drove an analogue-tachograph vehicle, matching the sentence.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "Article 36(1)/(2) requires producing records for the current day and preceding 56 days on an official's request; the sentence's general claim that this applies whenever a control officer asks is supported."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 36(1) lists for analogue tachograph drivers the record sheets for the current day and preceding 56 days, the driver card if held, and manual records and printouts from that period, matching the sentence."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Article 36(2) lists for digital tachograph drivers the driver card and manual records and printouts from the current day and preceding 56 days, matching the sentence."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "Article 36(2)(iii) requires record sheets for the same period during which the driver drove an analogue-tachograph vehicle, matching the sentence."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 3056,
+    "output_tokens": 326,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0004686,
+   "seconds": 2.78,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSSXsVU2MPaMY5zFfCN"
+  },
+  {
+   "id": "q097",
+   "answer_run": "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
+   "sentences": [
+    "Yes.",
+    "Under Regulation (EC) No 561/2006, Article 13(1), each Member State may grant exceptions from Articles 5 to 9 for listed categories of vehicles, and point (r) lists vehicles used for the delivery of ready-mixed concrete.",
+    "The exception may apply on the Member State's own territory or, with the agreement of the States concerned, on another Member State's territory, subject to individual conditions and provided the objectives in Article 1 are not prejudiced.",
+    "Member States must inform the Commission of exceptions granted under Article 13(1), and the Commission informs the other Member States."
+   ],
+   "estimated_input_tokens": 2546,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The answer says yes, that Member States may grant exceptions for ready-mixed concrete vehicles; Article 13(1)(r) lists such vehicles among those for which each Member State may grant exceptions, so this is supported.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Article 13(1) lets each Member State grant exceptions from Articles 5 to 9 for listed vehicle categories, and point (r) lists vehicles used for the delivery of ready-mixed concrete, matching the claim.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Article 13(1) allows exceptions on the Member State's own territory or, with the agreement of the States concerned, another Member State's territory, subject to individual conditions and provided Article 1 objectives are not prejudiced, as stated.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"Article 13(2) states that Member States shall inform the Commission of exceptions granted under paragraph 1 and the Commission shall inform the other Member States, matching the claim.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The answer says yes, that Member States may grant exceptions for ready-mixed concrete vehicles; Article 13(1)(r) lists such vehicles among those for which each Member State may grant exceptions, so this is supported."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 13(1) lets each Member State grant exceptions from Articles 5 to 9 for listed vehicle categories, and point (r) lists vehicles used for the delivery of ready-mixed concrete, matching the claim."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Article 13(1) allows exceptions on the Member State's own territory or, with the agreement of the States concerned, another Member State's territory, subject to individual conditions and provided Article 1 objectives are not prejudiced, as stated."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "Article 13(2) states that Member States shall inform the Commission of exceptions granted under paragraph 1 and the Commission shall inform the other Member States, matching the claim."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 3227,
+    "output_tokens": 380,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0005127,
+   "seconds": 2.8,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSSjmrSS7rZu5MqRAAx"
+  },
+  {
+   "id": "q097",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "Yes.",
+    "A Member State may grant exceptions from Articles 5 to 9 of Regulation 561/2006 for vehicles used to deliver ready-mixed concrete.",
+    "This is allowed only if the objectives of Article 1 are not undermined, and the State may attach its own conditions.",
+    "The exception applies on its own territory, or on another Member State's territory if the States concerned agree.",
+    "The Member State must inform the Commission of the exception, and the Commission then tells the other Member States."
+   ],
+   "estimated_input_tokens": 2573,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The answer says 'Yes' to whether Member States may grant exceptions for ready-mixed concrete delivery vehicles; Article 13(1)(r) expressly lists vehicles used for the delivery of ready-mixed concrete as a permitted exception category.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Article 13(1) allows each Member State to grant exceptions from Articles 5 to 9, and Article 13(1)(r) lists ready-mixed concrete delivery vehicles.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Article 13(1) states the exceptions are allowed provided the Article 1 objectives are not prejudiced and permits making them subject to individual conditions, which matches the claim.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"Article 13(1) says the exceptions apply on the State's own territory or, with agreement of the States concerned, on another Member State's territory.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"Article 13(2) requires Member States to inform the Commission of exceptions granted, and the Commission to inform the other Member States.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The answer says 'Yes' to whether Member States may grant exceptions for ready-mixed concrete delivery vehicles; Article 13(1)(r) expressly lists vehicles used for the delivery of ready-mixed concrete as a permitted exception category."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 13(1) allows each Member State to grant exceptions from Articles 5 to 9, and Article 13(1)(r) lists ready-mixed concrete delivery vehicles."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Article 13(1) states the exceptions are allowed provided the Article 1 objectives are not prejudiced and permits making them subject to individual conditions, which matches the claim."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "Article 13(1) says the exceptions apply on the State's own territory or, with agreement of the States concerned, on another Member State's territory."
+     },
+     {
+      "sentence": 4,
+      "verdict": "supported",
+      "reason": "Article 13(2) requires Member States to inform the Commission of exceptions granted, and the Commission to inform the other Member States."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 3256,
+    "output_tokens": 413,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0005321,
+   "seconds": 2.15,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSSwkC1BmuoWBuyk1KB"
+  }
+ ]
+}

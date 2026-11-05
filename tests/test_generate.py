@@ -35,6 +35,7 @@ CONFIG = GenerationConfig(
     provider="anthropic",
     build_model="claude-haiku-5-5",
     scored_model="claude-opus-5-5",
+    judge_model="claude-opus-5-5",
     effort="medium",
     max_output_tokens=4000,
     max_prompt_tokens=100_000,

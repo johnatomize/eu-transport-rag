@@ -1,0 +1,161 @@
+{
+ "run": {
+  "created": "2026-11-05T20:47:37+00:00",
+  "commit": "d4df35c5b85b5cdf6ec32c54864115ab95573a1c",
+  "dirty": false
+ },
+ "config": {
+  "model": "claude-haiku-5-5",
+  "effort": "medium",
+  "max_output_tokens": 4000,
+  "judge_prompt_version": "b6b94f34888a",
+  "price_usd_per_million": {
+   "input": 0.1,
+   "output": 0.5
+  },
+  "prices_read_on": "2026-11-03",
+  "kind": "try",
+  "answer_runs": [
+   "2026-11-03T21-03-51Z-claude-opus-5-5.json"
+  ]
+ },
+ "estimate": {
+  "calls": 2,
+  "input_tokens": 3740,
+  "padded_input_tokens": 5610,
+  "expected_usd": 0.002811,
+  "most_usd": 0.004561
+ },
+ "paid": {
+  "calls": 2,
+  "input_tokens": 4705,
+  "output_tokens": 900,
+  "cost_usd": 0.000921
+ },
+ "error": null,
+ "failed": [],
+ "judgements": [
+  {
+   "id": "q005",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "You may drive at most 56 hours in a week.",
+    "This counts all the driving you do in that week, in the EU and in non-EU countries alike.",
+    "Those 56 hours must also not push you over the maximum weekly working time in the working time Directive.",
+    "Your average working week must stay at or below 48 hours.",
+    "A single week can go up to 60 hours of work, but only if you still average no more than 48 hours a week over four months."
+   ],
+   "estimated_input_tokens": 1762,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"Claim that weekly driving may be at most 56 hours is stated in Article 6(2).\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"Article 6(4) says weekly driving time includes all driving on the territory of the Community or of a third country, matching 'EU and non-EU countries alike'.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"Article 6(2) says the 56-hour weekly driving time shall not result in the maximum weekly working time under Directive 2002/15/EC being exceeded, so the driving must not push working time over that maximum.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"Article 4(a) of Directive 2002/15/EC states the average weekly working time may not exceed 48 hours.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"Article 4(a) of Directive 2002/15/EC says the maximum weekly working time may be extended to 60 hours only if the average of 48 hours a week is not exceeded over four months; the answer's phrasing matches this.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "Claim that weekly driving may be at most 56 hours is stated in Article 6(2)."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "Article 6(4) says weekly driving time includes all driving on the territory of the Community or of a third country, matching 'EU and non-EU countries alike'."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "Article 6(2) says the 56-hour weekly driving time shall not result in the maximum weekly working time under Directive 2002/15/EC being exceeded, so the driving must not push working time over that maximum."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "Article 4(a) of Directive 2002/15/EC states the average weekly working time may not exceed 48 hours."
+     },
+     {
+      "sentence": 4,
+      "verdict": "supported",
+      "reason": "Article 4(a) of Directive 2002/15/EC says the maximum weekly working time may be extended to 60 hours only if the average of 48 hours a week is not exceeded over four months; the answer's phrasing matches this."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2272,
+    "output_tokens": 383,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0004187,
+   "seconds": 2.28,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSLHVP2bZxmSDn6kM5w"
+  },
+  {
+   "id": "q006",
+   "answer_run": "2026-11-03T21-03-51Z-claude-opus-5-5.json",
+   "sentences": [
+    "After 4.5 hours of driving you must take an uninterrupted break of at least 45 minutes, unless you take a rest period instead.",
+    "You can split this break into two parts: first at least 15 minutes, then at least 30 minutes, placed so that they are completed by the end of the 4.5-hour driving period.",
+    "If you drive an occasional passenger service, you can instead split it into two breaks of at least 15 minutes each, spread over the driving period.",
+    "In multi-manning, you can take the 45-minute break in the moving vehicle while the other driver drives, as long as you are not assisting them.",
+    "Separately, the working time rules say you must not work more than six consecutive hours without a break.",
+    "If you work between six and nine hours in total, your working time must be interrupted by at least 30 minutes of break; if you work more than nine hours, by at least 45 minutes."
+   ],
+   "estimated_input_tokens": 1978,
+   "raw": "{\"sentences\":[{\"sentence\":1,\"reason\":\"The claim of a 45-minute uninterrupted break after 4.5 hours of driving, unless a rest period is taken, matches the first paragraph of Article 7.\",\"verdict\":\"supported\"},{\"sentence\":2,\"reason\":\"The claim that the break may be split into at least 15 minutes then at least 30 minutes, distributed so as to comply with the first paragraph, matches the second paragraph of Article 7; the 'completed by the end of the driving period' wording is a paraphrase of 'distributed over the period in such a way as to comply'.\",\"verdict\":\"supported\"},{\"sentence\":3,\"reason\":\"The occasional passenger service option of two breaks of at least 15 minutes each, distributed over the driving period, is stated in the third paragraph of Article 7.\",\"verdict\":\"supported\"},{\"sentence\":4,\"reason\":\"The multi-manning rule allowing the 45-minute break in a vehicle driven by another driver, provided the break-taker is not assisting, is stated in the fourth paragraph of Article 7.\",\"verdict\":\"supported\"},{\"sentence\":5,\"reason\":\"The rule that a worker must not work more than six consecutive hours without a break is stated in Article 5(1) of Directive 2002/15/EC.\",\"verdict\":\"supported\"},{\"sentence\":6,\"reason\":\"The 30-minute break for working time between six and nine hours and the 45-minute break for more than nine hours are both stated in Article 5(1) of Directive 2002/15/EC.\",\"verdict\":\"supported\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "supported": true,
+    "first_unsupported": null,
+    "problems": [],
+    "sentences": [
+     {
+      "sentence": 0,
+      "verdict": "supported",
+      "reason": "The claim of a 45-minute uninterrupted break after 4.5 hours of driving, unless a rest period is taken, matches the first paragraph of Article 7."
+     },
+     {
+      "sentence": 1,
+      "verdict": "supported",
+      "reason": "The claim that the break may be split into at least 15 minutes then at least 30 minutes, distributed so as to comply with the first paragraph, matches the second paragraph of Article 7; the 'completed by the end of the driving period' wording is a paraphrase of 'distributed over the period in such a way as to comply'."
+     },
+     {
+      "sentence": 2,
+      "verdict": "supported",
+      "reason": "The occasional passenger service option of two breaks of at least 15 minutes each, distributed over the driving period, is stated in the third paragraph of Article 7."
+     },
+     {
+      "sentence": 3,
+      "verdict": "supported",
+      "reason": "The multi-manning rule allowing the 45-minute break in a vehicle driven by another driver, provided the break-taker is not assisting, is stated in the fourth paragraph of Article 7."
+     },
+     {
+      "sentence": 4,
+      "verdict": "supported",
+      "reason": "The rule that a worker must not work more than six consecutive hours without a break is stated in Article 5(1) of Directive 2002/15/EC."
+     },
+     {
+      "sentence": 5,
+      "verdict": "supported",
+      "reason": "The 30-minute break for working time between six and nine hours and the 45-minute break for more than nine hours are both stated in Article 5(1) of Directive 2002/15/EC."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2433,
+    "output_tokens": 517,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.0005018,
+   "seconds": 2.96,
+   "attempts": 1,
+   "model": "claude-haiku-5-5",
+   "request_id": "req_011CgkSLSpUZRMs1q9gd5x6A"
+  }
+ ]
+}

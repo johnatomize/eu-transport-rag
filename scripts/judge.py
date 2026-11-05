@@ -1,8 +1,10 @@
 """Judge answers' faithfulness with Claude, or show what that would send and cost (`make judge`).
 
-    judge.py --model M --calibrate          the owner's 30 labelled answers (#82)
-    judge.py --model M --log FILE --only q  a few answers of an answer run, to try the judge out
-    judge.py --model M --log FILE           every answer of an answer run that passed the check
+    judge.py --model M --calibrate  the owner's 30 labelled answers (#82)
+    judge.py --log FILE --only q    a few answers of an answer run, to try the judge out
+    judge.py --log FILE             every answer of an answer run that passed the check
+
+The judge is judge_model in config/generation.yaml unless `--model` names another.
 
 FILE is an answer run log's name in runs/generation/. Without `--run` nothing is sent and no API
 key is needed: it builds each prompt and prints every call it would make, the estimated cost
@@ -73,7 +75,7 @@ ENV = ROOT / ".env"
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--model", required=True, help="the judge: a model priced in the config")
+    parser.add_argument("--model", help="the judge, if not the config's judge_model")
     which = parser.add_mutually_exclusive_group(required=True)
     which.add_argument("--calibrate", action="store_true", help="the owner's labelled answers")
     which.add_argument("--log", help="an answer run log's file name in runs/generation/")
@@ -91,6 +93,7 @@ def main(argv: list[str] | None = None) -> int:
     except (GenerationConfigError, CorpusError, ParseError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
+    args.model = args.model or config.judge_model
     if args.model not in config.prices:
         print(f"error: {args.model} has no price in {CONFIG.name}", file=sys.stderr)
         return 1

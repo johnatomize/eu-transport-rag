@@ -2,6 +2,16 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-05: Opus 5.5 judges faithfulness
+
+**Decision** (#83, by the owner's rule of the same day below): Opus 5.5 is the faithfulness judge, `judge_model` in `config/generation.yaml`, with the instructions of version `b6b94f34888a`.
+
+- **Measured:** on the owner's 30 labelled answers, Opus agreed on 28 (26 of the 28 supported, both unsupported) and Haiku on 26 (24 and both). Both found the owner's first unsupported sentence in q001 and q022. Haiku misses the rule's 27 by one, so Opus is the judge. Full results and every disagreement are in `results/faithfulness_judge.md`.
+- **The two answers both judges call unsupported against the owner's label** (q040, q095, both Haiku's) add details the cited nodes don't hold: what the AETR's "areas" are, and the driver card and analogue record sheets among what must be carried. The labels stay as the owner made them: changing a label after seeing the judges' verdicts would make the agreement depend on them.
+- **Cost:** judging the 30 cost US$0.57 with Opus and US$0.014 with Haiku; at Opus's rate a dev run's answers cost about US$0.80–0.95 to judge, half in batches.
+
+**Alternatives:** Haiku, about 40 times cheaper but under the agreement the owner set; changing the instructions and measuring again, which would tune the judge on the labels it is measured against.
+
 ## 2026-11-05: the faithfulness judge
 
 **Decision** (#83, plan agreed with the owner in chat): how `src/rag/judge.py` judges whether every claim in an answer follows from the text it cites, and how it is measured against the owner's labels (#82).

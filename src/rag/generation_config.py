@@ -1,8 +1,9 @@
 """The Claude models that write answers, and their prices, from `config/generation.yaml`.
 
 `build_model` answers while checkpoint F is built and debugged; `scored_model` writes every
-answer that G scores. Choices and reasons: "Haiku 5.5 while building, Opus 5.5 for scored
-answers" in docs/DECISIONS.md.
+answer that G scores; `judge_model` judges faithfulness. Choices and reasons: "Haiku 5.5
+while building, Opus 5.5 for scored answers" and "Opus 5.5 judges faithfulness" in
+docs/DECISIONS.md.
 """
 
 import datetime as dt
@@ -20,6 +21,7 @@ _SETTINGS = {
     "provider": str,
     "build_model": str,
     "scored_model": str,
+    "judge_model": str,
     "effort": str,
     "max_output_tokens": int,
     "max_prompt_tokens": int,
@@ -47,6 +49,7 @@ class GenerationConfig:
     provider: str
     build_model: str
     scored_model: str
+    judge_model: str  # judges faithfulness (#83)
     effort: str
     max_output_tokens: int
     max_prompt_tokens: int
@@ -106,7 +109,7 @@ def load_generation_config(path: Path) -> GenerationConfig:
             problems += found
             if price is not None:
                 prices[model] = price
-        for role in ROLES:
+        for role in (*ROLES, "judge"):
             model = raw[f"{role}_model"]
             if model not in raw["prices"]:
                 problems.append(f"{role}_model {model} has no prices")

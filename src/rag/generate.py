@@ -25,6 +25,7 @@ and `scripts/answer.py` hands it one only with an explicit flag, after the check
 Choices and reasons: "the answer client" in docs/DECISIONS.md.
 """
 
+import copy
 import datetime as dt
 import hashlib
 import json
@@ -89,6 +90,17 @@ def prompt_version() -> str:
 # --- Estimating --------------------------------------------------------------------------
 
 
+class Sendable(Protocol):
+    """One call as `estimate` and `send_all` need it: an answer's `Call`, or a judgement's
+    (`rag.judge.JudgeCall`)."""
+
+    question_id: str
+    prompt: Prompt
+
+    @property
+    def input_tokens(self) -> int: ...
+
+
 @dataclass(frozen=True)
 class Call:
     """One question as it would be sent: its prompt and the chunks the prompt was built from."""
@@ -137,7 +149,7 @@ class Estimate:
         return cost_usd(self.padded_input, self.calls * self.max_output_tokens, self.price)
 
 
-def estimate(calls: Sequence[Call], config: GenerationConfig, model: str) -> Estimate:
+def estimate(calls: Sequence[Sendable], config: GenerationConfig, model: str) -> Estimate:
     if model not in config.prices:
         raise GenerateError(f"{model} has no price in config/generation.yaml")
     counts = [c.input_tokens for c in calls]
@@ -189,17 +201,21 @@ def paid_holds(
     return holds
 
 
-def estimate_report(e: Estimate) -> str:
+def estimate_report(e: Estimate, unit: str = "answer") -> str:
     """The estimate in words: input with the margin, the expected cost and the most it can cost."""
     calls = f"{e.calls} call{'s' if e.calls != 1 else ''}"
     return (
         f"{calls}: about {e.input_tokens:,} input tokens, {e.padded_input:,} with a "
         f"{MARGIN - 1:.0%} margin.\n"
-        f"Expected cost, at {EXPECTED_OUTPUT_TOKENS:,} output tokens an answer plus the margin: "
-        f"US${e.expected_usd:.4f}.\n"
-        f"Most it can cost, every answer at {e.max_output_tokens:,} output tokens: "
+        f"Expected cost, at {EXPECTED_OUTPUT_TOKENS:,} output tokens {article(unit)} {unit} plus "
+        f"the margin: US${e.expected_usd:.4f}.\n"
+        f"Most it can cost, every {unit} at {e.max_output_tokens:,} output tokens: "
         f"US${e.most_usd:.4f}. The cap check uses this figure."
     )
+
+
+def article(word: str) -> str:
+    return "an" if word[:1] in "aeiou" else "a"
 
 
 # --- Calling the model ---------------------------------------------------------------------
@@ -237,13 +253,22 @@ class AnswerClient(Protocol):
 class AnthropicClient:
     """Claude through Anthropic's Messages API. Each call is paid for.
 
-    The answer format is passed as the reply's JSON schema, so the reply arrives as one text
-    block of JSON. Thinking is on, as these models always think, at the configured effort.
+    The answer format (or the judge's, `schema`) is passed as the reply's JSON schema, so the
+    reply arrives as one text block of JSON. Thinking is on, as these models always think, at
+    the configured effort.
     """
 
-    def __init__(self, config: GenerationConfig, model: str, api_key: str, http_client=None):
+    def __init__(
+        self,
+        config: GenerationConfig,
+        model: str,
+        api_key: str,
+        http_client=None,
+        schema: dict = ANSWER_SCHEMA,
+    ):
         self.model = model
         self.config = config
+        self.schema = schema  # the reply's format: the answer's, or the judge's (`rag.judge`)
         self._client = anthropic.Anthropic(
             api_key=api_key, max_retries=0, timeout=TIMEOUT_SECONDS, http_client=http_client
         )
@@ -257,7 +282,7 @@ class AnthropicClient:
                 messages=[{"role": "user", "content": prompt.user}],
                 output_config={
                     "effort": self.config.effort,
-                    "format": {"type": "json_schema", "schema": ANSWER_SCHEMA},
+                    "format": {"type": "json_schema", "schema": self.schema},
                 },
             )
         except anthropic.APIConnectionError as e:
@@ -312,7 +337,7 @@ class RunResult:
     """Every call a run made, in order, for the run log and the spend log."""
 
     answers: list[dict] = field(default_factory=list)
-    failed: list[dict] = field(default_factory=list)  # calls that got no reply: {"id", "error"}
+    failed: list[dict] = field(default_factory=list)  # calls that got no reply: head and error
     error: str | None = None
 
     @property
@@ -337,7 +362,7 @@ class RunResult:
         return sum(1 for a in self.answers if a["verdict"]["ok"] and not a["verdict"]["answerable"])
 
 
-def _failed_stop(reply: Reply) -> str | None:
+def failed_stop(reply: Reply) -> str | None:
     """Why a reply that came back can't be an answer, before its text is read."""
     if reply.stop_reason == "refusal":
         return f"the model declined to answer (category {reply.refusal_category})"
@@ -352,7 +377,7 @@ def _failed_stop(reply: Reply) -> str | None:
 
 def _verdict(reply: Reply, call: Call) -> dict:
     """The check's verdict on a reply, for the run log."""
-    stopped = _failed_stop(reply)
+    stopped = failed_stop(reply)
     if stopped:
         return {
             "ok": False,
@@ -381,12 +406,40 @@ def answer_all(
     sleep: Callable[[float], None] = time.sleep,
     clock: Callable[[], float] = time.monotonic,
 ) -> RunResult:
-    """Send each call, check each reply, and keep everything a run log needs.
+    """Send each call, check each reply, and keep everything a run log needs (`send_all`)."""
 
-    `save` is called after every call, answered or failed, so the run log on disk always holds
-    every reply paid for, whatever stops the run. A call that fails after its retries, an
-    interruption or any other error stops the run: the answers so far are kept, the failed call
-    is listed in `failed`, the error is kept, and the rest are not sent.
+    def head(call: Call) -> dict:
+        return {
+            "id": call.question_id,
+            "retrieved": [c.id for c in call.chunks],
+            "estimated_input_tokens": call.input_tokens,
+        }
+
+    blank = {"ok": False, "answerable": None, "answer": None, "problems": [], "citations": []}
+    return send_all(calls, client, price, head, _verdict, blank, progress, save, sleep, clock)
+
+
+def send_all[C: Sendable](
+    calls: Sequence[C],
+    client: AnswerClient,
+    price: Price,
+    head: Callable[[C], dict],
+    verdict: Callable[[Reply, C], dict],
+    blank: dict,
+    progress: Callable[[int, int], None] | None = None,
+    save: Callable[[RunResult], None] | None = None,
+    sleep: Callable[[float], None] = time.sleep,
+    clock: Callable[[], float] = time.monotonic,
+) -> RunResult:
+    """Send each call and keep, for the run log, what `head` says about the call, the raw
+    reply, `verdict`'s reading of it, the tokens the API counted, the cost and the time.
+
+    The entry is kept before `verdict` reads the reply, with `blank` as its verdict, so a bug
+    in the reading fails that one entry and never loses a paid reply. `save` is called after
+    every call, answered or failed, so the run log on disk always holds every reply paid for,
+    whatever stops the run. A call that fails after its retries, an interruption or any other
+    error stops the run: the entries so far are kept, the failed call is listed in `failed`
+    with what `head` says about it and the error, and the rest are not sent.
     """
     result = RunResult()
     try:
@@ -395,22 +448,14 @@ def answer_all(
             try:
                 reply, attempts = send_with_retries(client, call.prompt, sleep)
             except (Exception, KeyboardInterrupt) as e:
-                result.failed.append({"id": call.question_id, "error": _describe(e)})
+                result.failed.append({**head(call), "error": _describe(e)})
                 raise
-            # Paid for from here on: recorded before the check, which can't then lose it.
+            # Paid for from here on: recorded before the reply is read, which can't then lose it.
             entry = {
-                "id": call.question_id,
-                "retrieved": [c.id for c in call.chunks],
-                "estimated_input_tokens": call.input_tokens,
+                **head(call),
                 "raw": reply.text,
                 "stop_reason": reply.stop_reason,
-                "verdict": {
-                    "ok": False,
-                    "answerable": None,
-                    "answer": None,
-                    "problems": [],
-                    "citations": [],
-                },
+                "verdict": copy.deepcopy(blank),
                 "usage": {
                     "input_tokens": reply.input_tokens,
                     "output_tokens": reply.output_tokens,
@@ -425,8 +470,8 @@ def answer_all(
             }
             result.answers.append(entry)
             try:
-                entry["verdict"] = _verdict(reply, call)
-            except Exception as e:  # a bug in the check: the answer fails, the run goes on
+                entry["verdict"] = verdict(reply, call)
+            except Exception as e:  # a bug in the reading: the entry fails, the run goes on
                 entry["verdict"]["problems"] = [f"the check itself failed: {_describe(e)}"]
             if save:
                 save(result)

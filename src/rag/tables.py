@@ -2,9 +2,12 @@
 
 Nothing here retrieves anything or calls a model: each retrieval run log is scored with
 `rag.retrieval_eval`, and each answer run log with `rag.answer_eval`, against the question set
-and the parsed corpus, and the tables are written as Markdown to `results/`.
+and the parsed corpus; each calibration run of the faithfulness judge is compared with the
+owner's labels (`rag.faithfulness.agreement`). The tables are written as Markdown to
+`results/`.
 """
 
+import re
 from collections.abc import Mapping, Sequence
 
 from rag.answer_eval import (
@@ -21,6 +24,8 @@ from rag.answer_eval import (
 )
 from rag.answer_eval import evaluate as evaluate_answers
 from rag.chunk import STRATEGIES, Chunk
+from rag.faithfulness import MIN_AGREEMENT, Disagreement, Label, agreement, sentences
+from rag.judge import NOT_SUPPORTED
 from rag.parse import Tree
 from rag.questions import PHRASINGS, SPLITS, TYPES, Question
 from rag.retrieval_eval import CUTOFF, Evaluation, Metric, evaluate
@@ -489,3 +494,132 @@ def _run_row(name: str, log: Mapping, file: str) -> str:
         [name, config["split"], config["effort"], config["prompt_version"], commit, f"`{file}`",
          paid]
     )  # fmt: skip
+
+
+# --- The faithfulness judge against the owner's labels (#83) --------------------------------
+
+
+def _answer_model(run: str) -> str:
+    """The model that wrote an answer run, from its log's file name: '…-claude-opus-5-5.json'."""
+    match = re.search(r"-(claude-[a-z0-9-]+)\.json$", run)
+    return match[1] if match else run
+
+
+def _quoted(text: str) -> str:
+    return "“" + " ".join(text.split()) + "”"
+
+
+def judge_calibration(
+    logs: Sequence[tuple[str, Mapping]],
+    labels: Sequence[Label],
+    texts: Mapping[tuple[str, str], str],
+) -> str:
+    """How each calibration run of the judge `(file name, log)` agrees with the owner's labels.
+
+    `texts` maps each labelled answer, (question_id, run), to its text. A run that didn't judge
+    every labelled answer is listed as unfinished and not held to the rule.
+    """
+    supported = sum(lb.supported for lb in labels)
+    out = [
+        "# The faithfulness judge against the owner's labels",
+        "",
+        "Built by `make tables` from the judge's calibration runs in `runs/judge/` and the "
+        "owner's labels in `data/faithfulness_labels.v1.jsonl` (#82, #83). The owner labelled "
+        f"{len(labels)} of F's dev answers: {supported} supported and "
+        f"{len(labels) - supported} not. A judge agrees on an answer when it calls it supported "
+        "or not supported as the owner did; an answer it couldn't give a usable verdict on "
+        "counts as a disagreement. *Same first sentence* counts, among the unsupported answers "
+        "the judge caught, those where its first unsupported sentence is the owner's.",
+        "",
+        f"**The rule** (docs/DECISIONS.md, 2026-11-05): Haiku 5.5 is the judge if it agrees on "
+        f"at least {MIN_AGREEMENT} of {len(labels)} and catches every unsupported answer; "
+        "otherwise Opus 5.5. With only "
+        f"{len(labels) - supported} unsupported answers, catching them is a thin test.",
+        "",
+    ]
+    if not logs:
+        return "\n".join([*out, "No calibration run yet.", ""])
+    out += _header(
+        [
+            "Judge",
+            "Instructions",
+            "Run",
+            "Agreement",
+            "On supported answers",
+            "On unsupported answers",
+            "Same first sentence",
+            "Cost (US$)",
+            "Meets the rule",
+        ],
+        numeric_from=3,
+    )
+    results = []
+    for file, log in logs:
+        config = log["config"]
+        result = agreement(labels, log, texts)
+        finished = len(log["judgements"]) == len(labels) and not log["failed"]
+        results.append((file, config, result, finished))
+        rule = ("yes" if result.passes else "no") if finished else "unfinished"
+        out.append(
+            _row(
+                [
+                    config["model"],
+                    f"`{config['judge_prompt_version']}`",
+                    f"`{file}`",
+                    f"{result.agreed}/{result.labels}",
+                    f"{result.supported_agreed}/{result.supported}",
+                    f"{result.unsupported_agreed}/{result.unsupported}",
+                    f"{result.same_first}/{result.unsupported_agreed}",
+                    f"{log['paid']['cost_usd']:.4f}",
+                    rule,
+                ]
+            )
+        )
+    out += ["", "## Disagreements", ""]
+    for file, config, result, _ in results:
+        out += [
+            f"### {config['model']}, instructions `{config['judge_prompt_version']}`",
+            "",
+            f"Run `{file}`.",
+            "",
+        ]
+        if not result.disagreements:
+            out += ["None.", ""]
+            continue
+        for d in result.disagreements:
+            out += [*_disagreement(d, texts), ""]
+    return "\n".join(out).rstrip() + "\n"
+
+
+def _disagreement(d: Disagreement, texts: Mapping[tuple[str, str], str]) -> list[str]:
+    label = d.label
+    parts = sentences(texts[label.question_id, label.run])
+    owner = "supported"
+    if not label.supported:
+        assert label.first_unsupported is not None
+        owner = (
+            f"not supported, from sentence {label.first_unsupported + 1}: "
+            f"{_quoted(parts[label.first_unsupported])}"
+        )
+    lines = [f"- **{label.question_id}**, answer by {_answer_model(label.run)}. Owner: {owner}."]
+    verdict = d.judged["verdict"] if d.judged is not None else None
+    if verdict is None:
+        return [*lines, "  Judge: not judged."]
+    if not verdict["ok"]:
+        return [*lines, f"  Judge: no usable verdict ({'; '.join(verdict['problems'])})."]
+    if verdict["supported"]:
+        lines.append("  Judge: supported.")
+        if label.first_unsupported is not None:
+            reason = verdict["sentences"][label.first_unsupported]["reason"]
+            lines.append(
+                f"  Its reason for sentence {label.first_unsupported + 1}: {_quoted(reason)}"
+            )
+        return lines
+    lines.append("  Judge: not supported.")
+    for s in verdict["sentences"]:
+        if s["verdict"] == NOT_SUPPORTED:
+            lines.append(
+                f"  Sentence {s['sentence'] + 1}, {_quoted(parts[s['sentence']])}: "
+                f"{_quoted(s['reason'])}"
+            )
+    return lines

@@ -9,9 +9,9 @@ The log is Markdown, written by hand. Two parts of it are read:
     | 2026-10-27 | Project start | 0.00 | 0.00 |
 
 What has been spent is the sum of the cost column, plus any paid run whose log in one of
-`PAID_RUNS` (embeddings on Bedrock, answers from Claude, typed questions) no row names yet
-(`unlogged_runs`). The last total must match that sum, so a row added with a wrong total is
-caught before it can hide spending.
+`PAID_RUNS` (embeddings on Bedrock, answers from Claude, typed questions, the faithfulness
+judge) no row names yet (`unlogged_runs`). The last total must match that sum, so a row added
+with a wrong total is caught before it can hide spending.
 """
 
 import json
@@ -25,8 +25,9 @@ _AMOUNT = re.compile(r"-?\d+(?:\.\d+)?")
 
 
 # Where paid runs write their logs; each log's ["paid"]["cost_usd"] is what the run cost.
-# runs/ask holds one log for each question asked and paid for with `make ask`.
-PAID_RUNS = ("runs/embeddings", "runs/generation", "runs/ask")
+# runs/ask holds one log for each question asked and paid for with `make ask`, and runs/judge
+# the faithfulness judge's runs.
+PAID_RUNS = ("runs/embeddings", "runs/generation", "runs/ask", "runs/judge")
 
 
 class SpendLogError(Exception):

@@ -20,7 +20,7 @@ Choices and reasons: "the prompt and the answer format" in docs/DECISIONS.md.
 
 import json
 import re
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 
@@ -104,11 +104,9 @@ ANSWER_SCHEMA = {
 }
 
 _TAGS = ("passages", "passage", "node", "heading", "context", "question")
-# "<" that would open or close one of our tags, in any case and with any space after it.
 # Invisible characters (soft hyphen, zero-width spaces and joiners, direction marks, the BOM)
-# count as space here, so they can't hide a tag from this check while a model still reads it.
+# count as space when looking for a tag, so they can't hide one while a model still reads it.
 _GAP = r"[\s\u00ad\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]*"
-_TAG = re.compile(rf"<(?={_GAP}/?{_GAP}(?:{'|'.join(_TAGS)})(?![\w-]))", re.IGNORECASE)
 # What an attribute value may hold: node IDs and version labels, never a quote mark or "<".
 _ATTRIBUTE = re.compile(r"[^\"<>&]*")
 
@@ -203,15 +201,21 @@ def citation_label(node_id: str, docs: Mapping[str, Document], version: bool = T
 # --- The prompt ---------------------------------------------------------------------------
 
 
-def _escape(text: str) -> str:
-    """Make any text that would open or close one of the prompt's tags harmless.
+def tag_escaper(tags: Sequence[str]) -> Callable[[str], str]:
+    """A function that makes any text that would open or close one of `tags` harmless.
 
+    It replaces the "<" of such a tag, in any case and with any space after it, by "&lt;".
     Only those few sequences change, so every other quote still matches the corpus exactly.
     """
-    return _TAG.sub("&lt;", text)
+    pattern = re.compile(rf"<(?={_GAP}/?{_GAP}(?:{'|'.join(tags)})(?![\w-]))", re.IGNORECASE)
+    return lambda text: pattern.sub("&lt;", text)
 
 
-def _attribute(value: str) -> str:
+_escape = tag_escaper(_TAGS)
+
+
+def attribute(value: str) -> str:
+    """`value` as it may stand inside an attribute's quotes; `ValueError` if it can't."""
     if not _ATTRIBUTE.fullmatch(value):
         raise ValueError(f"{value!r} can't be written as an attribute")
     return value
@@ -224,7 +228,7 @@ def render_passage(chunk: Chunk, docs: Mapping[str, Document]) -> str:
     doc = docs[chunk.doc_id]
     source = f"{document_label(doc)}, {version_label(doc)}"
     heading, *lead = chunk.prefix.split("\n")
-    out = [f'<passage source="{_attribute(source)}">', f"<heading>{_escape(heading)}</heading>"]
+    out = [f'<passage source="{attribute(source)}">', f"<heading>{_escape(heading)}</heading>"]
     out += [f"<context>{_escape(line)}</context>" for line in lead]
     current: str | None = None
     for owner, line in zip(chunk.line_owners, chunk.body.split("\n"), strict=True):
@@ -234,7 +238,7 @@ def render_passage(chunk: Chunk, docs: Mapping[str, Document]) -> str:
             out.append(f"<heading>{_escape(line)}</heading>")
         else:
             if owner != current:
-                out.append(f'<node id="{_attribute(owner)}">')
+                out.append(f'<node id="{attribute(owner)}">')
             out.append(_escape(line))
         current = owner
     if current is not None:

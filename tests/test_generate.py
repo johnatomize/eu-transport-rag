@@ -211,7 +211,10 @@ def test_any_error_stops_the_run_but_keeps_every_paid_reply_and_names_the_failed
         save=lambda r: saved.append(len(r.answers)),
     )
     assert [a["id"] for a in result.answers] == ["q1"]
-    assert result.failed == [{"id": "q2", "error": "RuntimeError: something unforeseen"}]
+    assert [(f["id"], f["error"]) for f in result.failed] == [
+        ("q2", "RuntimeError: something unforeseen")
+    ]
+    assert result.failed[0]["retrieved"] == [CHUNK.id]
     assert result.error == "RuntimeError: something unforeseen"
     assert saved == [1, 1]  # after q1, and once more when the run stopped
 
@@ -414,7 +417,7 @@ def test_a_run_stopped_midway_leaves_a_log_the_spend_check_counts(script, monkey
     (path,) = script.RUNS.glob("*.json")
     log = json.loads(path.read_text(encoding="utf-8"))
     assert [a["id"] for a in log["answers"]] == ["q001"]
-    assert log["failed"] == [{"id": "q002", "error": "KeyboardInterrupt"}]
+    assert [(f["id"], f["error"]) for f in log["failed"]] == [("q002", "KeyboardInterrupt")]
     pending = unlogged_runs("# Progress\n\n## Spend log\n", script.RUNS)
     assert pending == [(path.name, log["paid"]["cost_usd"])] and pending[0][1] > 0
     assert not list(script.RUNS.glob("*.tmp"))

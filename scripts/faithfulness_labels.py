@@ -18,6 +18,7 @@ from pathlib import Path
 
 from rag.corpus import CorpusError, load_manifest
 from rag.faithfulness import (
+    LABELLED_RUNS,
     answers,
     assign,
     build_id,
@@ -35,11 +36,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "corpus" / "manifest.yaml"
 QUESTIONS = ROOT / "data" / "questions.v1.jsonl"
 LABELS = ROOT / "data" / "faithfulness_labels.v1.jsonl"
-# F's two dev runs, both with the same prompt and retrieval setup (hybrid, paragraphs, top 5).
-RUNS = (
-    ROOT / "runs" / "generation" / "2026-11-03T21-03-51Z-claude-opus-5-5.json",
-    ROOT / "runs" / "generation" / "2026-11-03T20-59-15Z-claude-haiku-5-5.json",
-)
+RUNS = tuple(ROOT / "runs" / "generation" / name for name in LABELLED_RUNS)
 TEMPLATE = Path(__file__).with_name("faithfulness_review.html")
 OUT = ROOT / "build" / "faithfulness-review" / "faithfulness-review.html"
 VERDICTS = ("supported", "unsupported")

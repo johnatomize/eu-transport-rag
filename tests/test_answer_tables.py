@@ -376,3 +376,14 @@ def test_a_log_that_is_not_a_whole_judge_run_is_refused():
     del broken["judgements"]
     with pytest.raises(ValueError, match="run-1.json is not a judge run log: it has no"):
         faithful_table([("run-1.json", broken)])
+
+
+def test_a_reranked_run_is_named_by_its_reranker_and_depth():
+    from rag.tables import run_label
+
+    config = {"model": "claude-opus-5-5", "retrieval": {"retriever": "hybrid",
+              "strategy": "paragraph", "k": 5, "reranker": "claude-haiku-5-5-low-c4658c1e8150",
+              "rerank_depth": 20}}  # fmt: skip
+    assert run_label(config) == (
+        "opus-5-5, hybrid paragraph top 5 reranked by haiku-5-5-low-c4658c1e8150 from top 20"
+    )

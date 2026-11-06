@@ -356,6 +356,9 @@ def run_label(config: Mapping) -> str:
     """A run's short name in the tables, from its settings: "opus-5-5, hybrid paragraph top 5"."""
     retrieval = dict(config["retrieval"])
     named = [retrieval.pop("retriever"), retrieval.pop("strategy"), f"top {retrieval.pop('k')}"]
+    if "reranker" in retrieval and "rerank_depth" in retrieval:  # the reranker's full setting
+        reranker = str(retrieval.pop("reranker")).removeprefix("claude-")
+        named.append(f"reranked by {reranker} from top {retrieval.pop('rerank_depth')}")
     named += [f"{key} {value}" for key, value in retrieval.items()]
     return f"{config['model'].removeprefix('claude-')}, {' '.join(map(str, named))}"
 

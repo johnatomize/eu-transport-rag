@@ -55,7 +55,7 @@ def test_a_log_it_cannot_read_is_refused(change, message):
 
 def test_the_real_spend_log_can_be_read():
     log = load_spend_log(ROOT / "docs" / "PROGRESS.md")
-    assert log.cap_usd == 20.0
+    assert log.cap_usd > 0  # the owner may raise it (DECISIONS.md, 2026-11-06)
     assert log.spent_usd >= 0
 
 

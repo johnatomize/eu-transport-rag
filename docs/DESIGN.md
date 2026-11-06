@@ -150,6 +150,7 @@ The Commission site rate-limits scripted downloads (HTTP 429 after about six PDF
   - top-k = 3 and 10;
   - article chunks and 200-word windows, at about the same amount of text;
   - with a reranking step (Qwen3-Reranker 0.6B, run locally).
+- Ways to improve reranking, compared on retrieval quality and on cost per question (owner's addition, 2026-11-06, after the reranker lowered recall@5 on the dev questions): blending its order with search's, a better instruction, adding cited passages after reranking, Jev (a hosted reranker) and Claude Haiku 5.5 reading the passages together. The paid ones wait for the owner's OK on cost; one that does better can become a proposed answer run.
 - Paired comparison between variants on the same questions (sign test), and the final run on the **test split only once**.
 - `make tables` regenerates every table from the run logs.
 

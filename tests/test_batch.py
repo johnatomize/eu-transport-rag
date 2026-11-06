@@ -489,7 +489,7 @@ def test_without_the_flag_nothing_is_sent_and_the_batch_price_is_shown(script, c
     assert script.main(["--only", "q001,q002", "--batch"]) == 0
     out = capsys.readouterr().out
     assert "2 calls in one batch, at the batch service's half price" in out
-    assert "make answers BATCH=1 RUN=1" in out
+    assert "make answers ONLY=q001,q002 BATCH=1 RUN=1" in out
     assert not list(script.RUNS.glob("*.json"))
 
 

@@ -24,8 +24,11 @@ the run the model, effort, prompt version and retrieval setup. Adding its row to
 naming the file, stays a manual step.
 
 Retrieval is the setup E found best unless told otherwise: hybrid search (BM25 and vector search
-fused by RRF) over paragraph chunks, top 5. Only the dev split can be answered; the test split
-waits for G.
+fused by RRF) over paragraph chunks, top 5. With `--rerank haiku`, Claude Haiku 5.5's order of
+search's top 20 decides the top k (#99, #85). The order is read from its cache in reranks/ and
+never asked for here: a question without a cached order stops the run before anything is sent,
+and `make rerank WITH=haiku` shows what asking would cost. Only the dev split can be answered;
+the test split waits for G.
 """
 
 import argparse
@@ -71,9 +74,12 @@ from rag.generate import (
 )
 from rag.generation_config import ROLES, GenerationConfigError
 from rag.generation_config import load_generation_config as load_generation
+from rag.hosted_rerank import LISTWISE_FIELDS, HostedCache, ListwiseScorer, load_hosted_config
 from rag.parse import ParseError, parse_corpus
 from rag.prompt import ANSWER_SCHEMA, build_prompt
 from rag.questions import validate
+from rag.rerank import RerankError
+from rag.retrieve import Rerank
 from rag.spend import SpendLogError, spending, spending_report
 from rag.vector import RETRIEVERS, VectorIndexError, make_retriever
 
@@ -84,6 +90,10 @@ CONFIG = ROOT / "config" / "generation.yaml"
 EMBEDDING_CONFIG = ROOT / "config" / "embedding.yaml"
 EMBEDDINGS = ROOT / "embeddings"
 RUNS = ROOT / "runs" / "generation"
+HOSTED_CONFIG = ROOT / "config" / "rerank-hosted.yaml"
+RERANKS = ROOT / "reranks"
+# Haiku reorders search's top 20, as in the retrieval run it was chosen from (#99).
+RERANK_DEPTH = 20
 ENV = ROOT / ".env"
 
 
@@ -98,6 +108,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("-k", type=int, default=5, help="chunks per prompt (default 5)")
     parser.add_argument("--only", help="answer only these dev questions: q001,q002")
     parser.add_argument("--batch", action="store_true", help="send as one batch, at half price")
+    parser.add_argument(
+        "--rerank",
+        choices=("haiku",),
+        help=f"let Haiku 5.5's cached order of search's top {RERANK_DEPTH} pick the top k",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -131,6 +146,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.retriever != "bm25":
             cache = EmbeddingCache.load(EMBEDDINGS, load_config(EMBEDDING_CONFIG))
         retriever = make_retriever(args.retriever, chunks, cache)
+        retrieval = {"retriever": args.retriever, "strategy": args.strategy, "k": args.k}
+        if args.rerank:
+            listwise = load_hosted_config(HOSTED_CONFIG).listwise
+            orders = HostedCache.load(RERANKS, listwise.name, LISTWISE_FIELDS)
+            retriever = Rerank(retriever, ListwiseScorer(orders, listwise), RERANK_DEPTH)
+            retrieval |= {"reranker": listwise.name, "rerank_depth": RERANK_DEPTH}
         calls = []
         for q in dev:
             hits = retriever.search(q.question, args.k)
@@ -140,17 +161,26 @@ def main(argv: list[str] | None = None) -> int:
         record = new_batch(calls, config, model, ANSWER_SCHEMA)
         batch = record if args.batch else None
         pending = find_batch(RUNS, record)  # a batch of these calls that may still be paid for
-    except (ConfigError, EmbedError, VectorIndexError, GenerateError, ValueError) as err:
+    except (
+        ConfigError,
+        EmbedError,
+        VectorIndexError,
+        RerankError,
+        GenerateError,
+        ValueError,
+    ) as err:
         print(f"error: {err}", file=sys.stderr)
         return 1
 
-    retrieval = {"retriever": args.retriever, "strategy": args.strategy, "k": args.k}
     print(
         f"Model {model} ({args.role}), effort {config.effort}, at most "
         f"{config.max_output_tokens:,} output tokens an answer."
     )
+    reranked = (
+        f", reranked by {retrieval['reranker']} from the top {RERANK_DEPTH}" if args.rerank else ""
+    )
     print(
-        f"Retrieval: {args.retriever} over {args.strategy} chunks, top {args.k}. "
+        f"Retrieval: {args.retriever} over {args.strategy} chunks, top {args.k}{reranked}. "
         f"Prompt version {prompt_version()}."
     )
     print(f"{'question':9} {'est. input':>10} {'est. output':>11} {'max output':>10}")
@@ -182,7 +212,11 @@ def main(argv: list[str] | None = None) -> int:
     if not args.run:
         for problem in holds:
             print(f"warning: a paid run would refuse to start: {problem}", file=sys.stderr)
-        again = " BATCH=1" if args.batch else ""
+        given = {"ROLE": args.role if args.role != "build" else None, "ONLY": args.only,
+                 "STRATEGY": args.strategy if args.strategy != "paragraph" else None,
+                 "K": args.k if args.k != 5 else None, "RERANK": args.rerank,
+                 "BATCH": 1 if args.batch else None}  # fmt: skip
+        again = "".join(f" {name}={value}" for name, value in given.items() if value)
         print(f"Nothing was sent. To send and pay: make answers{again} RUN=1")
         return 1 if errors else 0
     key = read_api_key(ENV)

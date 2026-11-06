@@ -1,0 +1,16 @@
+# The reranking model checkpoint G uses (docs/DECISIONS.md, "reranking is done by Qwen3-Reranker
+# 0.6B, run locally"). It runs on the owner's Mac and costs nothing; `make rerank RUN=1` runs it.
+#
+# The revision pins the model's files to one commit on Hugging Face
+# (https://huggingface.co/Qwen/Qwen3-Reranker-0.6B, Apache 2.0), so a later upload can never
+# change the scores; the cache key includes it. The device is in the key too, since the GPU and
+# the CPU round differently, and a machine without MPS refuses rather than mixing them.
+#
+# The instruction goes before each question in the form the model was trained on
+# ("<Instruct>: …", "<Query>: …", "<Document>: …"). It is the embedding model's task, word for
+# word, so that both models are asked the same thing.
+model_id: Qwen/Qwen3-Reranker-0.6B
+revision: e61197ed45024b0ed8a2d74b80b4d909f1255473
+device: mps
+max_input_tokens: 8192
+instruction: "Given a question about EU road transport law, retrieve the passages of legislation and Commission guidance that answer it"

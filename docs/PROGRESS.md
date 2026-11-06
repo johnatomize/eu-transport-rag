@@ -139,6 +139,18 @@ Checkpoints A–E are built and reviewed by the owner; D, the keyword retrieval 
 
 - **Runs through the batch service (#79):** `make answers BATCH=1` and `make judge … BATCH=1` send a run as one batch at half price, under the same dry run and cap check, at the batch prices (`src/rag/batch.py`; rules in `DECISIONS.md`). The batch's ID is in the run log before anything else happens; the same command run again picks up a batch that was stopped while waiting, and never sends it twice. Failed, expired and missing requests are logged as failed, never as answers. Until its results are in, a batch counts in the spend check at the most it can cost. The run log has a direct run's form plus the batch, with no seconds per answer, so scoring and tables treat both alike and show "–" for a batch run's speed. A dev pass of 60 questions with Opus 5.5 now comes to US$1.29 expected and US$2.79 at most. Tested with stand-ins only; the first real batch is #85's.
 - **Faithful column (#95):** `make tables` adds a **Faithful** column to `results/answers.md`: for each answer run the chosen judge (Opus 5.5, instructions `b6b94f34888a`) has judged, the share of its answers found supported, with its 95% interval and the number judged. A run not yet judged shows "not judged", as F's two dev runs do now; a judge run that misses an answer shows "unfinished" until the run is judged again; a run by another judge or other instructions is listed under the table, not counted (rules in `DECISIONS.md`). The Runs table names each run's judge log and what judging it cost. Tested on made-up logs, offline.
+- **Reranking (#84):** `Rerank` in `src/rag/retrieve.py` lets Qwen3-Reranker 0.6B, run on the Mac at a pinned revision, reorder any retriever's top N (choices in `DECISIONS.md`). `make rerank` reports the scores missing and `make rerank RUN=1` computes them: the 3,000 pairs of the 60 dev questions with hybrid search's top 50 paragraph chunks took about 6 minutes, cost nothing, and are committed in `reranks/`, so `make retrieval-runs` and `make tables` never run the model. Tests with a stand-in reranker show that only the top N move, ties keep their order and the same input gives the same order. On the 50 answerable dev questions, hybrid search over paragraph chunks:
+
+  | Run | Words in top 5 | Recall@3 | Recall@5 | Recall@10 | MRR@10 |
+  | --- | ---: | ---: | ---: | ---: | ---: |
+  | no reranking | 710 | 0.58 (0.44–0.71) | 0.76 (0.63–0.86) | 0.78 (0.65–0.87) | 0.78 (0.67–0.88) |
+  | reranked top 20 | 989 | 0.64 (0.50–0.76) | 0.70 (0.56–0.81) | 0.80 (0.67–0.89) | 0.73 (0.63–0.83) |
+  | reranked top 50 | 1019 | 0.64 (0.50–0.76) | 0.70 (0.56–0.81) | 0.80 (0.67–0.89) | 0.72 (0.62–0.82) |
+
+  - **No gain in the top 5:** reranking puts every gold passage in the top 5 for 2 more questions and 5 fewer. It wins q036 ("two of us driving", 561/2006 Art. 8(5) from 9th to 2nd) and q029 ("What is a 'company card'?"). Four of the five it loses need two passages: it keeps one high and pushes the other below a related passage, as on q037, where Art. 12 (driving on to a safe stop) falls from 2nd to 8th behind the parking-area rules of Art. 8a.
+  - **Verbatim questions gain, paraphrased ones lose:** recall@5 is 0.92 either way on the 12 verbatim questions, with recall@3 up from 0.75 to 0.92; on the 38 paraphrased it falls from 0.71 to 0.63.
+  - **It prefers longer passages:** the top 5 hold 40% more words after reranking, such as the whole list of definitions in 165/2014 Art. 2(2).
+  - **Depth hardly matters:** the top 20 and the top 50 give the same recall. All intervals overlap; the answer runs in #85 show whether the model answers better from either list.
 
 ## Spend log
 

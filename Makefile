@@ -2,7 +2,7 @@
 # The db-* targets also need Docker with Compose and a running Colima VM (see CLAUDE.md).
 # Later checkpoints add targets (tables, deploy, destroy) and extend check.
 
-.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs embed-dry-run embed answers ask judge tables tables-check faithfulness-labels faithfulness-review db-up db-check db-down test-db vector-index gitleaks-present docker-present
+.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs rerank embed-dry-run embed answers ask judge tables tables-check faithfulness-labels faithfulness-review db-up db-check db-down test-db vector-index gitleaks-present docker-present
 
 help: ## List the targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-20s %s\n", $$1, $$2}'
@@ -43,6 +43,9 @@ search: ## Print the best chunks for a question: make search Q="How long may I d
 
 retrieval-runs: ## Run every retrieval configuration on the dev split and write runs/retrieval/*.json
 	uv run --locked python scripts/retrieval_runs.py
+
+rerank: ## Report which reranker scores the reranked runs lack; RUN=1 scores them with the local model
+	uv run --locked $(if $(filter 1,$(RUN)),--group local-embed,) python scripts/retrieval_runs.py --scores $(if $(filter 1,$(RUN)),--run,)
 
 embed-dry-run: ## Print what embedding the corpus and the questions would take (and cost, on Bedrock); runs nothing
 	uv run --locked python scripts/embed_dry_run.py

@@ -3,9 +3,10 @@
 Every retriever implements `Retriever`, so that the evaluation, the service and the comparison
 of backends don't care which one they get. This module has the keyword baseline, BM25 (design
 §D); hybrid search, which merges the rankings of other retrievers by reciprocal rank fusion
-(design §E); and cross-reference expansion, which wraps any retriever and brings in the chunks
-that its hits refer to (design §E, problem 2). Vector search, also from E, is in `rag.vector`,
-beside its database backend.
+(design §E); cross-reference expansion, which wraps any retriever and brings in the chunks that
+its hits refer to (design §E, problem 2); and reranking, which wraps any retriever and lets a
+model reorder its best hits (design §G). Vector search, also from E, is in `rag.vector`, beside
+its database backend, and the reranking model and its score cache are in `rag.rerank`.
 
 BM25 is the Okapi variant with the usual defaults, k1 = 1.5 and b = 0.75, and the idf that
 stays positive, log(1 + (N - df + 0.5) / (df + 0.5)), as in Lucene. It is written here rather
@@ -42,6 +43,12 @@ class Retriever(Protocol):
         A score of exactly 0 means the chunk matched nothing: BM25 fills its top k with such
         chunks when fewer than k hold a query term.
         """
+        ...
+
+
+class Scorer(Protocol):
+    def scores(self, query: str, texts: Sequence[str]) -> list[float]:
+        """How well each text answers `query`, one number each, in order; higher is better."""
         ...
 
 
@@ -328,3 +335,43 @@ class Expansion:
             if len(hits) >= k:
                 break
         return hits[:k]
+
+
+# --- Reranking -----------------------------------------------------------------------------
+
+
+class Rerank:
+    """Wrap a retriever so that a reranker reorders its top `depth` hits (design §G).
+
+    A reranker reads the question together with each passage and scores the pair, rather than
+    comparing two things made separately, as search does; it is too slow to read every chunk,
+    so it reads only the wrapped retriever's best `depth`. Those are sorted by the scorer's
+    score, best first, and hits beyond `depth` follow in the wrapped retriever's order, so the
+    order changes only within the top `depth`. Equal scores keep the wrapped retriever's order,
+    so the same scores always give the same list.
+
+    A reordered hit's score is the scorer's (for `rag.rerank`, the model's log-odds that the
+    passage answers the question, which can be 0 or below without meaning that it matched
+    nothing); a hit beyond `depth` keeps the wrapped retriever's score, on that scale. `Hit.via`
+    is kept, so a wrapped `Expansion` still says what brought a chunk in.
+    """
+
+    def __init__(self, retriever: Retriever, scorer: Scorer, depth: int):
+        if depth < 1:
+            raise ValueError(f"the reranking depth must be at least 1, not {depth}")
+        self.retriever = retriever
+        self.scorer = scorer
+        self.depth = depth
+
+    def search(self, query: str, k: int) -> list[Hit]:
+        check_k(k)
+        hits = self.retriever.search(query, max(k, self.depth))
+        top, rest = hits[: self.depth], hits[self.depth :]
+        scores = self.scorer.scores(query, [hit.chunk.text for hit in top])
+        if len(scores) != len(top):
+            raise ValueError(f"the reranker gave {len(scores)} scores for {len(top)} passages")
+        if not all(math.isfinite(s) for s in scores):
+            raise ValueError("the reranker gave a score that is not a finite number")
+        order = sorted(range(len(top)), key=lambda i: -scores[i])  # stable: ties keep their order
+        reranked = [Hit(top[i].chunk, scores[i], top[i].via) for i in order]
+        return (reranked + rest)[:k]

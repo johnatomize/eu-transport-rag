@@ -2,6 +2,20 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-06: how the reranker reorders search results
+
+**Decision** (#84): `Rerank` in `src/rag/retrieve.py` wraps any retriever: Qwen3-Reranker 0.6B (#77) reads the question with each of the wrapped retriever's top N passages, and those N are sorted by its score; the passages beyond N keep their order. The model, its settings and its scores are in `src/rag/rerank.py` and `config/rerank.yaml`.
+
+- **The score:** the model is asked, in the form of its model card, whether the passage meets the question and an instruction, and its score is the log-odds of "yes" (its logit for "yes" minus that for "no"). That orders passages as the card's probability does, but two very likely passages don't both round to 1.0 and tie. Ties keep the wrapped retriever's order. Each pair is scored alone, without padding, so a score never depends on its batch, and an input over the model's 8,192 tokens is refused rather than cut short.
+- **The instruction** is the embedding model's, word for word: "Given a question about EU road transport law, retrieve the passages of legislation and Commission guidance that answer it". The passage is the chunk's indexed text, heading path included.
+- **Pinned and cached, as the embedding model is:** revision `e61197ed4502…` on Hugging Face (Apache 2.0), float32 on the Mac's GPU. Every score is kept in `reranks/<model setting>.jsonl`, keyed by the model, revision, device, instruction, question and passage, and committed, so `make retrieval-runs` and `make tables` never run the model and a missing score stops a run before any log is written. `make rerank` reports what is missing; `make rerank RUN=1` scores it on the Mac.
+- **N = 20 and 50, over hybrid search on paragraph chunks**, the setup #78 reranks: two runs, `hybrid-paragraph-rerank20` and `-rerank50`, whose logs name the reranker setting and N. Before reranking, the top 20 hold every gold passage for 41 of the 50 answerable dev questions and the top 50 for 48, against 38 for the top 5: that is all a reranker can gain. Scoring the top 50 for the 60 dev questions is 3,000 pairs, and covers N = 20 too.
+
+- **The answer runs rerank the top 20** (#85): the top 50 put the same passages in the top 5, and reranking 20 passages a question is about 2.5 times faster, which matters for the service.
+- **Cache keys are stored as `pair`**, not `key` as in the embedding cache: the secret scan's generic-API-key rule reads a long hash after the word "key" as a secret, and renaming the field avoids it without widening the scan's exception.
+
+**Alternatives:** batches of pairs, faster but with scores that shift slightly with what they are padded alongside; the probability as the score; reranking every strategy, left for later since #78 compares reranking on paragraph chunks only; computing scores inside `make retrieval-runs`, which would make it need the model's libraries.
+
 ## 2026-11-06: the Faithful column in the answer results
 
 **Decision** (#95): `results/answers.md` gives each scored answer run a **Faithful** column, the share of its answers the chosen faithfulness judge found supported, from the judge's whole runs in `runs/judge/run-*.json` (`src/rag/tables.py`).

@@ -468,7 +468,9 @@ def answers(
         "over every answerable question. **Refusal accuracy**: unanswerable questions refused. "
         "**False refusals**: answerable questions refused. **Not answered reliably**: the reply "
         "failed the check, so the reader was told it could not be answered reliably. Cost, "
-        "seconds and tokens are per question with a reply. Words shown is the length of the "
+        "seconds and tokens are per question with a reply; a run sent through the batch service "
+        "paid half price and has no seconds, as its replies have no time of their own. Words "
+        "shown is the length of the "
         "text of the passages put in each prompt, headings included, counted as in the "
         "retrieval results; the input tokens also count the instructions and the passages' "
         "markup.",

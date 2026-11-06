@@ -313,17 +313,19 @@ def run_log(
     answer_runs: Sequence[str],
     e: Estimate,
     result: RunResult,
+    batch: dict | None = None,
 ) -> dict:
     """What a judgement run's log holds: the run, its settings, the estimate, every call made.
 
     `kind` is "calibration" for the owner's labelled answers, "try" for a few answers outside
     them while the judge is built, and "run" for every answer of an answer run.
     `["paid"]["cost_usd"]` is what `rag.spend` counts until the spend log names the file.
+    A run sent as a batch also holds `batch` (`rag.batch`), and its prices are the batch's.
     """
     if kind not in KINDS:
         raise ValueError(f"kind should be one of {KINDS}, not {kind!r}")
-    price = config.prices[model]
-    return {
+    price = e.price
+    log = {
         "run": run,
         "config": {
             "model": model,
@@ -352,3 +354,6 @@ def run_log(
         "failed": result.failed,
         "judgements": result.answers,
     }
+    if batch is not None:
+        log["batch"] = batch
+    return log

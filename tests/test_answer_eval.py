@@ -279,6 +279,15 @@ def test_a_run_is_scored_overall_and_by_group():
     assert "correct" not in groups["unanswerable"].metrics
 
 
+def test_a_run_sent_as_a_batch_has_cost_and_tokens_but_no_seconds():
+    batch = {**RUN, "answers": [{**e, "seconds": None} for e in RUN["answers"]]}
+    m = evaluate(batch, QUESTIONS, TREE, NODES_OF).groups[0].metrics
+    assert "seconds" not in m
+    direct = evaluate(RUN, QUESTIONS, TREE, NODES_OF).groups[0].metrics
+    for metric in ("cost_usd", "input_tokens", "output_tokens"):
+        assert m[metric] == direct[metric]
+
+
 def test_scoring_is_reproducible():
     assert evaluate(RUN, QUESTIONS, TREE, NODES_OF) == evaluate(RUN, QUESTIONS, TREE, NODES_OF)
 

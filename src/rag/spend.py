@@ -28,6 +28,9 @@ _AMOUNT = re.compile(r"-?\d+(?:\.\d+)?")
 # runs/ask holds one log for each question asked and paid for with `make ask`, and runs/judge
 # the faithfulness judge's runs.
 PAID_RUNS = ("runs/embeddings", "runs/generation", "runs/ask", "runs/judge")
+# A run sent as a batch (`rag.batch`) whose results are in its log, or which was never created.
+# Any other batch may still be paid for, so it is counted at the most it can cost.
+BATCH_SETTLED = ("collected", "not_sent")
 
 
 class SpendLogError(Exception):
@@ -70,7 +73,8 @@ def unlogged_runs(text: str, runs: Path) -> list[tuple[str, float]]:
 
     A paid run writes its call log at once, but its row in the spend log is added by hand, and
     names the log's file. Until then the run's cost is counted here, so that two runs in a row
-    can't both pass the cap check against a spend log that shows neither.
+    can't both pass the cap check against a spend log that shows neither. A batch whose results
+    aren't in its log yet is counted at the most it can cost (`["estimate"]["most_usd"]`).
     """
     section = _section(text)
     pending = []
@@ -78,8 +82,12 @@ def unlogged_runs(text: str, runs: Path) -> list[tuple[str, float]]:
         if path.name in section:
             continue
         try:
-            cost = json.loads(path.read_text(encoding="utf-8"))["paid"]["cost_usd"]
-        except (OSError, ValueError, KeyError, TypeError) as e:
+            log = json.loads(path.read_text(encoding="utf-8"))
+            cost = log["paid"]["cost_usd"]
+            batch = log.get("batch")
+            if batch is not None and batch["status"] not in BATCH_SETTLED:
+                cost = max(cost, log["estimate"]["most_usd"])
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:
             raise SpendLogError(f"{path.name}: cannot read its cost ({e})") from e
         pending.append((path.name, float(cost)))
     return pending

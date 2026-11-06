@@ -29,7 +29,8 @@ all scoring needs. The rules, recorded in docs/DECISIONS.md ("how an answer run 
 - **No reply** happens when a batch request fails or expires (#79); a direct run stops at its
   first failed call, and a run with questions missing is refused as unfinished.
 - **Cost and speed:** the cost, the input and output tokens and the seconds of each reply, as
-  means over the questions that got one.
+  means over the questions that got one. A run sent as a batch has no seconds: its replies have
+  no time of their own, so speed comes from direct runs only (#79).
 - **Intervals** are 95%: Wilson for shares of questions, a seeded percentile bootstrap over
   questions for means. Each measure is given overall, by phrasing and by type.
 - **Paired comparison** of two runs on the same questions (#81): a question is *right* when it
@@ -78,7 +79,7 @@ class AnswerScore:
     cost_usd: float | None  # None when the call got no reply
     input_tokens: int | None
     output_tokens: int | None
-    seconds: float | None
+    seconds: float | None  # None too for a reply from a batch, which has no time of its own
 
     @property
     def right(self) -> bool | None:
@@ -250,6 +251,8 @@ def _group(name: str, scores: Sequence[AnswerScore], seed: int | str) -> AnswerG
         taken = [s for s in scores if getattr(s, names[0]) is not None]
         if not taken:
             continue
+        if any(s.seconds is None for s in taken):  # replies from a batch have no time (#79)
+            names = tuple(metric for metric in names if metric != "seconds")
         values = {metric: [getattr(s, metric) for s in taken] for metric in names}
         intervals = _bootstrap(values, RESAMPLES, f"{seed}:{name}:{names[0]}")
         for metric in names:

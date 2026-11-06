@@ -2,6 +2,20 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-06: runs through the batch service
+
+**Decision** (#79; what batch runs show for speed was answered by the owner in a working session): `make answers BATCH=1` and `make judge … BATCH=1` send a run's calls as one batch through Anthropic's Message Batches API, which answers within 24 hours, mostly within one, at half the price (`src/rag/batch.py`). Each request is exactly the call a direct run sends; only the way it travels changes.
+
+- **Same checks, batch prices:** the dry run prints the cost at the batch prices in `config/generation.yaml`, and a paid run needs `RUN=1`, prices read in the last week and a most-possible cost, every answer at its full output limit, within the cap.
+- **The batch's ID is in the run log before anything else happens:** the log is written before the batch is created, and again as soon as the API returns its ID. The log's `batch` holds the ID, a status (`sending`, `submitted`, `collected`, `not_sent` or `unknown`) and, for each call, its `custom_id` (its place in the run and its question, such as `007-q012`, unique even when one question's answer is judged twice) and a fingerprint of the exact request.
+- **Picked up, never sent twice:** a run stopped while it waits leaves its batch `submitted`. Running the same command again finds the log whose requests have the same fingerprints and waits for that batch instead of sending another, with no price or cap check, since nothing new is paid. Creating the batch is tried again only after "too many requests" (429), which creates nothing: a server error, a timeout, a dropped connection or Ctrl-C while the request is out may have stored the batch without its ID reaching the log, so the status becomes `unknown`, and the same command refuses to send it again until someone has looked on the Console's Batches page and, finding none, set the status to `not_sent` by hand. A direct run of the same calls is refused too while their batch may still be paid for. Reading a batch's progress and results costs nothing, so a dropped connection there is simply tried again.
+- **Spend:** until its results are in its log, a batch is counted at the most it can cost, so a run started meanwhile can't pass the cap.
+- **Results** are matched to calls by `custom_id`, in any order, and checked against the batch before any is recorded. A reply is recorded as a direct run's, at the batch price. A request that errored, expired or was canceled, or has no result, is listed in `failed` with the reason and scored as no reply, never as an answer. Such requests aren't billed.
+- **No time per answer (owner's choice):** a batch's replies have no time of their own, as an answer that took four seconds and one that queued for forty minutes look alike, so `seconds` is empty and the results table shows "–" for a batch run's speed. Speed comes from direct runs: F's Opus and Haiku runs. A variant can still be timed later with a few direct questions.
+- **The run log keeps a direct run's form,** plus `batch`, so scoring and tables don't care how a run was sent.
+
+**Alternatives:** timing ten questions of each variant directly, about US$2 more; running every variant directly, about US$4–5 more, which leaves less of the cap for the test run; picking a batch up by naming its log, which a mistyped name could turn into a second batch; prompt caching inside the batch, not worth it for a 600-token instruction.
+
 ## 2026-11-05: Opus 5.5 judges faithfulness
 
 **Decision** (#83, by the owner's rule of the same day below): Opus 5.5 is the faithfulness judge, `judge_model` in `config/generation.yaml`, with the instructions of version `b6b94f34888a`.

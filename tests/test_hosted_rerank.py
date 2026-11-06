@@ -132,7 +132,7 @@ def test_the_client_sends_the_key_and_reads_the_nouls():
     ("reply", "error"),
     [
         ((429, b"slow down"), Throttled),
-        ((503, b"busy"), Throttled),
+        ((503, b"busy"), MaybeSent),  # may have been billed, so not tried again
         ((422, b'{"detail": []}'), CallFailed),
         ((200, b"not json"), CallFailed),
         (TimeoutError("timed out"), MaybeSent),
@@ -189,10 +189,28 @@ def test_a_failed_request_is_listed_and_stops_the_run(tmp_path):
     assert "HTTP 400" in result.error
 
 
-def test_the_jev_estimate_is_priced_per_input_token():
+def test_the_jev_estimate_is_priced_per_input_token_with_room_at_the_top():
     e = estimate_jev([LOT, LOT], JEV)
-    assert e.calls == 2 and e.most_usd == e.expected_usd
-    assert e.most_usd == pytest.approx(round(e.input_tokens * 1.5) * 0.042 / 1e6, rel=1e-3)
+    assert e.calls == 2
+    assert e.expected_usd == pytest.approx(round(e.input_tokens * 1.5) * 0.042 / 1e6, rel=1e-3)
+    assert e.most_usd == pytest.approx(e.input_tokens * 2 * 0.042 / 1e6, rel=1e-3)
+
+
+def test_a_reply_from_another_model_is_refused_and_kept(tmp_path):
+    cache = HostedCache.load(tmp_path, JEV.name, JEV_FIELDS)
+    status, body = ok({"p01": 0.9, "p02": 0.2, "p03": 0.5})
+    other = (status, body.replace(b'"jev-1.14.0"', b'"jev-1.15.0"'))
+    result = jev_all([LOT], JevClient(JEV, "k", FakePost(other)), cache)
+    assert "not the pinned jev-1.14.0" in result.error
+    assert result.answers[0]["raw"] == {"p01": 0.9, "p02": 0.2, "p03": 0.5}
+    assert cache.entries == {}
+
+
+def test_a_prompt_that_may_be_too_long_is_held():
+    e = estimate_listwise([LOT], HAIKU, load_generation_config(ROOT / "config" / "generation.yaml"))
+    today = dt.date(2026, 11, 6)
+    assert holds(e, today, 0.0, 20.0, today, max_prompt_tokens=100_000) == []
+    assert "max_prompt_tokens" in holds(e, today, 0.0, 20.0, today, max_prompt_tokens=10)[0]
 
 
 def test_a_run_over_the_cap_or_with_old_prices_is_held():

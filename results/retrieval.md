@@ -129,7 +129,7 @@ Each reranked run against no reranking (hybrid-paragraph) and Qwen top 20 (hybri
 
 ## What reranking a question costs
 
-From the rerankers' scoring runs on the dev questions. A local run (`runs/rerank-local/`) costs nothing, and its time is the run's scoring time over its questions, on the Mac, without loading the model; a hosted run (`runs/rerank/`) is paid, and its time is each request's round trip, averaged. Its cost is what the API counted, at the configured price.
+From the rerankers' scoring runs on the dev questions. A local run (`runs/rerank-local/`) costs nothing, and its time is its scoring time a passage, on the Mac and without loading the model, times the 20 passages a reranked run reads, since a run that only tops up the cache scores fewer. A hosted run (`runs/rerank/`) is paid, and its time is each request's round trip, averaged. Its cost is what the API counted, at the configured price.
 
 | Reranker | Instruction | Log | Questions | Passages a question | Seconds a question | US$ a question | US$ per 1,000 |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |

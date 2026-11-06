@@ -196,7 +196,9 @@ def retriever_for(
         scorer = scorer_for(config)
         retriever = Rerank(retriever, scorer, config["rerank_depth"], config.get("rerank_blend"))
     if config.get("expansion_after_rerank") == "references":
-        retriever = Expansion(retriever, chunks, tree)
+        # A reranker's score of 0 doesn't mean that nothing matched, so every hit's references
+        # are followed.
+        retriever = Expansion(retriever, chunks, tree, follow_zero=True)
     return retriever
 
 
@@ -426,7 +428,8 @@ def report_hosted(which: str, lots: list[Lot], hosted: HostedConfig, cache: Host
         return 1
     print(estimate_lines(e))
     print(spending_report(spent))
-    blocked = holds(e, read_on, spent.spent_usd, spent.cap_usd, dt.date.today())
+    longest = None if which == "jev" else generation.max_prompt_tokens
+    blocked = holds(e, read_on, spent.spent_usd, spent.cap_usd, dt.date.today(), longest)
     key = read_typesafe_key(ENV) if which == "jev" else read_api_key(ENV)
     if not key:
         variable = "TYPESAFE_API_KEY" if which == "jev" else "ANTHROPIC_API_KEY"
@@ -449,8 +452,17 @@ def report_hosted(which: str, lots: list[Lot], hosted: HostedConfig, cache: Host
         print(f"error: cannot write the run log ({err}); nothing was sent", file=sys.stderr)
         return 1
 
+    calls = listwise_calls(missing) if which == "haiku" else []
+
     def save(result: RunResult) -> None:
-        write_run_log(path, hosted_run_log(header, name, settings, e, result))
+        """Log every call paid for and, for Haiku, cache its replies, even if the log can't be
+        written (it is then printed), so no reply paid for is asked for again. Jev caches its
+        answers itself, as each arrives."""
+        try:
+            write_run_log(path, hosted_run_log(header, name, settings, e, result))
+        finally:
+            if which == "haiku":
+                cache_orders(result, calls, config, cache)
 
     def progress(done: int, total: int) -> None:
         if done % 10 == 0 or done == total:
@@ -461,7 +473,6 @@ def report_hosted(which: str, lots: list[Lot], hosted: HostedConfig, cache: Host
         if which == "jev":
             result = jev_all(missing, JevClient(hosted.jev, key), cache, save, progress)
         else:
-            calls = listwise_calls(missing)
             settings_for_call = dataclasses.replace(
                 generation, effort=config.effort, max_output_tokens=config.max_output_tokens
             )
@@ -470,7 +481,6 @@ def report_hosted(which: str, lots: list[Lot], hosted: HostedConfig, cache: Host
             price = generation.prices[config.model]
             result = send_all(calls, client, price, listwise_head, listwise_verdict,
                               LISTWISE_BLANK, progress, save)  # fmt: skip
-            cache_orders(result, calls, config, cache)
     except OSError as err:
         print(
             f"error: a log or the cache could not be written ({err}). Save the printed log to "

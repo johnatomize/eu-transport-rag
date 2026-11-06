@@ -88,6 +88,7 @@ def referenced_in_top(run: Mapping, question_ids: Sequence[str], k: int = TOP) -
     return sum(len(entry) > 2 for entry in entries) / len(entries)
 
 
+RERANK_PASSAGES = 20  # the passages each reranked run of #99 reads a question
 # The runs each reranked run is compared with, question by question (#99): search alone, and
 # Qwen reranking its top 20 as in #84.
 RERANK_REFERENCES = (
@@ -277,10 +278,11 @@ def reranker_costs(logs: Sequence[tuple[str, Mapping]]) -> list[str]:
         "## What reranking a question costs",
         "",
         "From the rerankers' scoring runs on the dev questions. A local run (`runs/rerank-local/`) "
-        "costs nothing, and its time is the run's scoring time over its questions, on the Mac, "
-        "without loading the model; a hosted run (`runs/rerank/`) is paid, and its time is each "
-        "request's round trip, averaged. Its cost is what the API counted, at the configured "
-        "price.",
+        "costs nothing, and its time is its scoring time a passage, on the Mac and without "
+        f"loading the model, times the {RERANK_PASSAGES} passages a reranked run reads, since a "
+        "run that only tops up the cache scores fewer. A hosted run (`runs/rerank/`) is paid, "
+        "and its time is each request's round trip, averaged. Its cost is what the API counted, "
+        "at the configured price.",
         "",
     ]
     titles = ["Reranker", "Instruction", "Log", "Questions", "Passages a question",
@@ -290,9 +292,9 @@ def reranker_costs(logs: Sequence[tuple[str, Mapping]]) -> list[str]:
         config = log["config"]
         if "result" in log:  # local
             result = log["result"]
-            questions, seconds = result["questions"], result["seconds"]
-            each = seconds / questions if questions else 0.0
-            passages = result["pairs"] / questions if questions else 0.0
+            questions, pairs = result["questions"], result["pairs"]
+            passages = RERANK_PASSAGES
+            each = result["seconds"] / pairs * passages if pairs else 0.0
             cost = 0.0
             instruction = config["instruction_name"]
         else:  # hosted

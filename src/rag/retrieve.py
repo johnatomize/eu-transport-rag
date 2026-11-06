@@ -302,12 +302,20 @@ class Expansion:
     until k chunks are in it. References are followed one step: an added chunk's own references
     are not. A hit with a score of 0 matched nothing, so its references are not followed either.
 
-    An added chunk takes the score of the chunk that cites it, so scores never rise down the
-    list, and `Hit.via` names that chunk. The first k of a longer list are the list for k.
+    An added chunk takes the score of the chunk that cites it, so `Hit.via` names that chunk and,
+    over a search's scores, scores never rise down the list. The first k of a longer list are the
+    list for k.
+
+    With `follow_zero`, a hit's references are followed whatever its score: over a reranker
+    (`Rerank`, #99), whose scores are log-odds or fused ranks, 0 doesn't mean that nothing
+    matched, and scores past the reranked hits are on another scale, so they can rise.
     """
 
-    def __init__(self, retriever: Retriever, chunks: Sequence[Chunk], tree: Tree):
+    def __init__(
+        self, retriever: Retriever, chunks: Sequence[Chunk], tree: Tree, follow_zero: bool = False
+    ):
         self.retriever = retriever
+        self.follow_zero = follow_zero
         self._by_id = {chunk.id: chunk for chunk in chunks}
         if len(self._by_id) != len(chunks):
             raise ValueError("two chunks share an ID")
@@ -327,7 +335,7 @@ class Expansion:
                 continue
             hits.append(hit)
             seen.add(chunk_id)
-            if hit.score != 0:
+            if hit.score != 0 or self.follow_zero:
                 for target in self.references[chunk_id]:
                     if target not in seen:
                         hits.append(Hit(self._by_id[target], hit.score, via=chunk_id))

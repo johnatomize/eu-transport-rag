@@ -213,3 +213,7 @@ def test_the_cost_of_reranking_comes_from_the_scoring_logs(root):
     table = retrieval([run(root)], QUESTIONS, TREE, [("a.json", local), ("b.json", hosted)])
     assert "| qwen | needed | `a.json` | 60 | 20 | 2.50 | 0.00000 | 0.00 |" in table
     assert "| jev | – | `b.json` | 2 | 20 | 1.50 | 0.01500 | 15.00 |" in table
+    # A run that only topped up the cache is timed by the passage, for the 20 a run reads.
+    topped = {**local, "result": {"questions": 30, "pairs": 40, "seconds": 5.0}}
+    table = retrieval([run(root)], QUESTIONS, TREE, [("c.json", topped)])
+    assert "| qwen | needed | `c.json` | 30 | 20 | 2.50 | 0.00000 | 0.00 |" in table

@@ -45,19 +45,19 @@ from pathlib import Path
 import yaml
 
 from rag.db import read_env_file
-from rag.embed_estimate import PRICE_STALE_AFTER_DAYS, estimate_tokens
+from rag.embed_estimate import estimate_tokens
 from rag.generate import (
     MARGIN,
     CallFailed,
     MaybeSent,
-    OverCapError,
     RunResult,
     Throttled,
+    cost_holds,
     describe,
     failed_stop,
     with_retries,
 )
-from rag.generation_config import EFFORTS, GenerationConfig, Price
+from rag.generation_config import EFFORTS, GenerationConfig
 from rag.prompt import Prompt
 from rag.rerank import MissingScoresError, RerankError
 
@@ -342,16 +342,28 @@ class HostedEstimate:
     input_tokens: int  # estimated, before the margin
     most_usd: float  # with the margin on input, and every reply at its longest
     expected_usd: float
+    largest_input: int = 0  # the longest prompt, estimated, before the margin
+
+
+# Jev's tokenizer isn't published, and TypeSafe may add input of its own, so the most a Jev run
+# can cost is taken at twice the estimate. The first run (#99) was billed 397,826 tokens against
+# 431,817 estimated, so the expected figure keeps the usual margin.
+JEV_MOST_FACTOR = 2.0
 
 
 def estimate_jev(lots: Sequence[Lot], config: JevConfig) -> HostedEstimate:
-    tokens = sum(estimate_tokens(json.dumps(jev_request(config, lot))) for lot in lots)
-    usd = math.ceil(tokens * MARGIN) * config.price_input / 1_000_000
-    return HostedEstimate(len(lots), tokens, usd, usd)
+    counts = [estimate_tokens(json.dumps(jev_request(config, lot))) for lot in lots]
+    tokens = sum(counts)
+    expected = math.ceil(tokens * MARGIN) * config.price_input / 1_000_000
+    most = math.ceil(tokens * JEV_MOST_FACTOR) * config.price_input / 1_000_000
+    return HostedEstimate(len(lots), tokens, most, expected, max(counts, default=0))
 
 
 LISTWISE_EXPECTED_OUTPUT = 600  # a reply, thinking included: the expected figure only
-LISTWISE_SCHEMA_TOKENS = 2 * estimate_tokens(json.dumps(LISTWISE_SCHEMA)) + 200
+# The API adds its own input for structured output and thinking. The first run (#99) was billed
+# 364,156 input tokens for 60 calls against 283,446 estimated from the text: about 1,350 a call
+# more, so each call is allowed 1,500 on top of the schema.
+LISTWISE_SCHEMA_TOKENS = 2 * estimate_tokens(json.dumps(LISTWISE_SCHEMA)) + 1500
 
 
 def estimate_listwise(
@@ -360,34 +372,30 @@ def estimate_listwise(
     if config.model not in generation.prices:
         raise HostedError(f"{config.model} has no price in config/generation.yaml")
     price = generation.prices[config.model]
-    tokens = sum(
-        estimate_tokens(p.system) + estimate_tokens(p.user) + LISTWISE_SCHEMA_TOKENS
-        for p in map(listwise_prompt, lots)
-    )
+    counts = [c.input_tokens for c in listwise_calls(lots)]
+    tokens = sum(counts)
     padded = math.ceil(tokens * MARGIN)
     most = (padded * price.input + len(lots) * config.max_output_tokens * price.output) / 1e6
     expected_out = math.ceil(len(lots) * LISTWISE_EXPECTED_OUTPUT * MARGIN)
     expected = (padded * price.input + expected_out * price.output) / 1e6
-    return HostedEstimate(len(lots), tokens, most, expected)
+    return HostedEstimate(len(lots), tokens, most, expected, max(counts, default=0))
 
 
 def holds(
-    e: HostedEstimate, read_on: dt.date, spent_usd: float, cap_usd: float, today: dt.date
+    e: HostedEstimate,
+    read_on: dt.date,
+    spent_usd: float,
+    cap_usd: float,
+    today: dt.date,
+    max_prompt_tokens: int | None = None,
 ) -> list[str]:
-    """Why a paid run may not start: prices read too long ago, or a cost that could pass the
-    cap. Empty when it may."""
-    found = []
-    age = (today - read_on).days
-    if age > PRICE_STALE_AFTER_DAYS:
-        found.append(f"the prices were read {age} days ago; read them again and update them")
-    if spent_usd + e.most_usd > cap_usd:
+    """Why a paid run may not start: prices read too long ago, a cost that could pass the cap,
+    or, given `max_prompt_tokens`, a prompt that may be longer. Empty when it may."""
+    found = cost_holds(e.most_usd, read_on, "and update them", spent_usd, cap_usd, today)
+    if max_prompt_tokens is not None and math.ceil(e.largest_input * MARGIN) > max_prompt_tokens:
         found.append(
-            str(
-                OverCapError(
-                    f"this run may cost up to US${e.most_usd:.4f}; with US${spent_usd:.4f} "
-                    f"already spent that could pass the approved cap of US${cap_usd:.2f}"
-                )
-            )
+            f"the longest prompt is about {e.largest_input:,} tokens, which with the margin may "
+            f"pass max_prompt_tokens ({max_prompt_tokens:,})"
         )
     return found
 
@@ -435,8 +443,12 @@ class JevClient:
             )
         except (OSError, TimeoutError) as e:  # timeouts, refused or dropped connections
             raise MaybeSent(f"{describe(e)} (may have been billed)") from e
-        if status == 429 or status >= 500:  # refused or failed, not billed
+        if status == 429:  # refused before any work, so not billed: tried again
             raise Throttled(f"HTTP {status}: {raw[:200].decode('utf-8', 'replace')}")
+        if status >= 500:  # TypeSafe doesn't say whether these are billed, so not tried again
+            raise MaybeSent(
+                f"HTTP {status} (may have been billed): {raw[:200].decode('utf-8', 'replace')}"
+            )
         if status != 200:
             raise CallFailed(f"HTTP {status}: {raw[:500].decode('utf-8', 'replace')}")
         try:
@@ -449,8 +461,11 @@ class JevClient:
             raise CallFailed(f"a reply that couldn't be read ({describe(e)})") from e
 
 
-def read_nouls(reply: JevReply, count: int) -> list[float]:
-    """The passages' nouls in order, or `HostedError` if the reply doesn't answer each once."""
+def read_nouls(reply: JevReply, config: JevConfig, count: int) -> list[float]:
+    """The passages' nouls in order, or `HostedError` if the reply came from another model than
+    the pinned one or doesn't answer each passage once."""
+    if reply.model != config.model:
+        raise HostedError(f"the reply came from {reply.model}, not the pinned {config.model}")
     names = [f"p{i:02d}" for i in range(1, count + 1)]
     if set(reply.nouls) != set(names):
         raise HostedError(f"the reply answers {sorted(reply.nouls)}, not {names}")
@@ -473,8 +488,9 @@ def jev_all(
 
     Each request is logged as soon as it is paid for, before its reply is read; `save` is
     called after each, so the run log always holds every request paid for. A request that fails
-    after its retries, a reply that can't be read, or an interruption stops the run; what was
-    cached so far is kept, and running again asks only for what is missing.
+    after its retries, a reply that can't be read (whose answers are then kept in the log as
+    `raw`), or an interruption stops the run; what was cached so far is kept, and running again
+    asks only for what is missing.
     """
     result = RunResult()
     price = client.config.price_input
@@ -499,9 +515,10 @@ def jev_all(
             }
             result.answers.append(entry)
             try:
-                nouls = read_nouls(reply, len(lot.texts))
+                nouls = read_nouls(reply, client.config, len(lot.texts))
             except HostedError as e:
                 entry["problem"] = str(e)
+                entry["raw"] = reply.nouls
                 raise
             for text, noul in zip(lot.texts, nouls, strict=True):
                 cache.put(jev_key(client.config, lot.question, text), {"noul": noul})
@@ -624,7 +641,3 @@ def hosted_run_log(
 def read_typesafe_key(env: Path) -> str | None:
     """TYPESAFE_API_KEY from the environment, or else from the `.env` file at `env`."""
     return os.environ.get("TYPESAFE_API_KEY") or read_env_file(env).get("TYPESAFE_API_KEY")
-
-
-def listwise_price(generation: GenerationConfig, config: ListwiseConfig) -> Price:
-    return generation.prices[config.model]

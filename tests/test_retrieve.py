@@ -525,3 +525,17 @@ def test_blending_with_a_reranker_that_agrees_changes_nothing():
 def test_a_negative_blend_constant_is_refused():
     with pytest.raises(ValueError):
         Rerank(SameForAll(CHUNKS), ByWord(), depth=2, blend=-1)
+
+
+def test_expansion_over_a_reranker_follows_references_of_a_hit_scored_0(tree):
+    chunks = STRATEGIES["paragraph"](tree)
+    cited = next(c for c in chunks if c.id == "paragraph:561/2006:art6(5)")
+
+    class ZeroScore:
+        def search(self, query, k):
+            return [Hit(cited, 0.0)]
+
+    plain = Expansion(ZeroScore(), chunks, tree).search("q", 3)
+    assert [h.chunk.id for h in plain] == [cited.id]
+    followed = Expansion(ZeroScore(), chunks, tree, follow_zero=True).search("q", 3)
+    assert len(followed) == 3 and all(h.via == cited.id for h in followed[1:])

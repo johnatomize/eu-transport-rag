@@ -149,8 +149,8 @@ The Commission site rate-limits scripted downloads (HTTP 429 after about six PDF
 - Variants, each changing one thing from the best setup in E (hybrid search over paragraph chunks, top 5):
   - top-k = 3 and 10;
   - article chunks and 200-word windows, at about the same amount of text;
-  - with a reranking step (Qwen3-Reranker 0.6B, run locally).
-- Ways to improve reranking, compared on retrieval quality and on cost per question (owner's addition, 2026-11-06, after the reranker lowered recall@5 on the dev questions): blending its order with search's, a better instruction, adding cited passages after reranking, Jev (a hosted reranker) and Claude Haiku 5.5 reading the passages together. The paid ones wait for the owner's OK on cost; one that does better can become a proposed answer run.
+  - with a reranking step: Claude Haiku 5.5 reading search's top 20 together (the owner's choice on 2026-11-06, replacing Qwen3-Reranker 0.6B, which lowered recall@5 on the dev questions).
+- Ways to improve reranking, compared on retrieval quality and on cost per question (owner's addition, 2026-11-06, after the reranker lowered recall@5 on the dev questions): blending its order with search's, a better instruction, adding cited passages after reranking, Jev (a hosted reranker) and Claude Haiku 5.5 reading the passages together. The paid ones wait for the owner's OK on cost; one that does better can become a proposed answer run. Only the best of them answers: Haiku 5.5, the only candidate that lost no question to search alone.
 - Paired comparison between variants on the same questions (sign test), and the final run on the **test split only once**.
 - `make tables` regenerates every table from the run logs.
 

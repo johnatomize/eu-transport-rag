@@ -2,6 +2,15 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-06: Haiku 5.5 reranks the answer run, in place of Qwen
+
+**Decision** (owner, 2026-11-06, after #99's comparison; changes the reranked version of #78 and the owner's note on #85 of the same day): the reranked dev answer run in #85 uses Claude Haiku 5.5 reading hybrid search's top 20 paragraph chunks together (`hybrid-paragraph-haiku20`), not Qwen3-Reranker 0.6B. Only the best reranker from #99 goes into the answer runs, and a reranker that lowers recall is not worth answering with. #85 still has five new Opus 5.5 runs: top 3, top 10, article chunks, 200-word windows and Haiku reranking.
+
+- **Why Haiku:** on the 50 answerable dev questions it raised recall@5 from 0.76 to 0.80 and recall@3 from 0.58 to 0.78, lost no question to search alone, and won back all of Qwen's two-passage losses. Its top 5 is no longer than search's, so answering from it costs no more, and reranking adds about US$0.00066 a question, about 3% of an Opus answer.
+- **No new paid reranking:** Haiku's orders for the 60 dev questions are already cached in `reranks/` from #99, so the answer run reads them and pays only for answers and judging.
+
+**Alternatives:** keeping Qwen and adding Haiku as a sixth run (about US$1.90 more, to confirm in answers that Qwen's weaker passage lists matter); Haiku and Jev in place of Qwen (Jev matched Haiku's recall@5 but shows the model 15% more text, lost q060 to search alone and would need a second outside provider in the service); keeping Qwen alone, as planned in #78.
+
 ## 2026-11-06: ways to improve reranking, and how they are compared
 
 **Decision** (#99; the five candidates are the owner's, the settings below were fixed before any was measured): each candidate changes one thing from Qwen3-Reranker 0.6B reordering hybrid search's top 20 paragraph chunks, the setup the answer runs rerank (#85), and is measured on the dev split as a retrieval run. With 50 answerable questions, trying many settings and keeping the best would only fit the dev split, so each candidate has one setting.

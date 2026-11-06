@@ -176,7 +176,7 @@ Checkpoints A–E are built and reviewed by the owner; D, the keyword retrieval 
     | 5. Haiku 5.5 | 0.00066 | 0.66 | 1.5 s round trip | one more call to Anthropic's API, which answering already uses; no new key or provider |
 
     Both are small next to answering: an Opus 5.5 answer costs about US$0.02 a question (F's dev run), so Haiku reranking adds about 3%.
-  - **Proposal, not a run:** an answer run with Haiku reranking the top 20, as a dev variant beside #85's Qwen run, costing about US$1.30 with Opus 5.5 through the batch service. The owner decides.
+  - **Taken up by the owner (2026-11-06):** Haiku reranking the top 20 replaces Qwen as #85's reranked answer run, since a reranker that lowers recall isn't worth answering with (`DECISIONS.md`).
 ## Spend log
 
 Every cost goes here: date, what it paid for, amount and running total. A paid step needs the owner's OK and a dry-run estimate first.

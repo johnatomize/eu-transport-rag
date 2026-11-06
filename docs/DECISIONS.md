@@ -2,6 +2,16 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-06: the finalists for the test split
+
+**Decision** (owner, 2026-11-06, on #85's proposal; for #86): three versions answer the 40 test questions once, each with Opus 5.5 through the batch service and judged as on dev: Haiku 5.5 reranking hybrid search's top 20 paragraph chunks, top 5; hybrid search over article chunks, top 3; and the base, hybrid search over paragraph chunks, top 5.
+
+- **Haiku reranking:** on dev it refused 3 answerable questions against the base's 8 and cited 87% of gold passages against 80%, at the base's cost. Four of the five questions it won back have no key facts, so the owner's hand grades on the test split (#88) are what can show whether those answers are right.
+- **Article chunks:** the fewest retrieval misses on dev (4 against 7, with windows) and the best automatic correctness (0.87), with fewer unsupported answers than windows (6 against 9).
+- **The base:** the most faithful on dev (40 of 42 supported), and the setup the other two are compared with.
+
+**Alternatives:** 200-word windows in place of article chunks (the same correctness and misses, but 9 unsupported answers); top 10 in place of the base, which would leave the test table without the setup the design compares from; top 3, the weakest on dev.
+
 ## 2026-11-06: the spending cap rises to US$100, with a limit per paid issue
 
 **Decision** (owner, 2026-11-06, on #85's estimate): the project's cap in the spend log rises from US$20 to US$100. Answers, judging and Haiku reranking are paid from the owner's US$100 of Anthropic credits, so the total may pass the original US$20. Each paid issue still gets its own limit, approved by the owner after its dry run, as a guard against a run that gets stuck or repeats: US$20 for #85's dev answer and judging runs. Before each run in an issue, its spending so far plus that run's most-it-can-cost must stay within the issue's limit; otherwise the work stops and the owner is asked. The paid tools keep checking the project cap, as before.

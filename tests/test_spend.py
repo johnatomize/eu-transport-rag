@@ -98,3 +98,16 @@ def test_spending_counts_paid_answer_runs_and_embedding_runs_not_yet_logged(tmp_
         "runs/embeddings/2026-11-02T10-00-00Z.json",
         "runs/generation/2026-11-04T10-00-00Z-claude-haiku-5-5.json",
     ]
+
+
+def test_spending_counts_hosted_reranking_runs_not_yet_logged(tmp_path):
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "PROGRESS.md").write_text(LOG, encoding="utf-8")
+    (tmp_path / "runs").mkdir()
+    _run_log(tmp_path / "runs" / "rerank", "2026-11-06T12-00-00Z-jev-1.14.0.json", 0.03)
+    _run_log(tmp_path / "runs" / "rerank-local", "2026-11-06T10-46-34Z-needed.json", 0.0)
+    spent = spending(tmp_path)
+    assert [name for name, _ in spent.pending] == [
+        "runs/rerank/2026-11-06T12-00-00Z-jev-1.14.0.json"
+    ]
+    assert spent.spent_usd == pytest.approx(read_spend_log(LOG).spent_usd + 0.03)

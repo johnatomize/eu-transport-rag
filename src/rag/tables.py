@@ -22,6 +22,7 @@ from rag.answer_eval import (
     AnswerGroup,
     compare,
     missing_questions,
+    sign_test,
 )
 from rag.answer_eval import evaluate as evaluate_answers
 from rag.chunk import STRATEGIES, Chunk
@@ -87,8 +88,25 @@ def referenced_in_top(run: Mapping, question_ids: Sequence[str], k: int = TOP) -
     return sum(len(entry) > 2 for entry in entries) / len(entries)
 
 
-def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree) -> str:
-    """The retrieval results of `runs`, in the order given, as one Markdown document."""
+RERANK_PASSAGES = 20  # the passages each reranked run of #99 reads a question
+# The runs each reranked run is compared with, question by question (#99): search alone, and
+# Qwen reranking its top 20 as in #84.
+RERANK_REFERENCES = (
+    ("hybrid-paragraph", "no reranking"),
+    ("hybrid-paragraph-rerank20", "Qwen top 20"),
+)
+
+
+def retrieval(
+    runs: Sequence[Mapping],
+    questions: Sequence[Question],
+    tree: Tree,
+    reranker_logs: Sequence[tuple[str, Mapping]] = (),
+) -> str:
+    """The retrieval results of `runs`, in the order given, as one Markdown document.
+
+    `reranker_logs` are the scoring runs of the rerankers, local (`runs/rerank-local/`) and
+    hosted (`runs/rerank/`), by file name, for what reranking a question costs."""
     if not runs:
         raise ValueError("no run logs to make tables from")
     splits = {run["config"]["split"] for run in runs}
@@ -120,7 +138,8 @@ def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree
         f"top {TOP} chunks the same way, so text two overlapping windows share counts twice, "
         "as it would in the context a model is given. A run ending in -refs adds the chunks "
         "its hits cite (cross-reference expansion), and one ending in -rerank*N* has a "
-        "reranking model reorder its top *N* (both in `docs/DECISIONS.md`).",
+        "reranking model reorder its top *N*; -rerank20-blend, -needed and -refs, -jev20 and "
+        "-haiku20 are ways to improve on it (all in `docs/DECISIONS.md`).",
     ]
     for group in GROUPS:
         if group not in groups[names[0]]:
@@ -167,6 +186,10 @@ def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree
         text = q.question.replace("|", "\\|")
         lines.append(_row([qid, q.type, q.phrasing, ", ".join(q.gold_node_ids), text]))
 
+    lines += _reranking(results, runs)
+    if reranker_logs:
+        lines += reranker_costs(reranker_logs)
+
     lines += [
         "",
         "## Runs",
@@ -181,7 +204,8 @@ def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree
     for run in runs:
         config, meta = run["config"], run["run"]
         everyone = groups[meta["name"]]["all"].question_ids
-        placed = f"{referenced_in_top(run, everyone):.0%}" if "expansion" in config else "–"
+        expanded = "expansion" in config or "expansion_after_rerank" in config
+        placed = f"{referenced_in_top(run, everyone):.0%}" if expanded else "–"
         params = ", ".join(f"{k} {v}" for k, v in config.items() if k not in _NOT_PARAMETERS)
         retriever = f"{config['retriever']} ({params})" if params else config["retriever"]
         commit = (meta["commit"] or "unknown")[:7] + (" + changes" if meta["dirty"] else "")
@@ -199,6 +223,103 @@ def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree
             )
         )
     return "\n".join(lines) + "\n"
+
+
+def _ids(ids: Sequence[str]) -> str:
+    return ", ".join(ids) if ids else "–"
+
+
+def _reranking(results: Mapping[str, Evaluation], runs: Sequence[Mapping]) -> list[str]:
+    """Each reranked run against the `RERANK_REFERENCES`, question by question at recall@5."""
+    reranked = [run["run"]["name"] for run in runs if "reranker" in run["config"]]
+    references = [(name, label) for name, label in RERANK_REFERENCES if name in results]
+    if not reranked or not references:
+        return []
+    found = {
+        name: {s.question_id: bool(s.recall[TOP]) for s in result.scores}
+        for name, result in results.items()
+    }
+    against = " and ".join(f"{label} ({name})" for name, label in references)
+    lines = [
+        "",
+        "## Reranking compared",
+        "",
+        f"Each reranked run against {against}, "
+        f"question by question at recall@{TOP}. A question is won when every gold node is in this "
+        f"run's top {TOP} and not in the other's, and lost the other way round; p is the exact "
+        "two-sided sign test on wins and losses. Questions both runs find, or both miss, are "
+        "left out.",
+        "",
+    ]
+    titles = ["Run", f"Recall@{TOP}"]
+    for _, label in references:
+        titles += [f"Won / lost vs {label}", "p", "Won", "Lost"]
+    lines += _header(titles, numeric_from=1)
+    for name in reranked:
+        recall = {g.group: g for g in results[name].groups}["all"].metrics[f"recall@{TOP}"]
+        cells: list[object] = [name, _cell(recall)]
+        for reference, _ in references:
+            if reference == name:
+                cells += ["–", "–", "–", "–"]
+                continue
+            mine, theirs = found[name], found[reference]
+            won = sorted(q for q in mine if mine[q] and not theirs[q])
+            lost = sorted(q for q in mine if theirs[q] and not mine[q])
+            p = sign_test(len(won), len(lost))
+            cells += [f"{len(won)} / {len(lost)}", f"{p:.2f}", _ids(won), _ids(lost)]
+        lines.append(_row(cells))
+    return lines
+
+
+def reranker_costs(logs: Sequence[tuple[str, Mapping]]) -> list[str]:
+    """What scoring a question cost each reranker, from its scoring runs' logs (#99)."""
+    lines = [
+        "",
+        "## What reranking a question costs",
+        "",
+        "From the rerankers' scoring runs on the dev questions. A local run (`runs/rerank-local/`) "
+        "costs nothing, and its time is its scoring time a passage, on the Mac and without "
+        f"loading the model, times the {RERANK_PASSAGES} passages a reranked run reads, since a "
+        "run that only tops up the cache scores fewer. A hosted run (`runs/rerank/`) is paid, "
+        "and its time is each request's round trip, averaged. Its cost is what the API counted, "
+        "at the configured price.",
+        "",
+    ]
+    titles = ["Reranker", "Instruction", "Log", "Questions", "Passages a question",
+              "Seconds a question", "US$ a question", "US$ per 1,000"]  # fmt: skip
+    lines += _header(titles, numeric_from=3)
+    for name, log in logs:
+        config = log["config"]
+        if "result" in log:  # local
+            result = log["result"]
+            questions, pairs = result["questions"], result["pairs"]
+            passages = RERANK_PASSAGES
+            each = result["seconds"] / pairs * passages if pairs else 0.0
+            cost = 0.0
+            instruction = config["instruction_name"]
+        else:  # hosted
+            answered = log["answers"]
+            questions = len(answered)
+            timed = [a["seconds"] for a in answered if a.get("seconds") is not None]
+            each = sum(timed) / len(timed) if timed else 0.0
+            passages = sum(a["passages"] for a in answered) / questions if questions else 0.0
+            cost = log["paid"]["cost_usd"] / questions if questions else 0.0
+            instruction = "–"
+        lines.append(
+            _row(
+                [
+                    config["reranker"],
+                    instruction,
+                    f"`{name}`",
+                    questions,
+                    f"{passages:.0f}",
+                    f"{each:.2f}",
+                    f"{cost:.5f}",
+                    f"{cost * 1000:.2f}",
+                ]
+            )
+        )
+    return lines
 
 
 # --- Answers -------------------------------------------------------------------------------

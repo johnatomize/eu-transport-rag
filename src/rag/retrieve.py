@@ -302,12 +302,20 @@ class Expansion:
     until k chunks are in it. References are followed one step: an added chunk's own references
     are not. A hit with a score of 0 matched nothing, so its references are not followed either.
 
-    An added chunk takes the score of the chunk that cites it, so scores never rise down the
-    list, and `Hit.via` names that chunk. The first k of a longer list are the list for k.
+    An added chunk takes the score of the chunk that cites it, so `Hit.via` names that chunk and,
+    over a search's scores, scores never rise down the list. The first k of a longer list are the
+    list for k.
+
+    With `follow_zero`, a hit's references are followed whatever its score: over a reranker
+    (`Rerank`, #99), whose scores are log-odds or fused ranks, 0 doesn't mean that nothing
+    matched, and scores past the reranked hits are on another scale, so they can rise.
     """
 
-    def __init__(self, retriever: Retriever, chunks: Sequence[Chunk], tree: Tree):
+    def __init__(
+        self, retriever: Retriever, chunks: Sequence[Chunk], tree: Tree, follow_zero: bool = False
+    ):
         self.retriever = retriever
+        self.follow_zero = follow_zero
         self._by_id = {chunk.id: chunk for chunk in chunks}
         if len(self._by_id) != len(chunks):
             raise ValueError("two chunks share an ID")
@@ -327,7 +335,7 @@ class Expansion:
                 continue
             hits.append(hit)
             seen.add(chunk_id)
-            if hit.score != 0:
+            if hit.score != 0 or self.follow_zero:
                 for target in self.references[chunk_id]:
                     if target not in seen:
                         hits.append(Hit(self._by_id[target], hit.score, via=chunk_id))
@@ -354,14 +362,23 @@ class Rerank:
     passage answers the question, which can be 0 or below without meaning that it matched
     nothing); a hit beyond `depth` keeps the wrapped retriever's score, on that scale. `Hit.via`
     is kept, so a wrapped `Expansion` still says what brought a chunk in.
+
+    With `blend` (#99), the top `depth` are not sorted by the scorer alone but by reciprocal rank
+    fusion of two rankings, as hybrid search fuses its two: the wrapped retriever's and the
+    scorer's, each hit getting 1 / (`blend` + rank) from each, ranks counting from 1. A passage
+    the search placed high then needs the reranker to rank it low too before it drops. The hit's
+    score is the fused score; ties keep the wrapped retriever's order.
     """
 
-    def __init__(self, retriever: Retriever, scorer: Scorer, depth: int):
+    def __init__(self, retriever: Retriever, scorer: Scorer, depth: int, blend: int | None = None):
         if depth < 1:
             raise ValueError(f"the reranking depth must be at least 1, not {depth}")
+        if blend is not None and blend < 0:
+            raise ValueError(f"the blend constant must be at least 0, not {blend}")
         self.retriever = retriever
         self.scorer = scorer
         self.depth = depth
+        self.blend = blend
 
     def search(self, query: str, k: int) -> list[Hit]:
         check_k(k)
@@ -373,5 +390,12 @@ class Rerank:
         if not all(math.isfinite(s) for s in scores):
             raise ValueError("the reranker gave a score that is not a finite number")
         order = sorted(range(len(top)), key=lambda i: -scores[i])  # stable: ties keep their order
+        if self.blend is not None:
+            by_reranker = {i: rank for rank, i in enumerate(order, 1)}
+            scores = [
+                math.fsum((1 / (self.blend + i + 1), 1 / (self.blend + by_reranker[i])))
+                for i in range(len(top))
+            ]
+            order = sorted(range(len(top)), key=lambda i: -scores[i])
         reranked = [Hit(top[i].chunk, scores[i], top[i].via) for i in order]
         return (reranked + rest)[:k]

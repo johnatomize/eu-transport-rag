@@ -14,3 +14,10 @@ revision: e61197ed45024b0ed8a2d74b80b4d909f1255473
 device: mps
 max_input_tokens: 8192
 instruction: "Given a question about EU road transport law, retrieve the passages of legislation and Commission guidance that answer it"
+#
+# Other instructions, compared with the main one on the dev questions (#99) and used by no other
+# run. "needed" asks whether the answer relies on the passage, and says that a question may need
+# several: in #84 the main instruction kept one of two needed passages high and let the other
+# slip below a related passage. Its wording was fixed before any score was seen.
+other_instructions:
+  needed: "Given a question about EU road transport law, judge whether the answer relies on this passage. A question may need several passages, such as a rule, its exceptions and the definitions it uses; each of them counts"

@@ -183,3 +183,37 @@ def test_a_log_marks_the_chunks_expansion_added_and_the_table_counts_them(root):
     table = retrieval([log], QUESTIONS, TREE)
     # One of the two places in each top 5 was placed by a reference.
     assert "| bm25-t-refs | bm25 (expansion references) | t | 2 | 50 | 50% | unknown |" in table
+
+
+def test_reranked_runs_are_compared_question_by_question(root):
+    base = run(root, "hybrid-paragraph")
+    reranked = run(root, "hybrid-paragraph-rerank20")
+    reranked["config"]["reranker"] = "some-reranker"
+    reranked["questions"][0]["ranking"] = []  # q001's gold node is no longer found
+    table = retrieval([base, reranked], QUESTIONS, TREE)
+    assert "## Reranking compared" in table
+    section = table.split("## Reranking compared")[1].split("\n## ")[0]
+    assert (
+        "| hybrid-paragraph-rerank20 | 0.50 (0.09–0.91) | 0 / 1 | 1.00 | – | q001 | – | – | – | – |"
+        in section
+    )
+    assert "## Reranking compared" not in retrieval([base], QUESTIONS, TREE)
+
+
+def test_the_cost_of_reranking_comes_from_the_scoring_logs(root):
+    local = {
+        "config": {"reranker": "qwen", "instruction_name": "needed"},
+        "result": {"questions": 60, "pairs": 1200, "seconds": 150.0},
+    }
+    hosted = {
+        "config": {"reranker": "jev"},
+        "paid": {"cost_usd": 0.03},
+        "answers": [{"passages": 20, "seconds": 1.0}, {"passages": 20, "seconds": 2.0}],
+    }
+    table = retrieval([run(root)], QUESTIONS, TREE, [("a.json", local), ("b.json", hosted)])
+    assert "| qwen | needed | `a.json` | 60 | 20 | 2.50 | 0.00000 | 0.00 |" in table
+    assert "| jev | – | `b.json` | 2 | 20 | 1.50 | 0.01500 | 15.00 |" in table
+    # A run that only topped up the cache is timed by the passage, for the 20 a run reads.
+    topped = {**local, "result": {"questions": 30, "pairs": 40, "seconds": 5.0}}
+    table = retrieval([run(root)], QUESTIONS, TREE, [("c.json", topped)])
+    assert "| qwen | needed | `c.json` | 30 | 20 | 2.50 | 0.00000 | 0.00 |" in table

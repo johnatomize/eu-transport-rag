@@ -35,6 +35,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "corpus" / "manifest.yaml"
 QUESTIONS = ROOT / "data" / "questions.v1.jsonl"
 RUNS = ROOT / "runs" / "retrieval"
+RERANKER_RUNS = (ROOT / "runs" / "rerank-local", ROOT / "runs" / "rerank")
 ANSWER_RUNS = ROOT / "runs" / "generation"
 OUT = ROOT / "results" / "retrieval.md"
 ANSWERS_OUT = ROOT / "results" / "answers.md"
@@ -67,9 +68,16 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, ValueError) as e:
             print(f"error: can't read {path.relative_to(ROOT)}: {e}", file=sys.stderr)
             return 1
+    reranker_logs = []
+    for path in sorted(p for d in RERANKER_RUNS for p in d.glob("*.json")):
+        try:
+            reranker_logs.append((path.name, json.loads(path.read_text(encoding="utf-8"))))
+        except (OSError, ValueError) as e:
+            print(f"error: can't read {path.relative_to(ROOT)}: {e}", file=sys.stderr)
+            return 1
     try:
-        tables = {OUT: retrieval(runs, questions, tree)}
-    except ValueError as e:
+        tables = {OUT: retrieval(runs, questions, tree, reranker_logs)}
+    except (ValueError, KeyError) as e:
         print(f"error: {e}; run `make retrieval-runs`", file=sys.stderr)
         return 1
     try:

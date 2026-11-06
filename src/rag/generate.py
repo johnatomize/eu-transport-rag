@@ -192,9 +192,13 @@ def input_problems(e: Estimate, config: GenerationConfig) -> list[str]:
 
 def check_cap(e: Estimate, spent_usd: float, cap_usd: float) -> None:
     """Refuse a run whose most possible cost, on top of what has been spent, passes the cap."""
-    if spent_usd + e.most_usd > cap_usd:
+    check_most(e.most_usd, spent_usd, cap_usd)
+
+
+def check_most(most_usd: float, spent_usd: float, cap_usd: float) -> None:
+    if spent_usd + most_usd > cap_usd:
         raise OverCapError(
-            f"this run may cost up to US${e.most_usd:.4f}; with US${spent_usd:.4f} already "
+            f"this run may cost up to US${most_usd:.4f}; with US${spent_usd:.4f} already "
             f"spent that could pass the approved cap of US${cap_usd:.2f}"
         )
 
@@ -204,15 +208,26 @@ def paid_holds(
 ) -> list[str]:
     """Why a paid run may not start: prices read too long ago, or a cost that could pass the
     cap. Empty when it may."""
+    where = "on Anthropic's pricing page and update config/generation.yaml"
+    return cost_holds(e.most_usd, config.prices_read_on, where, spent_usd, cap_usd, today)
+
+
+def cost_holds(
+    most_usd: float,
+    prices_read_on: dt.date,
+    where: str,
+    spent_usd: float,
+    cap_usd: float,
+    today: dt.date,
+) -> list[str]:
+    """`paid_holds` for any paid run: its most possible cost, and where its prices are read
+    (`where`, as in "read them again <where>")."""
     holds = []
-    age = (today - config.prices_read_on).days
+    age = (today - prices_read_on).days
     if age > PRICE_STALE_AFTER_DAYS:
-        holds.append(
-            f"the prices were read {age} days ago; read them again on Anthropic's pricing page "
-            "and update config/generation.yaml"
-        )
+        holds.append(f"the prices were read {age} days ago; read them again {where}")
     try:
-        check_cap(e, spent_usd, cap_usd)
+        check_most(most_usd, spent_usd, cap_usd)
     except GenerateError as err:
         holds.append(str(err))
     return holds

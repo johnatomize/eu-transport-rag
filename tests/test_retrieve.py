@@ -495,3 +495,47 @@ def test_a_reranker_that_gives_the_wrong_scores_is_refused(scores):
 def test_a_reranking_depth_below_one_is_refused():
     with pytest.raises(ValueError):
         Rerank(SameForAll(CHUNKS), ByWord(), depth=0)
+
+
+class Reversed:
+    """A stand-in reranker that ranks the passages in the reverse of the order it is given."""
+
+    def scores(self, query, texts):
+        return [float(i) for i in range(len(texts))]
+
+
+def test_blending_keeps_a_passage_search_was_sure_of():
+    inner = SameForAll(CHUNKS)
+    alone = Rerank(inner, Reversed(), depth=3).search("rest", 3)
+    assert [h.chunk.id for h in alone] == ["art7", "art6(3)", "art6(1)"]
+    # Fused by RRF at k = 60: the first and the third both get 1/61 + 1/63, more than the
+    # second's 2/62, and their tie keeps search's order.
+    blended = Rerank(inner, Reversed(), depth=3, blend=60).search("rest", 5)
+    assert [h.chunk.id for h in blended] == ["art6(1)", "art7", "art6(3)", "art4(e)", "anx"]
+    assert blended[0].score == pytest.approx(1 / 61 + 1 / 63)
+    assert blended[3:] == inner.search("rest", 5)[3:]  # beyond the depth, nothing changes
+
+
+def test_blending_with_a_reranker_that_agrees_changes_nothing():
+    inner = SameForAll(CHUNKS)
+    agreeing = Rerank(inner, ByWord(), depth=5, blend=60).search("nothing", 5)  # all tie
+    assert [h.chunk.id for h in agreeing] == [c.id for c in CHUNKS]
+
+
+def test_a_negative_blend_constant_is_refused():
+    with pytest.raises(ValueError):
+        Rerank(SameForAll(CHUNKS), ByWord(), depth=2, blend=-1)
+
+
+def test_expansion_over_a_reranker_follows_references_of_a_hit_scored_0(tree):
+    chunks = STRATEGIES["paragraph"](tree)
+    cited = next(c for c in chunks if c.id == "paragraph:561/2006:art6(5)")
+
+    class ZeroScore:
+        def search(self, query, k):
+            return [Hit(cited, 0.0)]
+
+    plain = Expansion(ZeroScore(), chunks, tree).search("q", 3)
+    assert [h.chunk.id for h in plain] == [cited.id]
+    followed = Expansion(ZeroScore(), chunks, tree, follow_zero=True).search("q", 3)
+    assert len(followed) == 3 and all(h.via == cited.id for h in followed[1:])

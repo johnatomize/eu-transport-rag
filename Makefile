@@ -50,8 +50,8 @@ embed-dry-run: ## Print what embedding the corpus and the questions would take (
 embed: ## Report which chunks and questions lack a cached vector; RUN=1 embeds them with the configured model
 	uv run --locked $(if $(RUN),--group local-embed,) python scripts/embed.py $(if $(RUN),--run,)
 
-answers: ## Show what answering the dev questions with Claude would send and cost; RUN=1 sends and pays
-	uv run --locked python scripts/answer.py $(if $(RUN),--run,) $(if $(ROLE),--role $(ROLE),) $(if $(ONLY),--only $(ONLY),)
+answers: ## Show what answering the dev questions with Claude would send and cost; RUN=1 sends and pays, BATCH=1 at half price
+	uv run --locked python scripts/answer.py $(if $(RUN),--run,) $(if $(BATCH),--batch,) $(if $(ROLE),--role $(ROLE),) $(if $(ONLY),--only $(ONLY),)
 
 ask: export Q := $(Q)
 ask: ## Answer one typed question: make ask Q="…" shows the passages and cost; RUN=1 sends and pays
@@ -60,10 +60,10 @@ ask: ## Answer one typed question: make ask Q="…" shows the passages and cost;
 		$(if $(RUN),--run,) $(if $(ROLE),--role $(ROLE),) $(if $(RETRIEVER),--retriever $(RETRIEVER),) \
 		$(if $(STRATEGY),--strategy $(STRATEGY),) $(if $(K),-k $(K),) "$$Q"
 
-judge: ## Judge faithfulness: make judge LOG=<answer run> [ONLY=q003,q004], or CALIBRATE=1 MODEL=…; RUN=1 sends and pays
-	@test -n "$(LOG)$(CALIBRATE)" || { echo 'usage: make judge (LOG=<file in runs/generation/> [ONLY=q003,q004] | CALIBRATE=1) [MODEL=claude-haiku-5-5] [RUN=1]' >&2; exit 1; }
+judge: ## Judge faithfulness: make judge LOG=<answer run> [ONLY=q003,q004], or CALIBRATE=1 MODEL=…; RUN=1 sends and pays, BATCH=1 at half price
+	@test -n "$(LOG)$(CALIBRATE)" || { echo 'usage: make judge (LOG=<file in runs/generation/> [ONLY=q003,q004] | CALIBRATE=1) [MODEL=claude-haiku-5-5] [BATCH=1] [RUN=1]' >&2; exit 1; }
 	uv run --locked python scripts/judge.py $(if $(MODEL),--model $(MODEL),) $(if $(CALIBRATE),--calibrate,) \
-		$(if $(LOG),--log $(LOG),) $(if $(ONLY),--only $(ONLY),) $(if $(RUN),--run,)
+		$(if $(LOG),--log $(LOG),) $(if $(ONLY),--only $(ONLY),) $(if $(BATCH),--batch,) $(if $(RUN),--run,)
 
 vector-index: db-up ## Load chunks and their cached vectors into local pgvector: make vector-index [STRATEGY=paragraph]
 	uv run --locked python scripts/vector_index.py $(if $(STRATEGY),--strategy $(STRATEGY),)

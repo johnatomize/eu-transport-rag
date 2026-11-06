@@ -81,6 +81,11 @@ class CallFailed(GenerateError):
     dropped connection, after which the call may have been billed."""
 
 
+class MaybeSent(CallFailed):
+    """A timeout or dropped connection: the request may have reached the API, and been paid
+    for, without the reply arriving."""
+
+
 def prompt_version() -> str:
     """A short fingerprint of the instructions and the answer schema, for the run log."""
     text = SYSTEM + json.dumps(ANSWER_SCHEMA, sort_keys=True)
@@ -131,6 +136,7 @@ class Estimate:
     model: str
     price: Price
     expected_per_call: int = EXPECTED_OUTPUT_TOKENS  # output tokens a call, thinking included
+    batch: bool = False  # priced for the batch service: `price` is then the batch price
 
     @property
     def padded_input(self) -> int:
@@ -155,9 +161,12 @@ def estimate(
     config: GenerationConfig,
     model: str,
     expected_per_call: int = EXPECTED_OUTPUT_TOKENS,
+    batch: bool = False,
 ) -> Estimate:
+    """The calls' cost at the model's price, or at its batch price with `batch`."""
     if model not in config.prices:
         raise GenerateError(f"{model} has no price in config/generation.yaml")
+    price = config.prices[model]
     counts = [c.input_tokens for c in calls]
     return Estimate(
         calls=len(calls),
@@ -165,8 +174,9 @@ def estimate(
         largest_input=max(counts, default=0),
         max_output_tokens=config.max_output_tokens,
         model=model,
-        price=config.prices[model],
+        price=price.for_batch() if batch else price,
         expected_per_call=expected_per_call,
+        batch=batch,
     )
 
 
@@ -211,6 +221,8 @@ def paid_holds(
 def estimate_report(e: Estimate, unit: str = "answer") -> str:
     """The estimate in words: input with the margin, the expected cost and the most it can cost."""
     calls = f"{e.calls} call{'s' if e.calls != 1 else ''}"
+    if e.batch:
+        calls += " in one batch, at the batch service's half price"
     return (
         f"{calls}: about {e.input_tokens:,} input tokens, {e.padded_input:,} with a "
         f"{MARGIN - 1:.0%} margin.\n"
@@ -283,40 +295,57 @@ class AnthropicClient:
     def send(self, prompt: Prompt) -> Reply:
         try:
             message = self._client.messages.create(
-                model=self.model,
-                max_tokens=self.config.max_output_tokens,
-                system=prompt.system,
-                messages=[{"role": "user", "content": prompt.user}],
-                output_config={
-                    "effort": self.config.effort,
-                    "format": {"type": "json_schema", "schema": self.schema},
-                },
+                **request_params(self.config, self.model, self.schema, prompt)
             )
-        except anthropic.APIConnectionError as e:
-            # A timeout or a dropped connection: the model may have answered, and been paid
-            # for, without the reply arriving. Trying again could pay twice, so it isn't.
-            raise CallFailed(f"{type(e).__name__} (may have been billed): {e}") from e
-        except anthropic.APIStatusError as e:
-            failure = f"HTTP {e.status_code} {type(e).__name__}: {e.message}"
-            if e.status_code == 429 or e.status_code >= 500:  # refused or failed, not billed
-                raise Throttled(failure) from e
-            raise CallFailed(failure) from e
-        except anthropic.AnthropicError as e:  # a reply the SDK couldn't read, say
-            raise CallFailed(f"{type(e).__name__}: {e}") from e
-        texts = [block.text for block in message.content if block.type == "text"]
-        usage = message.usage
-        details = message.stop_details
-        return Reply(
-            text="".join(texts) if texts else None,
-            stop_reason=message.stop_reason,
-            refusal_category=getattr(details, "category", None) if details else None,
-            input_tokens=usage.input_tokens,
-            output_tokens=usage.output_tokens,
-            cache_write_tokens=usage.cache_creation_input_tokens or 0,
-            cache_read_tokens=usage.cache_read_input_tokens or 0,
-            model=message.model,
-            request_id=getattr(message, "_request_id", None),
-        )
+        except anthropic.AnthropicError as e:
+            raise classify(e) from e
+        return to_reply(message, getattr(message, "_request_id", None))
+
+
+def request_params(config: GenerationConfig, model: str, schema: dict, prompt: Prompt) -> dict:
+    """One call's request body, as sent directly or as one request of a batch (`rag.batch`)."""
+    return {
+        "model": model,
+        "max_tokens": config.max_output_tokens,
+        "system": prompt.system,
+        "messages": [{"role": "user", "content": prompt.user}],
+        "output_config": {
+            "effort": config.effort,
+            "format": {"type": "json_schema", "schema": schema},
+        },
+    }
+
+
+def classify(e: anthropic.AnthropicError) -> GenerateError:
+    """The SDK's error as `Throttled` (not billed, may pass) or `CallFailed` (not tried again)."""
+    if isinstance(e, anthropic.APIConnectionError):
+        # A timeout or a dropped connection: the model may have answered, and been paid for,
+        # without the reply arriving. Trying again could pay twice, so it isn't.
+        return MaybeSent(f"{type(e).__name__} (may have been billed): {e}")
+    if isinstance(e, anthropic.APIStatusError):
+        failure = f"HTTP {e.status_code} {type(e).__name__}: {e.message}"
+        if e.status_code == 429 or e.status_code >= 500:  # refused or failed, not billed
+            return Throttled(failure)
+        return CallFailed(failure)
+    return CallFailed(f"{type(e).__name__}: {e}")  # a reply the SDK couldn't read, say
+
+
+def to_reply(message, request_id: str | None) -> Reply:
+    """A message from the API, direct or from a batch, as a `Reply`."""
+    texts = [block.text for block in message.content if block.type == "text"]
+    usage = message.usage
+    details = message.stop_details
+    return Reply(
+        text="".join(texts) if texts else None,
+        stop_reason=message.stop_reason,
+        refusal_category=getattr(details, "category", None) if details else None,
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        cache_write_tokens=usage.cache_creation_input_tokens or 0,
+        cache_read_tokens=usage.cache_read_input_tokens or 0,
+        model=message.model,
+        request_id=request_id,
+    )
 
 
 def send_with_retries(
@@ -326,13 +355,19 @@ def send_with_retries(
 
     Raises the last `Throttled` after `MAX_ATTEMPTS` tries, and `CallFailed` at once.
     """
-    for attempt in range(1, MAX_ATTEMPTS + 1):
+    return with_retries(lambda: client.send(prompt), sleep)
+
+
+def with_retries[T](attempt: Callable[[], T], sleep: Callable[[float], None]) -> tuple[T, int]:
+    """`attempt()`, tried again after `Throttled`, at most `MAX_ATTEMPTS` times with growing
+    waits; its result and the number of tries."""
+    for tries in range(1, MAX_ATTEMPTS + 1):
         try:
-            return client.send(prompt), attempt
+            return attempt(), tries
         except Throttled as e:
-            if attempt == MAX_ATTEMPTS:
-                raise Throttled(f"gave up after {attempt} tries: {e}") from e
-            sleep(BACKOFF_SECONDS[attempt - 1])
+            if tries == MAX_ATTEMPTS:
+                raise Throttled(f"gave up after {tries} tries: {e}") from e
+            sleep(BACKOFF_SECONDS[tries - 1])
     raise AssertionError("unreachable")
 
 
@@ -382,7 +417,7 @@ def failed_stop(reply: Reply) -> str | None:
     return None
 
 
-def _verdict(reply: Reply, call: Call) -> dict:
+def answer_verdict(reply: Reply, call: Call) -> dict:
     """The check's verdict on a reply, for the run log."""
     stopped = failed_stop(reply)
     if stopped:
@@ -404,6 +439,18 @@ def _verdict(reply: Reply, call: Call) -> dict:
     }
 
 
+def answer_head(call: Call) -> dict:
+    """What an answer's run log entry says about its call, before the reply."""
+    return {
+        "id": call.question_id,
+        "retrieved": [c.id for c in call.chunks],
+        "estimated_input_tokens": call.input_tokens,
+    }
+
+
+ANSWER_BLANK = {"ok": False, "answerable": None, "answer": None, "problems": [], "citations": []}
+
+
 def answer_all(
     calls: Sequence[Call],
     client: AnswerClient,
@@ -414,16 +461,18 @@ def answer_all(
     clock: Callable[[], float] = time.monotonic,
 ) -> RunResult:
     """Send each call, check each reply, and keep everything a run log needs (`send_all`)."""
-
-    def head(call: Call) -> dict:
-        return {
-            "id": call.question_id,
-            "retrieved": [c.id for c in call.chunks],
-            "estimated_input_tokens": call.input_tokens,
-        }
-
-    blank = {"ok": False, "answerable": None, "answer": None, "problems": [], "citations": []}
-    return send_all(calls, client, price, head, _verdict, blank, progress, save, sleep, clock)
+    return send_all(
+        calls,
+        client,
+        price,
+        answer_head,
+        answer_verdict,
+        ANSWER_BLANK,
+        progress,
+        save,
+        sleep,
+        clock,
+    )
 
 
 def send_all[C: Sendable](
@@ -455,43 +504,70 @@ def send_all[C: Sendable](
             try:
                 reply, attempts = send_with_retries(client, call.prompt, sleep)
             except (Exception, KeyboardInterrupt) as e:
-                result.failed.append({**head(call), "error": _describe(e)})
+                result.failed.append({**head(call), "error": describe(e)})
                 raise
             # Paid for from here on: recorded before the reply is read, which can't then lose it.
-            entry = {
-                **head(call),
-                "raw": reply.text,
-                "stop_reason": reply.stop_reason,
-                "verdict": copy.deepcopy(blank),
-                "usage": {
-                    "input_tokens": reply.input_tokens,
-                    "output_tokens": reply.output_tokens,
-                    "cache_write_tokens": reply.cache_write_tokens,
-                    "cache_read_tokens": reply.cache_read_tokens,
-                },
-                "cost_usd": round(reply.cost_usd(price), 8),
-                "seconds": round(clock() - started, 2),
-                "attempts": attempts,
-                "model": reply.model,
-                "request_id": reply.request_id,
-            }
+            seconds = round(clock() - started, 2)
+            entry = paid_entry(call, reply, head, blank, price, seconds, attempts)
             result.answers.append(entry)
-            try:
-                entry["verdict"] = verdict(reply, call)
-            except Exception as e:  # a bug in the reading: the entry fails, the run goes on
-                entry["verdict"]["problems"] = [f"the check itself failed: {_describe(e)}"]
+            read_into(entry, reply, call, verdict)
             if save:
                 save(result)
             if progress:
                 progress(done, len(calls))
     except (Exception, KeyboardInterrupt) as e:
-        result.error = _describe(e)
+        result.error = describe(e)
     if save:
         save(result)
     return result
 
 
-def _describe(e: BaseException) -> str:
+def paid_entry[C: Sendable](
+    call: C,
+    reply: Reply,
+    head: Callable[[C], dict],
+    blank: dict,
+    price: Price,
+    seconds: float | None,
+    attempts: int,
+) -> dict:
+    """A run log entry for a reply that was paid for, with `blank` as its verdict until
+    `read_into` reads the reply: the caller keeps the entry first, so nothing that goes wrong
+    in the reading can lose a paid reply. `seconds` is None for a reply from a batch, which
+    has no time of its own (docs/DECISIONS.md, "runs through the batch service").
+    """
+    entry = {
+        **head(call),
+        "raw": reply.text,
+        "stop_reason": reply.stop_reason,
+        "verdict": copy.deepcopy(blank),
+        "usage": {
+            "input_tokens": reply.input_tokens,
+            "output_tokens": reply.output_tokens,
+            "cache_write_tokens": reply.cache_write_tokens,
+            "cache_read_tokens": reply.cache_read_tokens,
+        },
+        "cost_usd": round(reply.cost_usd(price), 8),
+        "seconds": seconds,
+        "attempts": attempts,
+        "model": reply.model,
+        "request_id": reply.request_id,
+    }
+    return entry
+
+
+def read_into[C: Sendable](
+    entry: dict, reply: Reply, call: C, verdict: Callable[[Reply, C], dict]
+) -> None:
+    """Put `verdict`'s reading of the reply in its entry. A bug in the reading fails that one
+    entry, and the run goes on."""
+    try:
+        entry["verdict"] = verdict(reply, call)
+    except Exception as e:
+        entry["verdict"]["problems"] = [f"the check itself failed: {describe(e)}"]
+
+
+def describe(e: BaseException) -> str:
     return f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
 
 
@@ -506,14 +582,16 @@ def run_log(
     split: str,
     e: Estimate,
     result: RunResult,
+    batch: dict | None = None,
 ) -> dict:
     """What a paid run's log holds: the run, its settings, the estimate, and every call made.
 
     `split` is the question set: "dev", or "typed" for a question asked with `make ask`.
     `["paid"]["cost_usd"]` is what `rag.spend` counts until the spend log names the file.
+    A run sent as a batch also holds `batch` (`rag.batch`), and its prices are the batch's.
     """
-    price = config.prices[model]
-    return {
+    price = e.price
+    log = {
         "run": run,
         "config": {
             "model": model,
@@ -542,6 +620,9 @@ def run_log(
         "failed": result.failed,
         "answers": result.answers,
     }
+    if batch is not None:
+        log["batch"] = batch
+    return log
 
 
 def read_api_key(env: Path) -> str | None:

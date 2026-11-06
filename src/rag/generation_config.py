@@ -43,6 +43,10 @@ class Price:
     batch_input: float
     batch_output: float
 
+    def for_batch(self) -> "Price":
+        """The batch service's prices as the input and output prices, to cost a batch's calls."""
+        return Price(self.batch_input, self.batch_output, self.batch_input, self.batch_output)
+
 
 @dataclass(frozen=True)
 class GenerationConfig:

@@ -13,6 +13,11 @@ With `--run` it pays, and only if:
 - no prompt may be over max_prompt_tokens;
 - ANTHROPIC_API_KEY is set, in the environment or in .env.
 
+With `--batch` the calls go as one batch through Anthropic's Message Batches API, at half price
+(`rag.batch`): the estimate and the cap check use the batch prices, and a paid run waits for the
+batch, usually under an hour, at most 24. If it is stopped while it waits, the same command run
+again picks up that batch instead of sending another.
+
 A paid run writes its log to runs/generation/: per question the retrieved chunk IDs, the raw
 reply, the check's verdict and reasons, the tokens the API counted, the cost and the time; for
 the run the model, effort, prompt version and retrieval setup. Adding its row to the spend log,
@@ -28,17 +33,32 @@ import datetime as dt
 import sys
 from pathlib import Path
 
+from rag.batch import (
+    AnthropicBatchClient,
+    BatchStatus,
+    find_batch,
+    found_note,
+    new_batch,
+    opening,
+    pick_up,
+    run_batch,
+    status_line,
+    stopped_note,
+)
 from rag.chunk import STRATEGIES
 from rag.corpus import CorpusError, load_manifest
 from rag.embed import EmbeddingCache, EmbedError
 from rag.embed_estimate import ConfigError, load_config
 from rag.generate import (
+    ANSWER_BLANK,
     EXPECTED_OUTPUT_TOKENS,
     AnthropicClient,
     Call,
     GenerateError,
     RunResult,
     answer_all,
+    answer_head,
+    answer_verdict,
     estimate,
     estimate_report,
     input_problems,
@@ -52,7 +72,7 @@ from rag.generate import (
 from rag.generation_config import ROLES, GenerationConfigError
 from rag.generation_config import load_generation_config as load_generation
 from rag.parse import ParseError, parse_corpus
-from rag.prompt import build_prompt
+from rag.prompt import ANSWER_SCHEMA, build_prompt
 from rag.questions import validate
 from rag.spend import SpendLogError, spending, spending_report
 from rag.vector import RETRIEVERS, VectorIndexError, make_retriever
@@ -77,6 +97,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--strategy", choices=STRATEGIES, default="paragraph")
     parser.add_argument("-k", type=int, default=5, help="chunks per prompt (default 5)")
     parser.add_argument("--only", help="answer only these dev questions: q001,q002")
+    parser.add_argument("--batch", action="store_true", help="send as one batch, at half price")
     args = parser.parse_args(argv)
 
     try:
@@ -113,9 +134,12 @@ def main(argv: list[str] | None = None) -> int:
         calls = []
         for q in dev:
             hits = retriever.search(q.question, args.k)
-            found = tuple(hit.chunk for hit in hits)
-            calls.append(Call(q.id, q.question, build_prompt(q.question, found, docs), found))
-        e = estimate(calls, config, model)
+            shown = tuple(hit.chunk for hit in hits)
+            calls.append(Call(q.id, q.question, build_prompt(q.question, shown, docs), shown))
+        e = estimate(calls, config, model, batch=args.batch)
+        record = new_batch(calls, config, model, ANSWER_SCHEMA)
+        batch = record if args.batch else None
+        pending = find_batch(RUNS, record)  # a batch of these calls that may still be paid for
     except (ConfigError, EmbedError, VectorIndexError, GenerateError, ValueError) as err:
         print(f"error: {err}", file=sys.stderr)
         return 1
@@ -145,13 +169,21 @@ def main(argv: list[str] | None = None) -> int:
     print(spending_report(spent))
     holds = paid_holds(e, config, spent.spent_usd, spent.cap_usd, dt.date.today())
     errors = input_problems(e, config)
+    if pending:
+        note, refused = found_note(*pending, batch_run=args.batch)
+        print(note)
+        if args.batch:  # nothing new is paid for: it passed the checks when it was sent
+            holds, errors = [], refused
+        else:
+            errors += refused
     for problem in errors:
         print(f"error: {problem}", file=sys.stderr)
 
     if not args.run:
         for problem in holds:
             print(f"warning: a paid run would refuse to start: {problem}", file=sys.stderr)
-        print("Nothing was sent. To send and pay: make answers RUN=1")
+        again = " BATCH=1" if args.batch else ""
+        print(f"Nothing was sent. To send and pay: make answers{again} RUN=1")
         return 1 if errors else 0
     key = read_api_key(ENV)
     if not key:
@@ -163,22 +195,43 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     def save(result: RunResult) -> None:
-        write_run_log(path, run_log(run, config, model, retrieval, "dev", e, result))
+        write_run_log(path, run_log(run, config, model, retrieval, "dev", e, result, batch))
 
-    try:  # before anything is sent, so a run that can't be logged never starts
-        run, path = new_run(ROOT, RUNS, model)
-        save(RunResult())
-    except OSError as err:
-        print(f"error: cannot write the run log ({err}); nothing was sent", file=sys.stderr)
-        return 1
-    client = AnthropicClient(config, model, api_key=key)
+    if pending:
+        run, path, batch = pick_up(pending)
+    else:
+        try:  # before anything is sent, so a run that can't be logged never starts
+            run, path = new_run(ROOT, RUNS, model)
+            save(RunResult())
+        except OSError as err:
+            print(f"error: cannot write the run log ({err}); nothing was sent", file=sys.stderr)
+            return 1
 
     def progress(done: int, total: int) -> None:
         if done % 10 == 0 or done == total:
             print(f"  {done}/{total}", flush=True)
 
+    def waiting(status: BatchStatus) -> None:
+        print(status_line(status, len(calls)), flush=True)
+
     try:
-        result = answer_all(calls, client, config.prices[model], progress, save)
+        if batch is None:
+            client = AnthropicClient(config, model, api_key=key)
+            result = answer_all(calls, client, e.price, progress, save)
+        else:
+            batches = AnthropicBatchClient(config, model, api_key=key)
+            print(opening(batch, len(calls)))
+            result = run_batch(
+                calls,
+                batches,
+                batch,
+                e.price,
+                answer_head,
+                answer_verdict,
+                ANSWER_BLANK,
+                save,
+                waiting,
+            )
     except OSError as err:
         print(
             f"error: the run log could not be written ({err}); it is printed above. Save it "
@@ -193,7 +246,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(
         f"Tokens as counted by the API: {result.input_tokens:,} input, "
-        f"{result.output_tokens:,} output; US${result.cost_usd:.4f} at list price."
+        f"{result.output_tokens:,} output; US${result.cost_usd:.4f} at "
+        f"{'the batch price' if batch else 'list price'}."
     )
     shown = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
     print(
@@ -201,6 +255,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     if result.error:
         print(f"error: stopped early: {result.error}", file=sys.stderr)
+        if note := stopped_note(batch):
+            print(note, file=sys.stderr)
         return 1
     return 0
 

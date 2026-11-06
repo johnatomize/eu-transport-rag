@@ -19,6 +19,10 @@ the verdicts. The labelled answers, recognised by their text, are judged only by
 until a calibration run exists, and never by `--only`, so trying the judge out never shows it,
 or whoever builds it, how it does on them.
 
+With `--batch` the judgements go as one batch through the Message Batches API, at half price,
+as for `make answers BATCH=1` (`rag.batch`): a run stopped while it waits is picked up by the
+same command run again, and nothing is sent twice.
+
 A paid run writes its log to runs/judge/, named `calibration-…`, `try-…` or `run-…` by what it
 judged. `make tables` compares each calibration run with the owner's labels in
 results/faithfulness_judge.md. Adding the run's row to the spend log, naming the file, stays a
@@ -31,6 +35,18 @@ import json
 import sys
 from pathlib import Path
 
+from rag.batch import (
+    AnthropicBatchClient,
+    BatchStatus,
+    find_batch,
+    found_note,
+    new_batch,
+    opening,
+    pick_up,
+    run_batch,
+    status_line,
+    stopped_note,
+)
 from rag.corpus import CorpusError, load_manifest
 from rag.faithfulness import LABELLED_RUNS, answers, by_id, select, validate_labels
 from rag.generate import (
@@ -81,6 +97,7 @@ def main(argv: list[str] | None = None) -> int:
     which.add_argument("--log", help="an answer run log's file name in runs/generation/")
     parser.add_argument("--only", help="with --log: only these questions' answers, q003,q004")
     parser.add_argument("--run", action="store_true", help="send the calls and pay for them")
+    parser.add_argument("--batch", action="store_true", help="send as one batch, at half price")
     args = parser.parse_args(argv)
     if args.only and not args.log:
         parser.error("--only goes with --log")
@@ -117,7 +134,10 @@ def main(argv: list[str] | None = None) -> int:
         calls = [make_call(question_of[e["id"]], e, run, tree, docs) for run, e in picked]
         if not calls:
             raise ValueError("no answer to judge")
-        e = estimate(calls, config, args.model, EXPECTED_OUTPUT_TOKENS)
+        e = estimate(calls, config, args.model, EXPECTED_OUTPUT_TOKENS, batch=args.batch)
+        record = new_batch(calls, config, args.model, JUDGE_SCHEMA)
+        batch = record if args.batch else None
+        pending = find_batch(RUNS, record)  # a batch of these calls that may still be paid for
     except (OSError, ValueError, KeyError, GenerateError) as err:
         print(f"error: {err}", file=sys.stderr)
         return 1
@@ -140,6 +160,13 @@ def main(argv: list[str] | None = None) -> int:
     print(spending_report(spent))
     holds = paid_holds(e, config, spent.spent_usd, spent.cap_usd, dt.date.today())
     errors = input_problems(e, config)
+    if pending:
+        note, refused = found_note(*pending, batch_run=args.batch)
+        print(note)
+        if args.batch:  # nothing new is paid for: it passed the checks when it was sent
+            holds, errors = [], refused
+        else:
+            errors += refused
     for problem in errors:
         print(f"error: {problem}", file=sys.stderr)
 
@@ -158,24 +185,36 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     def save(result: RunResult) -> None:
-        write_run_log(path, run_log(run, config, args.model, kind, answer_runs, e, result))
+        log = run_log(run, config, args.model, kind, answer_runs, e, result, batch)
+        write_run_log(path, log)
 
-    try:  # before anything is sent, so a run that can't be logged never starts
-        run, path = new_run(ROOT, RUNS, args.model, prefix=f"{kind}-")
-        save(RunResult())
-    except OSError as err:
-        print(f"error: cannot write the run log ({err}); nothing was sent", file=sys.stderr)
-        return 1
-    client = AnthropicClient(config, args.model, api_key=key, schema=JUDGE_SCHEMA)
+    if pending:
+        run, path, batch = pick_up(pending)
+    else:
+        try:  # before anything is sent, so a run that can't be logged never starts
+            run, path = new_run(ROOT, RUNS, args.model, prefix=f"{kind}-")
+            save(RunResult())
+        except OSError as err:
+            print(f"error: cannot write the run log ({err}); nothing was sent", file=sys.stderr)
+            return 1
 
     def progress(done: int, total: int) -> None:
         if done % 10 == 0 or done == total:
             print(f"  {done}/{total}", flush=True)
 
+    def waiting(status: BatchStatus) -> None:
+        print(status_line(status, len(calls)), flush=True)
+
     try:
-        result = send_all(
-            calls, client, config.prices[args.model], head, read_reply, BLANK, progress, save
-        )
+        if batch is None:
+            client = AnthropicClient(config, args.model, api_key=key, schema=JUDGE_SCHEMA)
+            result = send_all(calls, client, e.price, head, read_reply, BLANK, progress, save)
+        else:
+            batches = AnthropicBatchClient(config, args.model, api_key=key, schema=JUDGE_SCHEMA)
+            print(opening(batch, len(calls)))
+            result = run_batch(
+                calls, batches, batch, e.price, head, read_reply, BLANK, save, waiting
+            )
     except OSError as err:
         print(
             f"error: the run log could not be written ({err}); it is printed above. Save it "
@@ -192,7 +231,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(
         f"Tokens as counted by the API: {result.input_tokens:,} input, "
-        f"{result.output_tokens:,} output; US${result.cost_usd:.4f} at list price."
+        f"{result.output_tokens:,} output; US${result.cost_usd:.4f} at "
+        f"{'the batch price' if batch else 'list price'}."
     )
     shown = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
     print(
@@ -202,6 +242,8 @@ def main(argv: list[str] | None = None) -> int:
         print("Run `make tables` to compare it with the owner's labels.")
     if result.error:
         print(f"error: stopped early: {result.error}", file=sys.stderr)
+        if note := stopped_note(batch):
+            print(note, file=sys.stderr)
         return 1
     return 0
 

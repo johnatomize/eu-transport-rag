@@ -25,9 +25,9 @@ _AMOUNT = re.compile(r"-?\d+(?:\.\d+)?")
 
 
 # Where paid runs write their logs; each log's ["paid"]["cost_usd"] is what the run cost.
-# runs/ask holds one log for each question asked and paid for with `make ask`, and runs/judge
-# the faithfulness judge's runs.
-PAID_RUNS = ("runs/embeddings", "runs/generation", "runs/ask", "runs/judge")
+# runs/ask holds one log for each question asked and paid for with `make ask`, runs/judge
+# the faithfulness judge's runs, and runs/rerank the hosted rerankers' runs (#99).
+PAID_RUNS = ("runs/embeddings", "runs/generation", "runs/ask", "runs/judge", "runs/rerank")
 # A run sent as a batch (`rag.batch`) whose results are in its log, or which was never created.
 # Any other batch may still be paid for, so it is counted at the most it can cost.
 BATCH_SETTLED = ("collected", "not_sent")

@@ -53,7 +53,10 @@ _SETTINGS = {
     "device": str,
     "max_input_tokens": int,
     "instruction": str,
+    "other_instructions": dict,
 }
+_OPTIONAL = {"other_instructions"}
+_NAME = re.compile(r"[a-z][a-z0-9-]*")
 
 # The chat the model was trained to answer, from its model card at the pinned revision.
 PREFIX = (
@@ -79,6 +82,18 @@ class RerankConfig:
     device: str  # "mps" (the Mac's GPU) or "cpu"
     max_input_tokens: int
     instruction: str
+    # Instructions compared with the main one (#99), by a short name such as "needed"; their
+    # scores share the cache file, since each score's key holds its instruction.
+    other_instructions: tuple[tuple[str, str], ...] = ()
+
+    def instruction_named(self, name: str | None) -> str:
+        """The instruction a run names; None is the main one."""
+        if name is None:
+            return self.instruction
+        found = dict(self.other_instructions).get(name)
+        if found is None:
+            raise RerankError(f"config/rerank.yaml has no other instruction named {name!r}")
+        return found
 
 
 def load_config(path: Path) -> RerankConfig:
@@ -91,7 +106,7 @@ def load_config(path: Path) -> RerankConfig:
         raise RerankError(f"{path.name}: not valid YAML ({e})") from e
     if not isinstance(raw, dict):
         raise RerankError(f"{path.name}: expected a mapping of settings")
-    problems = [f"missing {k}" for k in _SETTINGS if k not in raw]
+    problems = [f"missing {k}" for k in _SETTINGS if k not in raw and k not in _OPTIONAL]
     problems += [f"unknown {k}" for k in raw if k not in _SETTINGS]
     problems += [
         f"{k} should be {kind.__name__}"
@@ -107,14 +122,22 @@ def load_config(path: Path) -> RerankConfig:
             problems.append("max_input_tokens should be above 0")
         if not raw["instruction"].strip():
             problems.append("instruction should not be empty")
+        for name, text in raw.get("other_instructions", {}).items():
+            if not (isinstance(name, str) and _NAME.fullmatch(name)):
+                problems.append(f"other instruction name {name!r} should be lowercase-with-dashes")
+            elif not (isinstance(text, str) and text.strip()):
+                problems.append(f"other instruction {name} should be non-empty text")
+            elif text == raw["instruction"]:
+                problems.append(f"other instruction {name} is the main instruction")
     if problems:
         raise RerankError(f"{path.name}: " + "; ".join(problems))
-    return RerankConfig(**raw)
+    others = tuple(sorted(raw.pop("other_instructions", {}).items()))
+    return RerankConfig(**raw, other_instructions=others)
 
 
-def model_input(config: RerankConfig, query: str, text: str) -> str:
+def model_input(instruction: str, query: str, text: str) -> str:
     """The user's turn of the chat: the instruction, the question and the passage."""
-    return f"<Instruct>: {config.instruction}\n<Query>: {query}\n<Document>: {text}"
+    return f"<Instruct>: {instruction}\n<Query>: {query}\n<Document>: {text}"
 
 
 def setting_name(config: RerankConfig) -> str:
@@ -123,12 +146,13 @@ def setting_name(config: RerankConfig) -> str:
     return f"{model}-{config.revision[:12]}-{config.device}"
 
 
-def cache_key(config: RerankConfig, query: str, text: str) -> str:
+def cache_key(config: RerankConfig, query: str, text: str, instruction: str | None = None) -> str:
+    """The pair's key; `instruction` is the text of the instruction, the main one by default."""
     record = {
         "model": config.model_id,
         "revision": config.revision,
         "device": config.device,
-        "instruction": config.instruction,
+        "instruction": config.instruction if instruction is None else instruction,
         "query": query,
         "text": text,
     }
@@ -177,13 +201,16 @@ class ScoreCache:
     def __len__(self) -> int:
         return len(self._entries)
 
-    def get(self, query: str, text: str) -> Entry | None:
-        return self._entries.get(cache_key(self.config, query, text))
+    def get(self, query: str, text: str, instruction: str | None = None) -> Entry | None:
+        return self._entries.get(cache_key(self.config, query, text, instruction))
 
-    def put(self, query: str, text: str, score: float, tokens: int) -> None:
+    def put(
+        self, query: str, text: str, score: float, tokens: int, instruction: str | None = None
+    ) -> None:
         if not math.isfinite(score):
             raise RerankError("got a score that is not a finite number; not cached")
-        self._entries[cache_key(self.config, query, text)] = Entry(float(score), tokens)
+        key = cache_key(self.config, query, text, instruction)
+        self._entries[key] = Entry(float(score), tokens)
         self._dirty = True
 
     def save(self) -> None:
@@ -208,11 +235,12 @@ class CachedScorer:
     scored and unscored passages; `make rerank` reports what is missing and scores it.
     """
 
-    def __init__(self, cache: ScoreCache):
+    def __init__(self, cache: ScoreCache, instruction: str | None = None):
         self.cache = cache
+        self.instruction = instruction  # its text; None is the main instruction
 
     def scores(self, query: str, texts: Sequence[str]) -> list[float]:
-        entries = [self.cache.get(query, t) for t in texts]
+        entries = [self.cache.get(query, t, self.instruction) for t in texts]
         missing = sum(1 for e in entries if e is None)
         if missing:
             raise MissingScoresError(
@@ -222,9 +250,11 @@ class CachedScorer:
         return [e.score for e in entries if e is not None]
 
 
-def missing_pairs(pairs: Iterable[tuple[str, str]], cache: ScoreCache) -> list[tuple[str, str]]:
+def missing_pairs(
+    pairs: Iterable[tuple[str, str]], cache: ScoreCache, instruction: str | None = None
+) -> list[tuple[str, str]]:
     """The distinct (question, passage) pairs with no cached score, in the order first seen."""
-    return [p for p in dict.fromkeys(pairs) if cache.get(*p) is None]
+    return [p for p in dict.fromkeys(pairs) if cache.get(*p, instruction) is None]
 
 
 # --- The local model -----------------------------------------------------------------------
@@ -272,7 +302,7 @@ class LocalReranker:
 
         # The model card tokenizes with the defaults, which for this tokenizer add nothing; if a
         # library version starts adding tokens, the input would differ from the card's.
-        sample = model_input(config, "q", "d")
+        sample = model_input(config.instruction, "q", "d")
         if tokenizer(sample)["input_ids"] != tokenizer.encode(sample, add_special_tokens=False):
             raise RerankError("the tokenizer adds tokens by default; check the library version")
 
@@ -287,9 +317,10 @@ class LocalReranker:
 
         return cls(config, encode, run)
 
-    def score(self, query: str, text: str) -> tuple[float, int]:
+    def score(self, query: str, text: str, instruction: str | None = None) -> tuple[float, int]:
         """The log-odds that `text` answers `query`, and the input's length in tokens."""
-        ids = self._prefix + self._encode(model_input(self.config, query, text)) + self._suffix
+        asked = self.config.instruction if instruction is None else instruction
+        ids = self._prefix + self._encode(model_input(asked, query, text)) + self._suffix
         if len(ids) > self.config.max_input_tokens:
             raise RerankError(
                 f"an input of {len(ids):,} tokens is over the limit of "
@@ -306,6 +337,7 @@ def score_missing(
     cache: ScoreCache,
     model: LocalReranker,
     progress: Callable[[int, int], None] | None = None,
+    instruction: str | None = None,
 ) -> str | None:
     """Score each pair with `model` and cache it; returns the error that stopped the run, if any.
 
@@ -315,8 +347,8 @@ def score_missing(
     error = None
     try:
         for done, (query, text) in enumerate(pairs, 1):
-            score, tokens = model.score(query, text)
-            cache.put(query, text, score, tokens)
+            score, tokens = model.score(query, text, instruction)
+            cache.put(query, text, score, tokens, instruction)
             if done % SAVE_EVERY == 0:
                 cache.save()
             if progress:

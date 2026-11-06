@@ -1,0 +1,21 @@
+# The hosted rerankers compared with the local one on the dev questions (#99; docs/DECISIONS.md,
+# "ways to improve reranking"). Both are paid: `make rerank WITH=jev` or `WITH=haiku` shows what
+# a run would send and cost, and RUN=1 pays, within the approved cap. Their wording is in
+# src/rag/hosted_rerank.py, and its hash is part of each reranker's name.
+#
+# Jev (TypeSafe AI): a pinned version, not an alias, so a new release can't change the scores.
+# The price is per million input tokens, from https://docs.typesafe.ai/go/models.md, read on
+# prices_read_on; output tokens are free. The key is TYPESAFE_API_KEY in .env.
+jev:
+  model: jev-1.14.0
+  price_input_per_million: 0.042
+  prices_read_on: 2026-11-06
+  timeout_seconds: 60.0
+
+# Claude Haiku 5.5 reading the top passages together and returning an order, with the key and
+# prices of config/generation.yaml. Low effort: it orders 20 short passages and must stay quick
+# enough to run on every question; a reply cut off at max_output_tokens leaves search's order.
+haiku:
+  model: claude-haiku-5-5
+  effort: low
+  max_output_tokens: 2000

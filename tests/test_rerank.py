@@ -158,10 +158,10 @@ def test_the_model_reads_the_chat_its_card_gives():
     fed: list[list[int]] = []
     model = LocalReranker(config, encode, lambda ids: fed.append(ids) or 0.5)
     score, tokens = model.score(Q, "Nine hours.")
-    text = PREFIX + model_input(config, Q, "Nine hours.") + SUFFIX
+    text = PREFIX + model_input(config.instruction, Q, "Nine hours.") + SUFFIX
     assert fed == [encode(text)]
     assert (score, tokens) == (0.5, len(text))
-    assert model_input(config, Q, "Nine hours.") == (
+    assert model_input(config.instruction, Q, "Nine hours.") == (
         f"<Instruct>: Find the rule\n<Query>: {Q}\n<Document>: Nine hours."
     )
 
@@ -194,3 +194,68 @@ def test_scoring_caches_each_pair_and_keeps_the_work_when_it_fails(tmp_path):
     assert error == "RuntimeError: out of memory"
     again = ScoreCache.load(tmp_path, CONFIG)
     assert len(again) == 2 and again.get("q", "c") is None
+
+
+# --- Other instructions (#99) --------------------------------------------------------------
+
+NEEDED = dataclasses.replace(CONFIG, other_instructions=(("needed", "Find what the answer needs"),))
+
+
+def test_the_committed_config_has_the_needed_instruction():
+    config = load_config(ROOT / "config" / "rerank.yaml")
+    assert "several passages" in config.instruction_named("needed")
+    assert config.instruction_named(None) == config.instruction
+
+
+def test_an_unknown_instruction_name_is_refused():
+    with pytest.raises(RerankError, match="no other instruction"):
+        NEEDED.instruction_named("other")
+
+
+@pytest.mark.parametrize(
+    ("others", "message"),
+    [
+        ("  Bad Name: text\n", "lowercase"),
+        ("  needed: ''\n", "non-empty"),
+        ("  needed: i\n", "is the main instruction"),
+    ],
+)
+def test_a_bad_other_instruction_is_refused(tmp_path, others, message):
+    path = tmp_path / "rerank.yaml"
+    path.write_text(
+        "model_id: x\nrevision: " + "a" * 40 + "\ndevice: mps\nmax_input_tokens: 10\n"
+        "instruction: i\nother_instructions:\n" + others,
+        encoding="utf-8",
+    )
+    with pytest.raises(RerankError, match=message):
+        load_config(path)
+
+
+def test_the_main_instructions_keys_are_unchanged_by_other_instructions():
+    assert cache_key(NEEDED, Q, "text") == cache_key(CONFIG, Q, "text")
+    assert cache_key(NEEDED, Q, "text", CONFIG.instruction) == cache_key(CONFIG, Q, "text")
+    assert cache_key(NEEDED, Q, "text", "Find what the answer needs") != cache_key(
+        CONFIG, Q, "text"
+    )
+
+
+def test_each_instruction_has_its_own_scores_in_one_file(tmp_path):
+    other = NEEDED.instruction_named("needed")
+    cache = ScoreCache.load(tmp_path, NEEDED)
+    cache.put(Q, "a", 1.0, 5)
+    cache.put(Q, "a", -2.0, 6, other)
+    cache.save()
+    again = ScoreCache.load(tmp_path, NEEDED)
+    assert CachedScorer(again).scores(Q, ["a"]) == [1.0]
+    assert CachedScorer(again, other).scores(Q, ["a"]) == [-2.0]
+    assert missing_pairs([(Q, "a"), (Q, "b")], again, other) == [(Q, "b")]
+
+
+def test_the_model_is_asked_with_the_instruction_given():
+    fed: list[list[int]] = []
+    config = dataclasses.replace(NEEDED, max_input_tokens=10_000)
+    model = LocalReranker(config, encode, lambda ids: fed.append(ids) or 0.5)
+    model.score(Q, "Nine hours.", "Find what the answer needs")
+    assert fed == [
+        encode(PREFIX + model_input("Find what the answer needs", Q, "Nine hours.") + SUFFIX)
+    ]

@@ -1,0 +1,31 @@
+{
+ "run": {
+  "created": "2026-11-06T10:46:34+00:00",
+  "commit": "9842ec8b36f55f71cbb45fe473c72a211e14f19c",
+  "dirty": true
+ },
+ "config": {
+  "reranker": "Qwen_Qwen3-Reranker-0.6B-e61197ed4502-mps",
+  "model_id": "Qwen/Qwen3-Reranker-0.6B",
+  "revision": "e61197ed45024b0ed8a2d74b80b4d909f1255473",
+  "instruction_name": "needed",
+  "instruction": "Given a question about EU road transport law, judge whether the answer relies on this passage. A question may need several passages, such as a rule, its exceptions and the definitions it uses; each of them counts"
+ },
+ "environment": {
+  "device": "mps",
+  "machine": "arm64",
+  "system": "Darwin 25.5.0",
+  "python": "3.12.15",
+  "torch": "2.14.1",
+  "transformers": "5.21.0",
+  "tokenizers": "0.23.3"
+ },
+ "result": {
+  "questions": 60,
+  "pairs": 1200,
+  "tokens": 370469,
+  "load_seconds": 4.1,
+  "seconds": 157.7
+ },
+ "error": null
+}

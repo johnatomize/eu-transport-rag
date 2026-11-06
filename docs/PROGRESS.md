@@ -181,7 +181,7 @@ Checkpoints A–E are built and reviewed by the owner; D, the keyword retrieval 
 
 Every cost goes here: date, what it paid for, amount and running total. A paid step needs the owner's OK and a dry-run estimate first.
 
-Approved cap: **US$20 for the whole project** (E, F and G), approved by the owner on 2026-10-31 after the embedding dry-run (#44, #45).
+Approved cap: **US$100 for the whole project**, raised by the owner on 2026-11-06 from the US$20 approved on 2026-10-31 after the embedding dry-run (#44, #45): the answers are paid from the owner's US$100 of Anthropic credits, so the total may pass US$20. Each paid issue still has its own limit, approved by the owner after its dry run, against runs that get stuck or repeat: US$20 for the dev answer runs (#85).
 
 The owner upgraded the AWS project from the Free plan (US$100 of credits until 2027-04-30) to the paid plan by 2026-11-03, so the card can now be charged; whether the credits carried over is still to be checked in AWS Settings. Costs are logged at their price before credits, so the cap applies to usage whether the credits or the card pay for it. Answers in F and G are paid on the owner's Anthropic account instead (decided 2026-11-03, reasons in `DECISIONS.md`), which holds about US$100 of promotional credits; their spend is logged here the same way, at list price, and counts against the same cap. The AWS budgets below can't see it, so a spend limit on the Anthropic Console is set before the first paid answer. Two AWS budgets email the owner: AWS's zero-spend template (spending over US$0.01 in a month), and *eu-transport-rag cap* (US$20 a month, counted before credits, with alerts at 10%, 50% and 100% of actual spend and 100% of forecast spend).
 

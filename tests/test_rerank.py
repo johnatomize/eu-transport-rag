@@ -99,11 +99,11 @@ def test_scores_survive_a_reload_and_the_file_is_sorted(tmp_path):
 @pytest.mark.parametrize(
     ("line", "message"),
     [
-        ('{"key": "x", "tokens": 1, "score": 1.0}', "sha256"),
-        ('{"key": "' + "a" * 64 + '", "tokens": -1, "score": 1.0}', "count"),
-        ('{"key": "' + "a" * 64 + '", "tokens": 1, "score": NaN}', "finite"),
-        ('{"key": "' + "a" * 64 + '", "tokens": 1, "score": "1"}', "finite"),
-        ('{"key": "' + "a" * 64 + '", "tokens": 1}', "score"),
+        ('{"pair": "x", "tokens": 1, "score": 1.0}', "sha256"),
+        ('{"pair": "' + "a" * 64 + '", "tokens": -1, "score": 1.0}', "count"),
+        ('{"pair": "' + "a" * 64 + '", "tokens": 1, "score": NaN}', "finite"),
+        ('{"pair": "' + "a" * 64 + '", "tokens": 1, "score": "1"}', "finite"),
+        ('{"pair": "' + "a" * 64 + '", "tokens": 1}', "score"),
     ],
 )
 def test_a_damaged_cache_file_is_refused(tmp_path, line, message):
@@ -113,7 +113,7 @@ def test_a_damaged_cache_file_is_refused(tmp_path, line, message):
 
 
 def test_a_key_seen_twice_is_refused(tmp_path):
-    line = '{"key": "' + "a" * 64 + '", "tokens": 1, "score": 1.0}\n'
+    line = '{"pair": "' + "a" * 64 + '", "tokens": 1, "score": 1.0}\n'
     (tmp_path / f"{setting_name(CONFIG)}.jsonl").write_text(line * 2, encoding="utf-8")
     with pytest.raises(RerankError, match="twice"):
         ScoreCache.load(tmp_path, CONFIG)

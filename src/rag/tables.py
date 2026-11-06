@@ -2,13 +2,14 @@
 
 Nothing here retrieves anything or calls a model: each retrieval run log is scored with
 `rag.retrieval_eval`, and each answer run log with `rag.answer_eval`, against the question set
-and the parsed corpus; each calibration run of the faithfulness judge is compared with the
-owner's labels (`rag.faithfulness.agreement`). The tables are written as Markdown to
-`results/`.
+and the parsed corpus, and with the chosen faithfulness judge's run on it, if there is one
+(#95); each calibration run of the judge is compared with the owner's labels
+(`rag.faithfulness.agreement`). The tables are written as Markdown to `results/`.
 """
 
 import re
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 
 from rag.answer_eval import (
     ANSWERED,
@@ -32,9 +33,10 @@ from rag.faithfulness import (
     agreement,
     sentences,
 )
+from rag.judge import judgeable
 from rag.parse import Tree
 from rag.questions import PHRASINGS, SPLITS, TYPES, Question
-from rag.retrieval_eval import CUTOFF, Evaluation, Metric, evaluate
+from rag.retrieval_eval import CUTOFF, Evaluation, Metric, evaluate, wilson
 from rag.runlog import rankings
 
 GROUPS = ("all", "paraphrased", "verbatim")
@@ -279,6 +281,7 @@ def _split_section(
     split: str,
     runs: Sequence[tuple[str, Mapping, AnswerEvaluation]],
     words: Mapping[str, Mapping[str, int]],
+    faithful: Mapping[str, str],
 ) -> list[str]:
     names = [name for name, _, _ in runs]
     groups = {name: {g.group: g for g in ev.groups} for name, _, ev in runs}
@@ -296,9 +299,10 @@ def _split_section(
         "### Quality",
         "",
     ]
-    lines += _header(["Run", *(title for _, title in QUALITY)])
+    lines += _header(["Run", *(title for _, title in QUALITY), "Faithful"])
     for name in names:
-        lines.append(_row([name, *(_maybe(groups[name]["all"], key) for key, _ in QUALITY)]))
+        cells = [_maybe(groups[name]["all"], key) for key, _ in QUALITY]
+        lines.append(_row([name, *cells, faithful[name]]))
 
     lines += ["", "### Cost and speed per question", ""]
     lines += _header(["Run", *(title for _, title, _ in COST), "Words shown"])
@@ -380,11 +384,155 @@ def _paired(runs: Sequence[tuple[str, Mapping, AnswerEvaluation]]) -> list[str]:
     return [*lines, "", note + "."]
 
 
+@dataclass(frozen=True)
+class Judged:
+    """What the chosen judge's run on one answer run found (#95)."""
+
+    file: str  # the judge's run log
+    judgeable: int  # answers of the run that passed the check and aren't refusals
+    judged: int  # of those, judged; fewer means the judge run is unfinished
+    usable: int  # of those, with a usable verdict
+    supported: int  # of those, supported
+    cost_usd: float  # what the judge run paid
+    error: str | None  # why the judge run stopped early, if it did
+
+    @property
+    def finished(self) -> bool:
+        return self.judged == self.judgeable
+
+
+def _check_judge_shape(file: str, log: Mapping) -> None:
+    try:
+        config = log["config"]
+        [config["model"], config["judge_prompt_version"], config["answer_runs"],
+         log["judgements"], log["error"], log["paid"]["cost_usd"]]  # fmt: skip
+    except (KeyError, TypeError) as e:
+        raise ValueError(f"{file} is not a judge run log: it has no {e}") from None
+    if config.get("kind") != "run":
+        raise ValueError(f"{file} is a {config.get('kind')!r} run of the judge, not a whole run")
+    if len(config["answer_runs"]) != 1:
+        raise ValueError(f"{file} judges {len(config['answer_runs'])} answer runs, not one")
+
+
+def judged(answer_file: str, answer_log: Mapping, judge_file: str, judge_log: Mapping) -> Judged:
+    """Count the judge's verdicts in `judge_log` on the answers of `answer_log`.
+
+    Each judgement must be of an answer in that run that passed the check and isn't a refusal,
+    with that answer's text, and only once. A judgement the judge gave no usable verdict on is
+    judged but not usable; a call that got no reply is not judged.
+    """
+    answers_by_id = {e["id"]: e for e in answer_log["answers"] if judgeable(e)}
+    seen: set[str] = set()
+    usable = supported = 0
+    for j in judge_log["judgements"]:
+        qid = j["id"]
+        where = f"{judge_file}, {qid}"
+        if j["answer_run"] != answer_file:
+            raise ValueError(f"{where}: judges an answer of {j['answer_run']}, not {answer_file}")
+        if qid not in answers_by_id:
+            raise ValueError(f"{where}: not an answer of {answer_file} that passed the check")
+        if qid in seen:
+            raise ValueError(f"{where}: judged twice")
+        seen.add(qid)
+        # Compared as words, so that a change in how answers are split into sentences doesn't
+        # matter, but a different answer does.
+        if " ".join(j["sentences"]).split() != answers_by_id[qid]["verdict"]["answer"].split():
+            raise ValueError(f"{where}: the judged text isn't the answer in {answer_file}")
+        verdict = j["verdict"]
+        if verdict["ok"]:
+            usable += 1
+            supported += bool(verdict["supported"])
+    error = judge_log["error"]
+    cost = judge_log["paid"]["cost_usd"]
+    return Judged(judge_file, len(answers_by_id), len(seen), usable, supported, cost, error)
+
+
+def match_judges(
+    judge_logs: Sequence[tuple[str, Mapping]],
+    judge: tuple[str, str] | None,
+    answer_files: Sequence[str],
+) -> tuple[dict[str, list[tuple[str, Mapping]]], list[str]]:
+    """The chosen judge's runs, `(model, instructions version)`, of each answer run.
+
+    A judge run names the answer run it judged by its file name. Returns the chosen judge's
+    runs of each answer file that has any, oldest first, and a note on each judge run not
+    counted because another judge, or other instructions, made it. A judge run of an answer run
+    not in `answer_files` is refused.
+    """
+    matched: dict[str, list[tuple[str, Mapping]]] = {}
+    notes = []
+    for file, log in sorted(judge_logs, key=lambda item: item[0]):
+        _check_judge_shape(file, log)
+        config = log["config"]
+        (answer_file,) = config["answer_runs"]
+        if answer_file not in answer_files:
+            raise ValueError(f"{file} judges {answer_file}, which isn't in runs/generation/")
+        if judge is None or (config["model"], config["judge_prompt_version"]) != judge:
+            chosen = f"{judge[0]} with `{judge[1]}`" if judge else "none chosen"
+            notes.append(
+                f"`{file}`: judged by {config['model']} with instructions "
+                f"`{config['judge_prompt_version']}`, not the chosen judge ({chosen})"
+            )
+            continue
+        matched.setdefault(answer_file, []).append((file, log))
+    return matched, notes
+
+
+def choose_judged(
+    answer_file: str, answer_log: Mapping, candidates: Sequence[tuple[str, Mapping]]
+) -> tuple[Judged, list[str]]:
+    """The judge run that counts for one answer run, from the chosen judge's runs of it.
+
+    The finished run counts, so a run stopped partway can be finished by judging the answer run
+    again. Each unfinished run is noted; with none finished, the latest is shown as unfinished.
+    Two finished runs are refused, as two answer runs of one setup are.
+    """
+    results = [judged(answer_file, answer_log, file, log) for file, log in candidates]
+    done = [r for r in results if r.finished]
+    if len(done) > 1:
+        raise ValueError(
+            f"{' and '.join(r.file for r in done)} each judge every answer of {answer_file}; "
+            "once both are in the spend log, keep the one to count and move the other out of "
+            "runs/judge/"
+        )
+    notes = []
+    for r in results:
+        if r.finished:
+            continue
+        note = f"`{r.file}`: unfinished, {r.judged} of the {r.judgeable} answers of `{answer_file}`"
+        note += " judged"
+        if r.error:
+            note += f", stopped by: {' '.join(r.error.split())}"
+        if done:
+            note += f"; `{done[0].file}` counts instead"
+        notes.append(note)
+    return (done[0] if done else results[-1]), notes
+
+
+def _faithful(found: Judged | None) -> str:
+    """The Faithful cell: the share supported, with its interval and the number judged."""
+    if found is None:
+        return "not judged"
+    if not found.finished:
+        return "unfinished"
+    if not found.judgeable:
+        return "nothing to judge"
+    if not found.usable:
+        return "no usable verdict"
+    low, high = wilson(found.supported, found.usable)
+    cell = f"{_cell(Metric(found.supported / found.usable, low, high))}, {found.usable} judged"
+    if unusable := found.judged - found.usable:
+        cell += f", {unusable} without a verdict"
+    return cell
+
+
 def answers(
     logs: Sequence[tuple[str, Mapping]],
     questions: Sequence[Question],
     tree: Tree,
     chunks: Mapping[str, Sequence[Chunk]] | None = None,
+    judge_logs: Sequence[tuple[str, Mapping]] = (),
+    judge: tuple[str, str] | None = None,
 ) -> str:
     """The answer results of the run logs `(file name, log)`, as one Markdown document.
 
@@ -392,9 +540,13 @@ def answers(
     there are several) and then by file name. Runs are named by model and retrieval, with their
     other settings added where two names would be the same; two runs with the same settings on
     one split are refused. A run that hasn't answered every question of its split is listed,
-    not scored. The
-    test split is scored here, for checkpoint G's final table (design §C). `chunks` gives the
-    chunks of each strategy; by default each strategy a run used is cut from `tree`.
+    not scored. The test split is scored here, for checkpoint G's final table (design §C).
+    `chunks` gives the chunks of each strategy; by default each strategy a run used is cut from
+    `tree`.
+
+    `judge_logs` are the faithfulness judge's whole runs `(file name, log)`, and `judge` the
+    chosen judge, `(model, instructions version)`: each scored run judged by it gets its share
+    of supported answers (`match_judges`, `judged`). Judge runs not counted are listed.
     """
     for file, log in logs:
         _check_shape(file, log)
@@ -444,7 +596,8 @@ def answers(
                 raise ValueError(
                     f"{' and '.join(sorted((seen[settings], file)))} are both {settings} on "
                     f"the {split} "
-                    "split; keep the one to score and move the other out of runs/generation/"
+                    "split; once both are in the spend log, keep the one to score and move the "
+                    "other out of runs/generation/"
                 )
             seen[settings] = file
             name = label if short.count(label) == 1 else _full_label(config)
@@ -453,6 +606,26 @@ def answers(
             ev = evaluate_answers(log, questions, tree, nodes_of, allow_test=True)
             done[split].append((name, log, ev))
     words = {s: {c.id: len(c.text.split()) for c in cs} for s, cs in chunks.items()}
+
+    by_file = dict(logs)
+    matched, notes = match_judges(judge_logs, judge, list(by_file))
+    found: dict[str, Judged] = {}  # answer run file -> what its judge run found
+    scored = set(files.values())
+    for answer_file, candidates in matched.items():
+        if answer_file not in scored:
+            notes += [f"`{f}`: its answer run `{answer_file}` isn't scored" for f, _ in candidates]
+            continue
+        found[answer_file], unfinished = choose_judged(
+            answer_file, by_file[answer_file], candidates
+        )
+        notes += unfinished
+    faithful = {
+        split: {name: _faithful(found.get(files[(split, name)])) for name, _, _ in runs}
+        for split, runs in done.items()
+    }
+    judge_name = "judged by the faithfulness judge"
+    if judge is not None:
+        judge_name = f"judged by {judge[0]} with instructions `{judge[1]}`, the judge chosen in #83"
 
     lines = [
         "# Answer results",
@@ -467,7 +640,11 @@ def answers(
         "answerable questions answered. **Citation recall**: the share of gold passages cited, "
         "over every answerable question. **Refusal accuracy**: unanswerable questions refused. "
         "**False refusals**: answerable questions refused. **Not answered reliably**: the reply "
-        "failed the check, so the reader was told it could not be answered reliably. Cost, "
+        "failed the check, so the reader was told it could not be answered reliably. "
+        "**Faithful**: the share of answers in which every claim follows from the passages they "
+        f"cite, as {judge_name}, over the answers it gave a usable verdict on; only "
+        "answers that passed the check and aren't refusals are judged. *Not judged* means the "
+        "judge hasn't been run on that run's answers. Cost, "
         "seconds and tokens are per question with a reply; a run sent through the batch service "
         "paid half price and has no seconds, as its replies have no time of their own. Words "
         "shown is the length of the "
@@ -479,28 +656,35 @@ def answers(
         lines += ["", "No answer runs yet."]
     for split in SPLITS:
         if done[split]:
-            lines += _split_section(split, done[split], words)
+            lines += _split_section(split, done[split], words, faithful[split])
 
     if any(done.values()):
         lines += ["", "## Runs", ""]
-        lines += _header(["Run", "Split", "Effort", "Prompt", "Commit", "Log", "Paid (US$)"], 6)
+        titles = ["Run", "Split", "Effort", "Prompt", "Commit", "Log", "Judge log", "Paid (US$)",
+                  "Judging paid (US$)"]  # fmt: skip
+        lines += _header(titles, 7)
         for split in SPLITS:
             for name, log, _ in done[split]:
-                lines.append(_run_row(name, log, files[(split, name)]))
+                file = files[(split, name)]
+                lines.append(_run_row(name, log, file, found.get(file)))
     if partial:
         lines += ["", "Not scored, because they don't answer every question of their split:", ""]
         for file, log, left in partial:
             lines.append(f"- `{file}`: {run_label(log['config'])}, {left} questions missing")
+    if notes:
+        lines += ["", "Judge runs not counted in the Faithful column:", ""]
+        lines += [f"- {note}" for note in sorted(notes)]
     return "\n".join(lines) + "\n"
 
 
-def _run_row(name: str, log: Mapping, file: str) -> str:
+def _run_row(name: str, log: Mapping, file: str, judge: Judged | None) -> str:
     config, meta = log["config"], log["run"]
     commit = (meta["commit"] or "unknown")[:7] + (" + changes" if meta["dirty"] else "")
     paid = f"{log['paid']['cost_usd']:.2f}"
+    judge_file, judge_paid = (f"`{judge.file}`", f"{judge.cost_usd:.2f}") if judge else ("–", "–")
     return _row(
         [name, config["split"], config["effort"], config["prompt_version"], commit, f"`{file}`",
-         paid]
+         judge_file, paid, judge_paid]
     )  # fmt: skip
 
 

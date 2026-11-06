@@ -469,3 +469,9 @@ def test_the_table_refuses_labels_that_leave_a_chosen_answer_out(tree, tmp_path,
     logs = {n: json.loads((ROOT / "runs" / "generation" / n).read_text()) for n in LABELLED_RUNS}
     with pytest.raises(ValueError, match="not valid"):
         module.judge_table([], logs, questions)
+
+
+def test_log_takes_a_file_name_not_a_path(script, capsys):
+    with pytest.raises(SystemExit):
+        script.main(["--log", f"./{LABELLED_RUNS[1]}"])
+    assert "not a path" in capsys.readouterr().err

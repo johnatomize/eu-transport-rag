@@ -2,6 +2,17 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-06: the Faithful column in the answer results
+
+**Decision** (#95): `results/answers.md` gives each scored answer run a **Faithful** column, the share of its answers the chosen faithfulness judge found supported, from the judge's whole runs in `runs/judge/run-*.json` (`src/rag/tables.py`).
+
+- **Which judge counts:** only runs by the chosen judge, `judge_model` in `config/generation.yaml` with the instructions the code holds now (`judge_prompt_version`), the pair that was calibrated in #83. A run by another model or with other instructions is listed under the table as not counted, with the reason, so a paid run is never silently dropped. If the instructions change, every earlier run moves to that list until it is judged again, since the new instructions haven't been measured against the owner's labels.
+- **Over what:** only answers that passed the check and aren't refusals are judged. The share is taken over the answers the judge gave a usable verdict on, with its Wilson 95% interval, and the cell says how many: "0.93 (0.82–0.98), 42 judged". An answer the judge gave no usable verdict on is shown apart ("1 without a verdict"), not counted as supported or as unsupported.
+- **Matching:** a judge run names the answer run it judged by its file name, so `make judge LOG=…` takes the bare file name, not a path. Each judgement must be of an answer of that run that passed the check, only once, with that answer's text, compared word for word so a change in how sentences are split doesn't matter.
+- **Unfinished:** a judge run that is missing any judgeable answer of its run, such as a call that got no reply, is listed with what stopped it. Judging the answer run again finishes it: the finished run counts and the unfinished one stays listed, with its cost still in the spend log. With no finished run, the cell shows "unfinished". Two finished runs of one answer run are refused, as two answer runs of one setup are; once both are in the spend log, the one not to count is moved out of `runs/judge/`. A run with no judge run shows "not judged". The Runs table names each run's judge log and what judging it cost.
+
+**Alternatives:** counting a missing verdict as unsupported, which would mix the judge's failures into the answers' faithfulness; counting judge runs by any model, which would put an uncalibrated judge's numbers beside the calibrated one's; a separate faithfulness table, which the owner's request for a column in the same table doesn't need.
+
 ## 2026-11-06: runs through the batch service
 
 **Decision** (#79; what batch runs show for speed was answered by the owner in a working session): `make answers BATCH=1` and `make judge … BATCH=1` send a run's calls as one batch through Anthropic's Message Batches API, which answers within 24 hours, mostly within one, at half the price (`src/rag/batch.py`). Each request is exactly the call a direct run sends; only the way it travels changes.

@@ -3,8 +3,11 @@
     make_tables.py           write the results tables (`make tables`)
     make_tables.py --check   fail if any differs from what would be written
 
-The tables are results/retrieval.md, results/answers.md, and results/faithfulness_judge.md,
-which compares each calibration run of the faithfulness judge with the owner's labels.
+The tables are results/retrieval.md; results/answers.md, with the share of each run's answers
+the chosen faithfulness judge (judge_model in config/generation.yaml, with the judge's current
+instructions) found supported, from its whole runs in runs/judge/; and
+results/faithfulness_judge.md, which compares each calibration run of the judge with the
+owner's labels.
 
 Refuses a retrieval run log made from another version of the questions or the corpus manifest,
 or whose chunks differ from what the parser and chunking code give now; and an answer run log
@@ -21,6 +24,8 @@ from pathlib import Path
 from rag.corpus import CorpusError, load_manifest
 from rag.faithfulness import LABELLED_RUNS, select, validate_labels
 from rag.faithfulness import answers as labelled_answers
+from rag.generation_config import GenerationConfigError, load_generation_config
+from rag.judge import prompt_version
 from rag.parse import ParseError, parse_corpus
 from rag.questions import validate
 from rag.runlog import StaleRunError, check_chunks, load
@@ -35,6 +40,7 @@ OUT = ROOT / "results" / "retrieval.md"
 ANSWERS_OUT = ROOT / "results" / "answers.md"
 JUDGE_RUNS = ROOT / "runs" / "judge"
 LABELS = ROOT / "data" / "faithfulness_labels.v1.jsonl"
+CONFIG = ROOT / "config" / "generation.yaml"
 JUDGE_OUT = ROOT / "results" / "faithfulness_judge.md"
 
 
@@ -67,18 +73,24 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {e}; run `make retrieval-runs`", file=sys.stderr)
         return 1
     try:
-        tables[ANSWERS_OUT] = answers(answer_logs, questions, tree)
-    except ValueError as e:
+        judge = (load_generation_config(CONFIG).judge_model, prompt_version())
+        judge_runs = judge_logs("run")
+        tables[ANSWERS_OUT] = answers(answer_logs, questions, tree, None, judge_runs, judge)
+    except (OSError, ValueError, KeyError, GenerationConfigError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
     try:
-        judge_logs = calibration_logs()
-        tables[JUDGE_OUT] = judge_table(judge_logs, dict(answer_logs), questions)
+        calibrations = judge_logs("calibration")
+        tables[JUDGE_OUT] = judge_table(calibrations, dict(answer_logs), questions)
     except (OSError, ValueError, KeyError) as e:
         print(f"error: the faithfulness judge's table: {e}", file=sys.stderr)
         return 1
     # unfinished runs are listed too
-    counts = {OUT: len(runs), ANSWERS_OUT: len(answer_logs), JUDGE_OUT: len(judge_logs)}
+    counts = {
+        OUT: len(runs),
+        ANSWERS_OUT: len(answer_logs) + len(judge_runs),
+        JUDGE_OUT: len(calibrations),
+    }
     if args.check:
         stale = [p for p, t in tables.items() if not p.exists() or p.read_text("utf-8") != t]
         for p in stale:
@@ -96,13 +108,17 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def calibration_logs() -> list[tuple[str, dict]]:
-    """The judge's calibration run logs, by file name, which starts with the time."""
+def judge_logs(kind: str) -> list[tuple[str, dict]]:
+    """The judge's run logs of one kind, "calibration" or "run", by file name, which starts with
+    the kind and then the time."""
     logs = []
-    for path in sorted(JUDGE_RUNS.glob("calibration-*.json")):
-        log = json.loads(path.read_text(encoding="utf-8"))
-        if log["config"]["kind"] != "calibration":
-            raise ValueError(f"{path.name} is named as a calibration run but isn't one")
+    for path in sorted(JUDGE_RUNS.glob(f"{kind}-*.json")):
+        try:
+            log = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            raise ValueError(f"can't read {path.relative_to(ROOT)}: {e}") from None
+        if log["config"]["kind"] != kind:
+            raise ValueError(f"{path.name} is named as a {kind} run but isn't one")
         logs.append((path.name, log))
     return logs
 

@@ -101,6 +101,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.only and not args.log:
         parser.error("--only goes with --log")
+    if args.log and Path(args.log).name != args.log:  # the run log names it, as the table reads
+        parser.error("--log takes the file's name in runs/generation/, not a path")
 
     try:
         config = load_generation(CONFIG)

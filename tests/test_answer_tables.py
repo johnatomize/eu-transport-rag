@@ -167,7 +167,7 @@ def test_test_runs_get_their_own_section_after_dev():
     assert text.index("## Dev split") < text.index("## Test split") < text.index("## Runs")
     runs = rows(section(text, "## Runs"), "opus-5-5")
     assert [r[1] for r in runs] == ["dev", "test"]
-    assert runs[0][4:] == ["0123456", "`a.json`", "0.12"]
+    assert runs[0][4:] == ["0123456", "`a.json`", "–", "0.12", "–"]
 
 
 def test_a_typed_question_log_is_refused():
@@ -203,3 +203,176 @@ def test_an_unfinished_run_from_another_parse_is_refused():
     partial = settle(log([entry("q001", retrieved=("p:9(9)",))]))
     with pytest.raises(ValueError, match="p.json shows chunks p:9\\(9\\)"):
         table(("p.json", partial))
+
+
+# --- The Faithful column (#95) ---------------------------------------------------------------
+
+JUDGE = ("claude-opus-5-5", "judge1")
+JUDGEABLE = ("q001", "q002", "q003", "q008")  # BASE's answers that passed the check
+
+
+def judgement(qid, run="a.json", supported=True, ok=True, answer=None, of=BASE) -> dict:
+    """A judge run log entry as `rag.judge` writes it, cut to what the table reads: the
+    judgement of question `qid`'s answer in the answer run `of`, logged as `run`."""
+    answer = answer or next(e for e in of["answers"] if e["id"] == qid)["verdict"]["answer"]
+    return {
+        "id": qid,
+        "answer_run": run,
+        "sentences": [answer],
+        "verdict": {"ok": ok, "supported": supported if ok else None},
+    }
+
+
+def judge_log(judgements, run="a.json", model="claude-opus-5-5", version="judge1") -> dict:
+    return {
+        "config": {
+            "model": model,
+            "judge_prompt_version": version,
+            "kind": "run",
+            "answer_runs": [run],
+        },
+        "judgements": list(judgements),
+        "failed": [],
+        "error": None,
+        "paid": {"cost_usd": 0.05},
+    }
+
+
+def faithful_table(judges, *logs) -> str:
+    logs = logs or (("a.json", BASE),)
+    return answers(list(logs), QUESTIONS, TREE, CHUNKS, judges, JUDGE)
+
+
+def faithful_cell(text: str, run: str = "opus-5-5, hybrid paragraph top 5") -> str:
+    (row,) = rows(section(text, "### Quality"), run)
+    return row[-1]
+
+
+def test_a_judged_run_shows_its_share_supported_and_how_many_were_judged():
+    verdicts = [judgement(q, supported=q != "q002") for q in JUDGEABLE]
+    text = faithful_table([("run-1.json", judge_log(verdicts))])
+    assert faithful_cell(text) == "0.75 (0.30–0.95), 4 judged"
+    (run,) = rows(section(text, "## Runs"), "opus-5-5")
+    assert run[6:] == ["`run-1.json`", "0.12", "0.05"]
+    assert "judged by claude-opus-5-5 with instructions `judge1`" in text
+
+
+def test_a_run_without_a_judge_run_says_not_judged():
+    text = faithful_table([], ("a.json", BASE), ("b.json", BETTER))
+    assert faithful_cell(text) == "not judged"
+    assert faithful_cell(text, "opus-5-5, hybrid paragraph top 3") == "not judged"
+    assert rows(section(text, "## Runs"), "opus-5-5")[0][6:] == ["–", "0.12", "–"]
+
+
+def test_a_verdict_the_judge_could_not_give_is_counted_apart():
+    verdicts = [judgement(q) for q in JUDGEABLE[:3]] + [judgement("q008", ok=False)]
+    text = faithful_table([("run-1.json", judge_log(verdicts))])
+    assert faithful_cell(text) == "1.00 (0.44–1.00), 3 judged, 1 without a verdict"
+
+
+def test_a_judge_run_missing_an_answer_is_unfinished():
+    stopped = judge_log([judgement(q) for q in JUDGEABLE[:3]])  # q008's call got no reply
+    stopped["error"] = "Throttled:\ngave up"
+    text = faithful_table([("run-1.json", stopped)])
+    assert faithful_cell(text) == "unfinished"
+    assert (
+        "- `run-1.json`: unfinished, 3 of the 4 answers of `a.json` judged, stopped by: "
+        "Throttled: gave up\n" in text
+    )
+
+
+def test_a_finished_judge_run_counts_over_an_unfinished_one():
+    stopped = judge_log([judgement(q) for q in JUDGEABLE[:3]])
+    again = judge_log([judgement(q, supported=q != "q001") for q in JUDGEABLE])
+    text = faithful_table([("run-2.json", again), ("run-1.json", stopped)])
+    assert faithful_cell(text) == "0.75 (0.30–0.95), 4 judged"
+    assert (
+        "`run-1.json`: unfinished, 3 of the 4 answers of `a.json` judged; `run-2.json` counts"
+        in text
+    )
+
+
+def test_with_no_finished_judge_run_the_latest_shows_as_unfinished():
+    first = judge_log([judgement("q001")])
+    second = judge_log([judgement(q) for q in JUDGEABLE[:3]])
+    text = faithful_table([("run-1.json", first), ("run-2.json", second)])
+    assert faithful_cell(text) == "unfinished"
+    assert rows(section(text, "## Runs"), "opus-5-5")[0][6] == "`run-2.json`"
+
+
+def test_another_judge_or_other_instructions_are_listed_not_counted():
+    verdicts = [judgement(q) for q in JUDGEABLE]
+    haiku = judge_log(verdicts, model="claude-haiku-5-5")
+    older = judge_log(verdicts, version="judge0")
+    text = faithful_table([("run-h.json", haiku), ("run-o.json", older)])
+    assert faithful_cell(text) == "not judged"
+    assert "- `run-h.json`: judged by claude-haiku-5-5 with instructions `judge1`" in text
+    assert "- `run-o.json`: judged by claude-opus-5-5 with instructions `judge0`" in text
+
+
+def test_a_judge_run_is_matched_to_its_answer_run_by_file_name():
+    judged_ids = ("q001", "q002", "q003", "q004", "q005", "q006", "q007")  # BETTER's answers
+    verdicts = [judgement(q, run="b.json", of=BETTER) for q in judged_ids]
+    text = faithful_table(
+        [("run-b.json", judge_log(verdicts, run="b.json"))], ("a.json", BASE), ("b.json", BETTER)
+    )
+    assert faithful_cell(text) == "not judged"
+    assert faithful_cell(text, "opus-5-5, hybrid paragraph top 3").endswith(", 7 judged")
+
+
+def test_a_judge_run_of_an_unknown_answer_run_is_refused():
+    with pytest.raises(ValueError, match="judges z.json, which isn't in runs/generation/"):
+        faithful_table([("run-1.json", judge_log([], run="z.json"))])
+
+
+def test_two_finished_judge_runs_of_one_answer_run_are_refused():
+    verdicts = [judgement(q) for q in JUDGEABLE]
+    judges = [("run-1.json", judge_log(verdicts)), ("run-2.json", judge_log(verdicts))]
+    with pytest.raises(ValueError, match="run-1.json and run-2.json each judge every answer"):
+        faithful_table(judges)
+
+
+def test_a_run_with_nothing_to_judge_says_so():
+    refusals = settle(log([entry(f"q00{i}", answerable=False) for i in range(1, 9)]))
+    text = faithful_table([("run-1.json", judge_log([]))], ("a.json", refusals))
+    assert faithful_cell(text) == "nothing to judge"
+
+
+@pytest.mark.parametrize(
+    ("verdicts", "message"),
+    [
+        ([judgement("q004")], "q004: not an answer of a.json that passed the check"),
+        ([judgement("q001"), judgement("q001")], "q001: judged twice"),
+        ([judgement("q001", answer="Something else.")], "isn't the answer in a.json"),
+        ([judgement("q001", run="b.json")], "judges an answer of b.json, not a.json"),
+    ],
+)
+def test_judgements_that_do_not_fit_the_answer_run_are_refused(verdicts, message):
+    with pytest.raises(ValueError, match=message):
+        faithful_table([("run-1.json", judge_log(verdicts))])
+
+
+def test_sentences_split_differently_still_match_the_answer():
+    verdicts = [judgement(q) for q in JUDGEABLE]
+    verdicts[0]["sentences"] = ["9", "hours"]  # q001's answer, "9 hours", split in two
+    text = faithful_table([("run-1.json", judge_log(verdicts))])
+    assert faithful_cell(text).endswith(", 4 judged")
+
+
+def test_a_judge_run_of_an_unscored_answer_run_is_listed():
+    partial = settle(log(RUN["answers"][:3]), model="claude-haiku-5-5")
+    text = faithful_table(
+        [("run-p.json", judge_log([], run="p.json"))], ("a.json", BASE), ("p.json", partial)
+    )
+    assert "- `run-p.json`: its answer run `p.json` isn't scored" in text
+
+
+def test_a_log_that_is_not_a_whole_judge_run_is_refused():
+    calibration = judge_log([])
+    calibration["config"]["kind"] = "calibration"
+    with pytest.raises(ValueError, match="'calibration' run of the judge, not a whole run"):
+        faithful_table([("run-1.json", calibration)])
+    broken = judge_log([])
+    del broken["judgements"]
+    with pytest.raises(ValueError, match="run-1.json is not a judge run log: it has no"):
+        faithful_table([("run-1.json", broken)])

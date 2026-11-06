@@ -152,6 +152,7 @@ The Commission site rate-limits scripted downloads (HTTP 429 after about six PDF
   - with a reranking step: Claude Haiku 5.5 reading search's top 20 together (the owner's choice on 2026-11-06, replacing Qwen3-Reranker 0.6B, which lowered recall@5 on the dev questions).
 - Ways to improve reranking, compared on retrieval quality and on cost per question (owner's addition, 2026-11-06, after the reranker lowered recall@5 on the dev questions): blending its order with search's, a better instruction, adding cited passages after reranking, Jev (a hosted reranker) and Claude Haiku 5.5 reading the passages together. The paid ones wait for the owner's OK on cost; one that does better can become a proposed answer run. Only the best of them answers: Haiku 5.5, the only candidate that lost no question to search alone.
 - Paired comparison between variants on the same questions (sign test), and the final run on the **test split only once**.
+- What each finalist would cost to run in production, per question and per month at a few volumes, at real-time prices rather than the batch prices of the evaluation runs, with the levers that change it (owner's addition, 2026-11-06). Model costs come from the run logs; hosting is added in I.
 - `make tables` regenerates every table from the run logs.
 
 ### H. Service and Docker (~3–4 h, free)
@@ -168,6 +169,7 @@ The Commission site rate-limits scripted downloads (HTTP 429 after about six PDF
   - the Anthropic API key stored as an AWS secret that only the service's own role can read;
   - CloudWatch logs with short retention.
 - **Where the index lives is decided in `DECISIONS.md`.** Recommended: an index file built in CI, stored in S3 and loaded into memory, which is cheap and enough for this corpus. The alternatives, RDS with pgvector, or Bedrock Knowledge Bases with OpenSearch Serverless, are realistic at scale but cost money even when idle. Their prices are checked on the day and the trade-off is written down. Retrieval sits behind one interface, and a test checks that the in-memory and pgvector backends return identical rankings.
+- The deployment's cost estimate gives the monthly hosting cost at the same volumes as G's production estimate, so the two add up to a monthly total.
 - `make deploy` and `make destroy`. Leaving nothing running is part of the checklist.
 
 ### J. CI/CD with GitHub Actions (~3–4 h)

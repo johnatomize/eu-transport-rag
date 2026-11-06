@@ -457,3 +457,36 @@ def test_two_runs_started_in_the_same_second_never_share_a_log(monkeypatch, tmp_
     assert run["created"] == "2026-11-03T10:00:00+00:00"
     with pytest.raises(FileExistsError):
         rag.generate.new_run(ROOT, tmp_path / "runs", "claude-haiku-5-5", prefix="ask-")
+
+
+def test_a_reranked_run_answers_from_haikus_cached_order(script, monkeypatch, capsys):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    canned = reply(answer(answerable=False))
+    monkeypatch.setattr(script, "AnthropicClient", lambda *a, **k: Scripted(canned))
+    assert script.main(["--only", "q001", "--rerank", "haiku", "--run"]) == 0
+    (path,) = script.RUNS.glob("*.json")
+    log = json.loads(path.read_text(encoding="utf-8"))
+    retrieval = log["config"]["retrieval"]
+    assert retrieval["reranker"].startswith("claude-haiku-5-5-") and retrieval["rerank_depth"] == 20
+    # The same top 5 as the retrieval run Haiku's order was measured in (#99).
+    measured = json.loads((ROOT / "runs/retrieval/hybrid-paragraph-haiku20.json").read_text())
+    (q001,) = (q for q in measured["questions"] if q["id"] == "q001")
+    top5 = [chunk for chunk, _ in q001["ranking"][:5]]
+    assert log["answers"][0]["retrieved"] == top5
+    assert "reranked by claude-haiku-5-5-" in capsys.readouterr().out
+
+
+def test_a_question_without_a_cached_order_stops_the_run_before_anything_is_sent(
+    script, monkeypatch, tmp_path, capsys
+):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    monkeypatch.setattr(script, "RERANKS", tmp_path / "no-reranks")
+    assert script.main(["--only", "q001", "--rerank", "haiku", "--run"]) == 1
+    assert script.built == []
+    assert not script.RUNS.exists() or not list(script.RUNS.glob("*.json"))
+    assert "no cached order from Haiku" in capsys.readouterr().err
+
+
+def test_the_dry_run_names_the_options_to_send_it_with(script, capsys):
+    assert script.main(["--only", "q001", "--role", "scored", "-k", "3", "--batch"]) == 0
+    assert "make answers ROLE=scored ONLY=q001 K=3 BATCH=1 RUN=1" in capsys.readouterr().out

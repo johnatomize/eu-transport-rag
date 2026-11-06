@@ -53,8 +53,9 @@ embed-dry-run: ## Print what embedding the corpus and the questions would take (
 embed: ## Report which chunks and questions lack a cached vector; RUN=1 embeds them with the configured model
 	uv run --locked $(if $(RUN),--group local-embed,) python scripts/embed.py $(if $(RUN),--run,)
 
-answers: ## Show what answering the dev questions with Claude would send and cost; RUN=1 sends and pays, BATCH=1 at half price
-	uv run --locked python scripts/answer.py $(if $(RUN),--run,) $(if $(BATCH),--batch,) $(if $(ROLE),--role $(ROLE),) $(if $(ONLY),--only $(ONLY),)
+answers: ## Show what answering the dev questions with Claude would send and cost; RUN=1 sends and pays, BATCH=1 at half price. Also ROLE, ONLY, STRATEGY, K, RERANK=haiku
+	uv run --locked python scripts/answer.py $(if $(RUN),--run,) $(if $(BATCH),--batch,) $(if $(ROLE),--role $(ROLE),) $(if $(ONLY),--only $(ONLY),) \
+		$(if $(STRATEGY),--strategy $(STRATEGY),) $(if $(K),-k $(K),) $(if $(RERANK),--rerank $(RERANK),)
 
 ask: export Q := $(Q)
 ask: ## Answer one typed question: make ask Q="…" shows the passages and cost; RUN=1 sends and pays

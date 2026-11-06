@@ -2,6 +2,12 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-06: the spending cap rises to US$100, with a limit per paid issue
+
+**Decision** (owner, 2026-11-06, on #85's estimate): the project's cap in the spend log rises from US$20 to US$100. Answers, judging and Haiku reranking are paid from the owner's US$100 of Anthropic credits, so the total may pass the original US$20. Each paid issue still gets its own limit, approved by the owner after its dry run, as a guard against a run that gets stuck or repeats: US$20 for #85's dev answer and judging runs. Before each run in an issue, its spending so far plus that run's most-it-can-cost must stay within the issue's limit; otherwise the work stops and the owner is asked. The paid tools keep checking the project cap, as before.
+
+**Alternatives:** keeping US$20 for the whole project, which #85's cautious estimate (US$14.23 expected, before the test run) would nearly use up.
+
 ## 2026-11-06: Haiku 5.5 reranks the answer run, in place of Qwen
 
 **Decision** (owner, 2026-11-06, after #99's comparison; changes the reranked version of #78 and the owner's note on #85 of the same day): the reranked dev answer run in #85 uses Claude Haiku 5.5 reading hybrid search's top 20 paragraph chunks together (`hybrid-paragraph-haiku20`), not Qwen3-Reranker 0.6B. Only the best reranker from #99 goes into the answer runs, and a reranker that lowers recall is not worth answering with. #85 still has five new Opus 5.5 runs: top 3, top 10, article chunks, 200-word windows and Haiku reranking.

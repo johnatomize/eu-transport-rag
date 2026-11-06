@@ -118,7 +118,9 @@ def retrieval(runs: Sequence[Mapping], questions: Sequence[Question], tree: Tree
         "only when every gold node is in the top k (rules in `docs/DECISIONS.md`). Mean words "
         f"is the length of an indexed chunk, prefix included; words in top {TOP} adds up the "
         f"top {TOP} chunks the same way, so text two overlapping windows share counts twice, "
-        "as it would in the context a model is given.",
+        "as it would in the context a model is given. A run ending in -refs adds the chunks "
+        "its hits cite (cross-reference expansion), and one ending in -rerank*N* has a "
+        "reranking model reorder its top *N* (both in `docs/DECISIONS.md`).",
     ]
     for group in GROUPS:
         if group not in groups[names[0]]:

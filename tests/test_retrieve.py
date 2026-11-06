@@ -2,7 +2,16 @@ import pytest
 
 from rag.chunk import STRATEGIES, Chunk
 from rag.parse import Node, Ref, Tree
-from rag.retrieve import BM25, RRF, Expansion, Hit, Retriever, reference_targets, tokens
+from rag.retrieve import (
+    BM25,
+    RRF,
+    Expansion,
+    Hit,
+    Rerank,
+    Retriever,
+    reference_targets,
+    tokens,
+)
 
 
 def chunk(chunk_id: str, body: str) -> Chunk:
@@ -400,3 +409,89 @@ def test_article_6_5_brings_in_the_working_time_directive(tree):
     targets = reference_targets(STRATEGIES["paragraph"](tree), tree)
     assert "paragraph:2002/15:art3(b)" in targets["paragraph:561/2006:art6(5)"]
     assert "paragraph:561/2006:art4(e)" in targets["paragraph:561/2006:art6(5)"]
+
+
+# --- Reranking -----------------------------------------------------------------------------
+
+
+class SameForAll:
+    """A retriever that returns the same ranking for every query, scores falling with rank."""
+
+    def __init__(self, chunks):
+        self.chunks = list(chunks)
+        self.asked: list[int] = []
+
+    def search(self, query: str, k: int) -> list[Hit]:
+        self.asked.append(k)
+        return [Hit(c, 1.0 - i / 100) for i, c in enumerate(self.chunks[:k])]
+
+
+class ByWord:
+    """A stand-in reranker: a text's score is how often it holds the query's first word."""
+
+    def __init__(self):
+        self.read: list[list[str]] = []
+
+    def scores(self, query: str, texts):
+        self.read.append(list(texts))
+        word = query.split()[0].lower()
+        return [float(t.lower().count(word)) for t in texts]
+
+
+def test_reranking_reorders_only_the_top_n():
+    inner = SameForAll(CHUNKS)
+    reranked = Rerank(inner, ByWord(), depth=3).search("rest", 5)
+    # None of the top 3 says "rest"; the fourth does, but it is beyond N, so the order stays.
+    assert [h.chunk.id for h in reranked] == [c.id for c in CHUNKS]
+    reranked = Rerank(inner, ByWord(), depth=3).search("break", 5)
+    assert [h.chunk.id for h in reranked] == ["art7", "art6(1)", "art6(3)", "art4(e)", "anx"]
+
+
+def test_hits_beyond_n_keep_their_order_and_scores():
+    inner = SameForAll(CHUNKS)
+    reranked = Rerank(inner, ByWord(), depth=2).search("driving", 5)
+    assert [h.score for h in reranked[2:]] == [h.score for h in inner.search("driving", 5)[2:]]
+
+
+def test_equal_scores_keep_the_wrapped_order():
+    inner = SameForAll(CHUNKS)
+    reranked = Rerank(inner, ByWord(), depth=5).search("nothing", 5)
+    assert [h.chunk.id for h in reranked] == [c.id for c in CHUNKS]
+    assert all(h.score == 0.0 for h in reranked)
+
+
+def test_the_same_input_gives_the_same_order():
+    reranker = Rerank(SameForAll(CHUNKS), ByWord(), depth=5)
+    assert reranker.search("driving", 5) == reranker.search("driving", 5)
+
+
+def test_the_reranker_reads_the_top_n_even_for_a_smaller_k():
+    inner, scorer = SameForAll(CHUNKS), ByWord()
+    hits = Rerank(inner, scorer, depth=4).search("rest", 1)
+    assert inner.asked == [4]
+    assert scorer.read == [[c.text for c in CHUNKS[:4]]]
+    assert [h.chunk.id for h in hits] == ["art4(e)"]
+
+
+def test_reranking_keeps_what_brought_a_chunk_in():
+    class Via:
+        def search(self, query, k):
+            return [Hit(CHUNKS[0], 1.0), Hit(CHUNKS[2], 1.0, via="art6(1)")][:k]
+
+    hits = Rerank(Via(), ByWord(), depth=2).search("break", 2)
+    assert (hits[0].chunk.id, hits[0].via) == ("art7", "art6(1)")
+
+
+@pytest.mark.parametrize("scores", [[1.0], [1.0, float("nan")]])
+def test_a_reranker_that_gives_the_wrong_scores_is_refused(scores):
+    class Broken:
+        def scores(self, query, texts):
+            return scores
+
+    with pytest.raises(ValueError):
+        Rerank(SameForAll(CHUNKS), Broken(), depth=2).search("rest", 2)
+
+
+def test_a_reranking_depth_below_one_is_refused():
+    with pytest.raises(ValueError):
+        Rerank(SameForAll(CHUNKS), ByWord(), depth=0)

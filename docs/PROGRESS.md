@@ -152,6 +152,31 @@ Checkpoints A–E are built and reviewed by the owner; D, the keyword retrieval 
   - **It prefers longer passages:** the top 5 hold 40% more words after reranking, such as the whole list of definitions in 165/2014 Art. 2(2).
   - **Depth hardly matters:** the top 20 and the top 50 give the same recall. All intervals overlap; the answer runs in #85 show whether the model answers better from either list.
 
+- **Ways to improve reranking (#99):** five candidates, each fixed before it was measured (`DECISIONS.md`), each in place of Qwen reordering hybrid search's top 20 paragraph chunks. Three are free: blending Qwen's order with search's, Qwen asked whether the answer *needs* the passage, and the passages the reranked hits cite added after them. Two are hosted and paid: Jev (TypeSafe AI), which scores each passage on its own, and Claude Haiku 5.5, which reads the 20 together and returns an order. `make rerank WITH=jev|haiku` shows what a hosted run would cost; `RUN=1` pays, under the cap check, and every answer is committed in `reranks/`, so `make retrieval-runs` and `make tables` never call an API. `results/retrieval.md` now compares every reranked run question by question and gives each reranker's cost a question from its logs. Tests use stand-ins for both APIs. On the 50 answerable dev questions:
+
+  | Run | Words in top 5 | Recall@3 | Recall@5 | MRR@10 | vs no reranking (won / lost) | vs Qwen top 20 (won / lost) |
+  | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+  | no reranking | 710 | 0.58 (0.44–0.71) | 0.76 (0.63–0.86) | 0.78 (0.67–0.88) | – | 5 / 2 |
+  | Qwen top 20 (#84) | 989 | 0.64 (0.50–0.76) | 0.70 (0.56–0.81) | 0.73 (0.63–0.83) | 2 / 5 | – |
+  | 1. blend | 846 | 0.66 (0.52–0.78) | 0.76 (0.63–0.86) | 0.81 (0.70–0.90) | 2 / 2 | 3 / 0 |
+  | 2. "needed" instruction | 871 | 0.64 (0.50–0.76) | 0.72 (0.58–0.83) | 0.79 (0.69–0.88) | 1 / 3 | 2 / 1 |
+  | 3. cited passages after | 946 | 0.58 (0.44–0.71) | 0.70 (0.56–0.81) | 0.70 (0.59–0.81) | 4 / 7 | 3 / 3 |
+  | 4. Jev | 818 | 0.72 (0.58–0.83) | **0.80 (0.67–0.89)** | 0.90 (0.82–0.97) | 3 / 1 | 6 / 1 |
+  | 5. Haiku 5.5 reading together | 703 | **0.78 (0.65–0.87)** | **0.80 (0.67–0.89)** | 0.88 (0.79–0.95) | **2 / 0** | **5 / 0** |
+
+  - **The two hosted rerankers beat no reranking; nothing free does.** Both reach recall@5 0.80 against 0.76. Haiku loses no question to search alone and puts every gold passage in the top 3 for 39 questions against search's 29. Jev wins one more question (q062) but loses q060. The intervals still overlap, and against no reranking neither split is significant (p = 0.50 and 0.62); against Qwen, Haiku's 5 / 0 has p = 0.06.
+  - **The two-passage losses are fixed** by blending, Jev and Haiku: all three win back q035, q037 (Art. 12, driving on to a safe stop, now in the top 5) and q095, and Jev and Haiku also win back q022 and q068. The other instruction and the cited passages fix only some and lose others.
+  - **Gains are on both kinds of question:** paraphrased recall@5 goes from 0.71 to 0.74 with either hosted reranker, verbatim from 0.92 to 1.00. Haiku's top 5 is no longer than search's (703 words against 710), so answering from it costs no more; Jev's is 15% longer, Qwen's 40%.
+  - **Cost of reranking one question**, measured on the dev runs (paid figures from the run logs):
+
+    | Candidate | US$ a question | US$ per 1,000 | Time a question | What the deployed service would carry or call |
+    | --- | ---: | ---: | ---: | --- |
+    | Qwen, alone or with 1–3 | 0 | 0 | 2.6 s on the Mac's GPU (the "needed" run; blend and cited passages add nothing) | the model's 1.2 GB of files and PyTorch in its image, loaded at start; on Lambda, which has no GPU, it would be slower, not measured |
+    | 4. Jev | 0.00028 | 0.28 | 0.38 s round trip | one HTTPS call to TypeSafe a question; a second outside provider and API key, stored as an AWS secret |
+    | 5. Haiku 5.5 | 0.00066 | 0.66 | 1.5 s round trip | one more call to Anthropic's API, which answering already uses; no new key or provider |
+
+    Both are small next to answering: an Opus 5.5 answer costs about US$0.02 a question (F's dev run), so Haiku reranking adds about 3%.
+  - **Proposal, not a run:** an answer run with Haiku reranking the top 20, as a dev variant beside #85's Qwen run, costing about US$1.30 with Opus 5.5 through the batch service. The owner decides.
 ## Spend log
 
 Every cost goes here: date, what it paid for, amount and running total. A paid step needs the owner's OK and a dry-run estimate first.
@@ -168,3 +193,5 @@ The owner upgraded the AWS project from the Free plan (US$100 of credits until 2
 | 2026-11-05 | Faithfulness judge try-out with Claude Haiku 5.5, 4 unlabelled answers (#83, cap US$3 approved by the owner): `try-2026-11-05T20-47-27Z-claude-haiku-5-5.json` and `try-2026-11-05T20-47-37Z-claude-haiku-5-5.json`, 7,723 input and 1,250 output tokens | 0.0014 | 1.2629 |
 | 2026-11-05 | Faithfulness judge calibration with Claude Haiku 5.5, 30 labelled answers (#83): `calibration-2026-11-05T20-47-52Z-claude-haiku-5-5.json`, 72,968 input and 13,258 output tokens | 0.0139 | 1.2768 |
 | 2026-11-05 | Faithfulness judge calibration with Claude Opus 5.5, 30 labelled answers (#83): `calibration-2026-11-05T20-49-11Z-claude-opus-5-5.json`, 72,968 input and 13,870 output tokens | 0.5693 | 1.8461 |
+| 2026-11-06 | Reranking the dev questions' top 20 with Jev `jev-1.14.0` (#99, cap US$0.05 approved by the owner): `2026-11-06T11-14-30Z-jev-1.14.0.json`, 397,826 input tokens (output free) | 0.0167 | 1.8628 |
+| 2026-11-06 | Reranking the dev questions' top 20 with Claude Haiku 5.5 reading them together (#99, cap US$0.15 approved by the owner): `2026-11-06T11-14-59Z-claude-haiku-5-5.json`, 364,156 input and 6,304 output tokens | 0.0396 | 1.9024 |

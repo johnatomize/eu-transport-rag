@@ -1,0 +1,811 @@
+{
+ "run": {
+  "created": "2026-11-06T11:14:30+00:00",
+  "commit": "fa165f3cb281225e1fcb09e4d2fbc834be7fb009",
+  "dirty": false
+ },
+ "config": {
+  "reranker": "jev-1.14.0-8a8d7408cc1a",
+  "model": "jev-1.14.0",
+  "price_input": 0.042,
+  "prices_read_on": "2026-11-06",
+  "timeout_seconds": 60.0,
+  "price_read_on": "2026-11-06"
+ },
+ "estimate": {
+  "calls": 60,
+  "input_tokens": 431817,
+  "expected_usd": 0.027204,
+  "most_usd": 0.027204
+ },
+ "paid": {
+  "calls": 60,
+  "input_tokens": 397826,
+  "output_tokens": 21840,
+  "cost_usd": 0.016709
+ },
+ "error": null,
+ "failed": [],
+ "answers": [
+  {
+   "id": "q001",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6119,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.000257,
+   "seconds": 0.42,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q002",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6041,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00025372,
+   "seconds": 0.32,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q003",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6163,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00025885,
+   "seconds": 0.36,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q005",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5360,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00022512,
+   "seconds": 0.41,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q006",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 8494,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00035675,
+   "seconds": 0.38,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q007",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6536,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00027451,
+   "seconds": 0.38,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q008",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5997,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00025187,
+   "seconds": 0.35,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q011",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5579,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00023432,
+   "seconds": 0.35,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q012",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5387,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00022625,
+   "seconds": 0.34,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q017",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6863,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00028825,
+   "seconds": 0.37,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q018",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6069,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.0002549,
+   "seconds": 0.33,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q019",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6769,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.0002843,
+   "seconds": 0.35,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q021",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 8129,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00034142,
+   "seconds": 0.4,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q022",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 7039,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00029564,
+   "seconds": 0.39,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q023",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5623,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00023617,
+   "seconds": 0.35,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q024",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5770,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00024234,
+   "seconds": 0.36,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q025",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5983,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00025129,
+   "seconds": 0.33,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q029",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5463,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00022945,
+   "seconds": 0.37,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q031",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5672,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00023822,
+   "seconds": 0.58,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q032",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5640,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00023688,
+   "seconds": 0.31,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q033",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 7318,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00030736,
+   "seconds": 0.37,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q035",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6595,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00027699,
+   "seconds": 0.37,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q036",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6177,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00025943,
+   "seconds": 0.34,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q037",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 8191,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00034402,
+   "seconds": 0.35,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q038",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 7431,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.0003121,
+   "seconds": 0.37,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q039",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5416,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00022747,
+   "seconds": 0.34,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q040",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 4616,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00019387,
+   "seconds": 0.35,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q045",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 7176,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00030139,
+   "seconds": 0.39,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q046",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 8560,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00035952,
+   "seconds": 0.36,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q048",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 7131,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.0002995,
+   "seconds": 0.41,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q050",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 7832,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00032894,
+   "seconds": 0.41,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q051",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 7459,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00031328,
+   "seconds": 0.43,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q054",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6523,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00027397,
+   "seconds": 0.4,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q058",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5564,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00023369,
+   "seconds": 0.39,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q059",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5292,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00022226,
+   "seconds": 0.37,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q060",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5126,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00021529,
+   "seconds": 0.36,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q061",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6876,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00028879,
+   "seconds": 0.38,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q062",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6011,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00025246,
+   "seconds": 0.37,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q063",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 8461,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00035536,
+   "seconds": 0.46,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q064",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 9794,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00041135,
+   "seconds": 0.43,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q066",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 8221,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00034528,
+   "seconds": 0.41,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q068",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6728,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00028258,
+   "seconds": 0.38,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q071",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5789,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00024314,
+   "seconds": 0.34,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q072",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 7680,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00032256,
+   "seconds": 0.38,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q074",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 7121,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00029908,
+   "seconds": 0.4,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q076",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 9216,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00038707,
+   "seconds": 0.43,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q078",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6347,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00026657,
+   "seconds": 0.34,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q079",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 4994,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00020975,
+   "seconds": 0.35,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q080",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5727,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00024053,
+   "seconds": 0.34,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q081",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6784,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00028493,
+   "seconds": 0.4,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q084",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6702,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00028148,
+   "seconds": 0.39,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q085",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 7094,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00029795,
+   "seconds": 0.36,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q087",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6064,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00025469,
+   "seconds": 0.34,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q088",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6528,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00027418,
+   "seconds": 0.38,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q091",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6138,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.0002578,
+   "seconds": 0.37,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q094",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6383,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00026809,
+   "seconds": 0.34,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q095",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 8825,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00037065,
+   "seconds": 0.37,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q097",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 6523,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00027397,
+   "seconds": 0.36,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q098",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 7332,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00030794,
+   "seconds": 0.38,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  },
+  {
+   "id": "q099",
+   "passages": 20,
+   "usage": {
+    "input_tokens": 5385,
+    "output_tokens": 364
+   },
+   "cost_usd": 0.00022617,
+   "seconds": 0.35,
+   "attempts": 1,
+   "model": "jev-1.14.0",
+   "problem": null
+  }
+ ]
+}

@@ -21,9 +21,9 @@ rebuilt without the model. One file per model setting, under `reranks/`:
     reranks/Qwen_Qwen3-Reranker-0.6B-e61197ed4502-mps.jsonl
     {"pair": "<sha256>", "tokens": 212, "score": 3.8125}
 
-- `pair` is the key: the sha256 of the model ID, its revision, the device, the instruction, the question
-  and the passage's text, so a change to any of them misses the cache instead of returning a
-  stale score. The file name carries the revision and the device too.
+- `pair` is the key: the sha256 of the model ID, its revision, the device, the instruction,
+  the question and the passage's text, so a change to any of them misses the cache instead of
+  returning a stale score. The file name carries the revision and the device too.
 - The field is called `pair`, not `key` as in the embedding cache, so that the secret scan's
   generic-API-key rule, which looks for a long random value after a word such as "key", doesn't
   take the hashes for secrets; no exception to the scan is needed.

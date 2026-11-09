@@ -13,7 +13,8 @@ Refuses a retrieval run log made from another version of the questions or the co
 or whose chunks differ from what the parser and chunking code give now; and an answer run log
 that shows a chunk the corpus no longer gives. That check cuts the corpus again, but nothing is
 retrieved. The answer table scores the test split too, once its run exists: it is checkpoint
-G's final table (design §C).
+G's final table (design §C), as does the retrieval table, from the finalists' retrieval runs
+in runs/retrieval/test/ (#86).
 """
 
 import argparse
@@ -35,6 +36,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "corpus" / "manifest.yaml"
 QUESTIONS = ROOT / "data" / "questions.v1.jsonl"
 RUNS = ROOT / "runs" / "retrieval"
+TEST_RUNS = RUNS / "test"
 RERANKER_RUNS = (ROOT / "runs" / "rerank-local", ROOT / "runs" / "rerank")
 ANSWER_RUNS = ROOT / "runs" / "generation"
 OUT = ROOT / "results" / "retrieval.md"
@@ -53,7 +55,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         tree = parse_corpus(load_manifest(MANIFEST), ROOT)
         runs = [load(path, ROOT) for path in sorted(RUNS.glob("*.json"), key=lambda p: p.stem)]
-        check_chunks(runs, tree)
+        test_runs = [load(path, ROOT) for path in sorted(TEST_RUNS.glob("*.json"),
+                                                          key=lambda p: p.stem)]  # fmt: skip
+        check_chunks(runs + test_runs, tree)
     except (CorpusError, ParseError, StaleRunError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
@@ -76,7 +80,16 @@ def main(argv: list[str] | None = None) -> int:
             print(f"error: can't read {path.relative_to(ROOT)}: {e}", file=sys.stderr)
             return 1
     try:
-        tables = {OUT: retrieval(runs, questions, tree, reranker_logs)}
+        # A reranker's scoring run names its split; runs from before #86 read the dev split.
+        logs_of: dict[str, list] = {"dev": [], "test": []}
+        for name, log in reranker_logs:
+            logs_of[log["config"].get("split", "dev")].append((name, log))
+        table = retrieval(runs, questions, tree, logs_of["dev"])
+        if test_runs:  # checkpoint G's final table (#86), a section after the dev split's
+            test = retrieval(test_runs, questions, tree, logs_of["test"], allow_test=True,
+                             title="Test split")  # fmt: skip
+            table += "\n" + demote(test)
+        tables = {OUT: table}
     except (ValueError, KeyError) as e:
         print(f"error: {e}; run `make retrieval-runs`", file=sys.stderr)
         return 1
@@ -95,7 +108,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     # unfinished runs are listed too
     counts = {
-        OUT: len(runs),
+        OUT: len(runs) + len(test_runs),
         ANSWERS_OUT: len(answer_logs) + len(judge_runs),
         JUDGE_OUT: len(calibrations),
     }
@@ -114,6 +127,11 @@ def main(argv: list[str] | None = None) -> int:
         p.write_text(table, encoding="utf-8")
         print(f"wrote {p.relative_to(ROOT)} from {counts[p]} run logs")
     return 0
+
+
+def demote(markdown: str) -> str:
+    """Every heading one level down, so a document becomes a section of another."""
+    return "\n".join("#" + line if line.startswith("#") else line for line in markdown.split("\n"))
 
 
 def judge_logs(kind: str) -> list[tuple[str, dict]]:

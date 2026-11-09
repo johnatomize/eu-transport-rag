@@ -168,3 +168,75 @@ Placed by references is the share of the top 5 places held by a chunk that cross
 | vector-paragraph-refs | vector (model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, expansion references) | paragraph | 412 | 50 | 30% | 588d619 |
 | vector-window-200-50 | vector (model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized) | window-200-50 | 246 | 50 | – | 588d619 |
 | vector-window-200-50-refs | vector (model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, expansion references) | window-200-50 | 246 | 50 | 52% | 588d619 |
+
+## Test split
+
+The test split: 34 questions with gold nodes, and 6 unanswerable questions left out. Each cell is the mean with its 95% interval: Wilson for recall@k, a bootstrap over questions for the others. A chunk finds a gold node when it holds any of the node's text, and recall@k counts a question only when every gold node is in the top k (rules in `docs/DECISIONS.md`). Mean words is the length of an indexed chunk, prefix included; words in top 5 adds up the top 5 chunks the same way, so text two overlapping windows share counts twice, as it would in the context a model is given. These are checkpoint G's finalists (#86): hybrid-paragraph is the base, and hybrid-paragraph-haiku20 has Claude Haiku 5.5 reorder its top 20.
+
+### All questions (n = 34)
+
+| Run | Mean words | Words in top 5 | Recall@1 | Recall@3 | Recall@5 | Recall@10 | Fractional recall@5 | MRR@10 | nDCG@10 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| hybrid-article | 284 | 2308 | 0.44 (0.29–0.61) | 0.68 (0.51–0.81) | 0.76 (0.60–0.88) | 0.85 (0.70–0.94) | 0.84 (0.73–0.94) | 0.74 (0.61–0.85) | 0.76 (0.65–0.86) |
+| hybrid-paragraph | 112 | 823 | 0.50 (0.34–0.66) | 0.56 (0.39–0.71) | 0.65 (0.48–0.79) | 0.74 (0.57–0.85) | 0.77 (0.66–0.88) | 0.76 (0.64–0.88) | 0.74 (0.63–0.84) |
+| hybrid-paragraph-haiku20 | 112 | 728 | 0.65 (0.48–0.79) | 0.74 (0.57–0.85) | 0.82 (0.66–0.92) | 0.82 (0.66–0.92) | 0.90 (0.82–0.97) | 0.92 (0.84–0.99) | 0.88 (0.80–0.95) |
+
+### Paraphrased questions (n = 24)
+
+| Run | Mean words | Words in top 5 | Recall@1 | Recall@3 | Recall@5 | Recall@10 | Fractional recall@5 | MRR@10 | nDCG@10 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| hybrid-article | 284 | 2336 | 0.42 (0.24–0.61) | 0.67 (0.47–0.82) | 0.71 (0.51–0.85) | 0.79 (0.60–0.91) | 0.79 (0.64–0.92) | 0.71 (0.55–0.84) | 0.73 (0.58–0.86) |
+| hybrid-paragraph | 112 | 860 | 0.42 (0.24–0.61) | 0.50 (0.31–0.69) | 0.58 (0.39–0.76) | 0.71 (0.51–0.85) | 0.72 (0.58–0.86) | 0.67 (0.51–0.81) | 0.67 (0.53–0.79) |
+| hybrid-paragraph-haiku20 | 112 | 726 | 0.62 (0.43–0.79) | 0.71 (0.51–0.85) | 0.83 (0.64–0.93) | 0.83 (0.64–0.93) | 0.90 (0.80–0.99) | 0.89 (0.78–0.98) | 0.87 (0.76–0.96) |
+
+### Verbatim questions (n = 10)
+
+| Run | Mean words | Words in top 5 | Recall@1 | Recall@3 | Recall@5 | Recall@10 | Fractional recall@5 | MRR@10 | nDCG@10 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| hybrid-article | 284 | 2243 | 0.50 (0.24–0.76) | 0.70 (0.40–0.89) | 0.90 (0.60–0.98) | 1.00 (0.72–1.00) | 0.95 (0.85–1.00) | 0.82 (0.63–1.00) | 0.84 (0.71–0.95) |
+| hybrid-paragraph | 112 | 735 | 0.70 (0.40–0.89) | 0.70 (0.40–0.89) | 0.80 (0.49–0.94) | 0.80 (0.49–0.94) | 0.90 (0.75–1.00) | 1.00 (1.00–1.00) | 0.91 (0.81–1.00) |
+| hybrid-paragraph-haiku20 | 112 | 733 | 0.70 (0.40–0.89) | 0.80 (0.49–0.94) | 0.80 (0.49–0.94) | 0.80 (0.49–0.94) | 0.90 (0.75–1.00) | 1.00 (1.00–1.00) | 0.91 (0.81–1.00) |
+
+### Recall@5 by question type
+
+| Type | n | hybrid-article | hybrid-paragraph | hybrid-paragraph-haiku20 |
+| --- | ---: | ---: | ---: | ---: |
+| single_fact | 8 | 1.00 (0.68–1.00) | 1.00 (0.68–1.00) | 1.00 (0.68–1.00) |
+| definition | 4 | 0.75 (0.30–0.95) | 0.75 (0.30–0.95) | 1.00 (0.51–1.00) |
+| multi_article | 6 | 0.50 (0.19–0.81) | 0.17 (0.03–0.56) | 0.67 (0.30–0.90) |
+| exception | 6 | 1.00 (0.61–1.00) | 0.83 (0.44–0.97) | 0.83 (0.44–0.97) |
+| cross_act | 4 | 0.25 (0.05–0.70) | 0.25 (0.05–0.70) | 0.25 (0.05–0.70) |
+| version_trap | 6 | 0.83 (0.44–0.97) | 0.67 (0.30–0.90) | 1.00 (0.61–1.00) |
+
+### Questions no run finds in the top 10 (2)
+
+Not every gold node is in the top 10 for any run.
+
+| Question | Type | Phrasing | Gold nodes | Text |
+| --- | --- | --- | --- | --- |
+| q055 | multi_article | paraphrased | 561/2006:art3(a), 561/2006:art6(5), clarification-5:p1 | I drive a bus on both short city routes and longer routes. Do I need the tachograph on the short ones? |
+| q070 | cross_act | paraphrased | 561/2006:art19(1), 2002/15:art11 | Who decides the fines for breaking the driving time and working time rules? |
+
+### Reranking compared
+
+Each reranked run against no reranking (hybrid-paragraph), question by question at recall@5. A question is won when every gold node is in this run's top 5 and not in the other's, and lost the other way round; p is the exact two-sided sign test on wins and losses. Questions both runs find, or both miss, are left out.
+
+| Run | Recall@5 | Won / lost vs no reranking | p | Won | Lost |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| hybrid-paragraph-haiku20 | 0.82 (0.66–0.92) | 6 / 0 | 0.03 | q030, q049, q052, q057, q092, q093 | – |
+
+### What reranking a question costs
+
+From the rerankers' scoring runs on the test questions. A local run (`runs/rerank-local/`) costs nothing, and its time is its scoring time a passage, on the Mac and without loading the model, times the 20 passages a reranked run reads, since a run that only tops up the cache scores fewer. A hosted run (`runs/rerank/`) is paid, and its time is each request's round trip, averaged. Its cost is what the API counted, at the configured price.
+
+| Reranker | Instruction | Log | Questions | Passages a question | Seconds a question | US$ a question | US$ per 1,000 |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| claude-haiku-5-5-low-c4658c1e8150 | – | `2026-11-09T07-47-22Z-claude-haiku-5-5.json` | 40 | 20 | 1.84 | 0.00067 | 0.67 |
+
+### Runs
+
+| Run | Retriever | Strategy | Chunks | Depth | Commit |
+| --- | --- | --- | ---: | ---: | ---: |
+| hybrid-article | hybrid (k1 1.5, b 0.75, model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, rrf_k 60, rrf_depth 50) | article | 133 | 50 | 4b55862 + changes |
+| hybrid-paragraph | hybrid (k1 1.5, b 0.75, model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, rrf_k 60, rrf_depth 50) | paragraph | 412 | 50 | 4b55862 + changes |
+| hybrid-paragraph-haiku20 | hybrid (k1 1.5, b 0.75, model Qwen_Qwen3-Embedding-0.6B-97b0c614be4d-mps-1024-normalized, rrf_k 60, rrf_depth 50, reranker claude-haiku-5-5-low-c4658c1e8150, rerank_depth 20) | paragraph | 412 | 50 | 4b55862 + changes |

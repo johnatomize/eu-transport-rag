@@ -401,6 +401,28 @@ def test_a_test_split_question_is_refused(script, capsys):
     assert script.built == []
 
 
+def test_only_a_finalist_answers_the_test_split_and_only_whole(script, capsys):
+    for args in (["-k", "10"], ["--strategy", "window-200-50"], ["--only", "q004"], []):
+        role = [] if args == [] else ["--role", "scored"]  # the build model isn't a finalist
+        assert script.main(["--split", "test", *role, *args]) == 1
+        assert "only by checkpoint G's finalists" in capsys.readouterr().err
+    assert script.built == []
+
+
+def test_a_finalist_answers_the_test_split_once(script, capsys):
+    assert script.main(["--split", "test", "--role", "scored"]) == 0  # a dry run
+    assert "The test split, 40 questions." in capsys.readouterr().out
+    script.RUNS.mkdir(parents=True)
+    retrieval = {"retriever": "hybrid", "strategy": "paragraph", "k": 5}
+    done = {"config": {"split": "test", "model": "claude-opus-5-5", "retrieval": retrieval}}
+    (script.RUNS / "old.json").write_text(json.dumps(done), encoding="utf-8")
+    assert script.main(["--split", "test", "--role", "scored"]) == 1
+    assert "has answered the test split already (old.json)" in capsys.readouterr().err
+    # Another finalist hasn't, so it may.
+    assert script.main(["--split", "test", "--role", "scored", "--rerank", "haiku"]) == 0
+    assert script.built == []
+
+
 def test_an_empty_selection_is_refused(script, capsys):
     assert script.main(["--only", ","]) == 1
     assert "names no question" in capsys.readouterr().err

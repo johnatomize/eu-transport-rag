@@ -41,11 +41,11 @@ search: ## Print the best chunks for a question: make search Q="How long may I d
 	@test -n "$$Q" || { echo 'usage: make search Q="your question" [STRATEGY=paragraph] [K=5] [REFS=1]' >&2; exit 1; }
 	uv run --locked python scripts/search.py --strategy $(or $(STRATEGY),paragraph) -k $(or $(K),5) $(if $(filter 1,$(REFS)),--refs,) "$$Q"
 
-retrieval-runs: ## Run every retrieval configuration on the dev split and write runs/retrieval/*.json
-	uv run --locked python scripts/retrieval_runs.py
+retrieval-runs: ## Run every retrieval configuration on the dev split and write runs/retrieval/*.json; SPLIT=test runs G's finalists once
+	uv run --locked python scripts/retrieval_runs.py $(if $(SPLIT),--split $(SPLIT),)
 
 rerank: ## Report which reranker scores the reranked runs lack; RUN=1 scores them with the local model. WITH=jev|haiku shows what a hosted reranker would cost; RUN=1 then pays
-	uv run --locked $(if $(and $(filter 1,$(RUN)),$(if $(WITH),,1)),--group local-embed,) python scripts/retrieval_runs.py --scores $(if $(WITH),--with $(WITH),) $(if $(filter 1,$(RUN)),--run,)
+	uv run --locked $(if $(and $(filter 1,$(RUN)),$(if $(WITH),,1)),--group local-embed,) python scripts/retrieval_runs.py --scores $(if $(WITH),--with $(WITH),) $(if $(filter 1,$(RUN)),--run,) $(if $(SPLIT),--split $(SPLIT),)
 
 embed-dry-run: ## Print what embedding the corpus and the questions would take (and cost, on Bedrock); runs nothing
 	uv run --locked python scripts/embed_dry_run.py
@@ -53,9 +53,9 @@ embed-dry-run: ## Print what embedding the corpus and the questions would take (
 embed: ## Report which chunks and questions lack a cached vector; RUN=1 embeds them with the configured model
 	uv run --locked $(if $(RUN),--group local-embed,) python scripts/embed.py $(if $(RUN),--run,)
 
-answers: ## Show what answering the dev questions with Claude would send and cost; RUN=1 sends and pays, BATCH=1 at half price. Also ROLE, ONLY, STRATEGY, K, RERANK=haiku
+answers: ## Show what answering the dev questions with Claude would send and cost; RUN=1 sends and pays, BATCH=1 at half price. Also ROLE, ONLY, STRATEGY, K, RERANK=haiku, SPLIT=test
 	uv run --locked python scripts/answer.py $(if $(RUN),--run,) $(if $(BATCH),--batch,) $(if $(ROLE),--role $(ROLE),) $(if $(ONLY),--only $(ONLY),) \
-		$(if $(STRATEGY),--strategy $(STRATEGY),) $(if $(K),-k $(K),) $(if $(RERANK),--rerank $(RERANK),)
+		$(if $(STRATEGY),--strategy $(STRATEGY),) $(if $(K),-k $(K),) $(if $(RERANK),--rerank $(RERANK),) $(if $(SPLIT),--split $(SPLIT),)
 
 ask: export Q := $(Q)
 ask: ## Answer one typed question: make ask Q="…" shows the passages and cost; RUN=1 sends and pays

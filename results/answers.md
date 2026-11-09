@@ -97,6 +97,83 @@ Each run against the base setup (opus-5-5, hybrid paragraph top 5), question by 
 
 6 comparisons on this split. Even if no run were better than another, each comparison would come out below p = 0.05 one time in twenty, so with 6 of them a single small p is weak evidence; a p below 0.0083 (0.05 / 6, Bonferroni) holds up when they are taken together.
 
+## Test split
+
+40 questions: 24 with key facts, 10 answerable without, and 6 unanswerable.
+
+### Quality
+
+| Run | Correct | Citation precision | Citation recall | Refusal accuracy | False refusals | Not answered reliably | Faithful |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| opus-5-5, hybrid paragraph top 5 | 0.71 (0.51–0.85) | 0.67 (0.55–0.79) | 0.70 (0.56–0.83) | 1.00 (0.61–1.00) | 0.21 (0.10–0.37) | 0.00 (0.00–0.09) | 0.89 (0.72–0.96), 27 judged |
+| opus-5-5, hybrid article top 3 | 0.83 (0.64–0.93) | 0.54 (0.44–0.64) | 0.73 (0.59–0.85) | 1.00 (0.61–1.00) | 0.15 (0.06–0.30) | 0.00 (0.00–0.09) | 0.83 (0.65–0.92), 29 judged |
+| opus-5-5, hybrid paragraph top 5 reranked by haiku-5-5-low-c4658c1e8150 from top 20 | 0.92 (0.74–0.98) | 0.57 (0.47–0.68) | 0.86 (0.76–0.95) | 1.00 (0.61–1.00) | 0.06 (0.02–0.19) | 0.00 (0.00–0.09) | 0.84 (0.68–0.93), 32 judged |
+
+### Cost and speed per question
+
+| Run | Cost (US$) | Seconds | Input tokens | Output tokens | Words shown |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| opus-5-5, hybrid paragraph top 5 | 0.0101 (0.0089–0.0113) | – | 2,965 (2,687–3,250) | 414 (331–500) | 790 |
+| opus-5-5, hybrid article top 3 | 0.0135 (0.0120–0.0150) | – | 4,365 (3,971–4,770) | 476 (377–580) | 1,431 |
+| opus-5-5, hybrid paragraph top 5 reranked by haiku-5-5-low-c4658c1e8150 from top 20 | 0.0104 (0.0092–0.0116) | – | 2,773 (2,545–3,018) | 482 (389–577) | 693 |
+
+### What happened to each question
+
+Retrieval misses and generation errors split the questions that went wrong: an answerable question not answered correctly, or an unanswerable one answered. A miss had no gold passage among those shown; an error had one.
+
+| Run | Answered | Refused | Not reliable | No reply | Retrieval misses | Generation errors |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| opus-5-5, hybrid paragraph top 5 | 27 | 13 | 0 | 0 | 3 | 6 |
+| opus-5-5, hybrid article top 3 | 29 | 11 | 0 | 0 | 4 | 2 |
+| opus-5-5, hybrid paragraph top 5 reranked by haiku-5-5-low-c4658c1e8150 from top 20 | 32 | 8 | 0 | 0 | 1 | 2 |
+
+### Correct by phrasing
+
+| Phrasing | n | opus-5-5, hybrid paragraph top 5 | opus-5-5, hybrid article top 3 | opus-5-5, hybrid paragraph top 5 reranked by haiku-5-5-low-c4658c1e8150 from top 20 |
+| --- | ---: | ---: | ---: | ---: |
+| paraphrased | 19 | 0.63 (0.41–0.81) | 0.79 (0.57–0.91) | 0.89 (0.69–0.97) |
+| verbatim | 5 | 1.00 (0.57–1.00) | 1.00 (0.57–1.00) | 1.00 (0.57–1.00) |
+
+### Correct by question type
+
+| Question type | n | opus-5-5, hybrid paragraph top 5 | opus-5-5, hybrid article top 3 | opus-5-5, hybrid paragraph top 5 reranked by haiku-5-5-low-c4658c1e8150 from top 20 |
+| --- | ---: | ---: | ---: | ---: |
+| single_fact | 8 | 1.00 (0.68–1.00) | 1.00 (0.68–1.00) | 1.00 (0.68–1.00) |
+| multi_article | 4 | 0.25 (0.05–0.70) | 0.75 (0.30–0.95) | 1.00 (0.51–1.00) |
+| exception | 4 | 1.00 (0.51–1.00) | 1.00 (0.51–1.00) | 1.00 (0.51–1.00) |
+| cross_act | 2 | 0.50 (0.09–0.91) | 0.50 (0.09–0.91) | 0.50 (0.09–0.91) |
+| version_trap | 6 | 0.50 (0.19–0.81) | 0.67 (0.30–0.90) | 0.83 (0.44–0.97) |
+
+### Citation recall by phrasing
+
+| Phrasing | n | opus-5-5, hybrid paragraph top 5 | opus-5-5, hybrid article top 3 | opus-5-5, hybrid paragraph top 5 reranked by haiku-5-5-low-c4658c1e8150 from top 20 |
+| --- | ---: | ---: | ---: | ---: |
+| paraphrased | 24 | 0.62 (0.44–0.79) | 0.67 (0.50–0.84) | 0.85 (0.72–0.96) |
+| verbatim | 10 | 0.90 (0.75–1.00) | 0.85 (0.70–1.00) | 0.90 (0.75–1.00) |
+
+### Citation recall by question type
+
+| Question type | n | opus-5-5, hybrid paragraph top 5 | opus-5-5, hybrid article top 3 | opus-5-5, hybrid paragraph top 5 reranked by haiku-5-5-low-c4658c1e8150 from top 20 |
+| --- | ---: | ---: | ---: | ---: |
+| single_fact | 8 | 1.00 (1.00–1.00) | 1.00 (1.00–1.00) | 1.00 (1.00–1.00) |
+| definition | 4 | 0.75 (0.25–1.00) | 0.75 (0.25–1.00) | 1.00 (1.00–1.00) |
+| multi_article | 6 | 0.39 (0.14–0.67) | 0.61 (0.47–0.81) | 0.81 (0.64–0.94) |
+| exception | 6 | 0.92 (0.75–1.00) | 0.83 (0.50–1.00) | 0.92 (0.75–1.00) |
+| cross_act | 4 | 0.50 (0.12–0.88) | 0.25 (0.00–0.50) | 0.50 (0.12–0.88) |
+| version_trap | 6 | 0.50 (0.17–0.83) | 0.67 (0.33–1.00) | 0.83 (0.50–1.00) |
+
+### Paired comparisons
+
+Each run against the base setup (opus-5-5, hybrid paragraph top 5) and each other, question by question. A question counts as right when it has key facts and is answered correctly, or is unanswerable and refused; answerable questions without key facts are left out. p is the exact two-sided sign test on the questions only one run gets right.
+
+| Run | Against | Only this right | Only that right | Both right | Both wrong | p |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| opus-5-5, hybrid article top 3 | opus-5-5, hybrid paragraph top 5 | 3 | 0 | 23 | 4 | 0.250 |
+| opus-5-5, hybrid paragraph top 5 reranked by haiku-5-5-low-c4658c1e8150 from top 20 | opus-5-5, hybrid paragraph top 5 | 5 | 0 | 23 | 2 | 0.062 |
+| opus-5-5, hybrid article top 3 | opus-5-5, hybrid paragraph top 5 reranked by haiku-5-5-low-c4658c1e8150 from top 20 | 0 | 2 | 26 | 2 | 0.500 |
+
+3 comparisons on this split. Even if no run were better than another, each comparison would come out below p = 0.05 one time in twenty, so with 3 of them a single small p is weak evidence; a p below 0.0167 (0.05 / 3, Bonferroni) holds up when they are taken together.
+
 ## Runs
 
 | Run | Split | Effort | Prompt | Commit | Log | Judge log | Paid (US$) | Judging paid (US$) |
@@ -108,3 +185,6 @@ Each run against the base setup (opus-5-5, hybrid paragraph top 5), question by 
 | opus-5-5, hybrid article top 3 | dev | medium | 7d03975820fd | bfb1666 | `2026-11-06T15-25-54Z-claude-opus-5-5.json` | `run-2026-11-06T15-34-46Z-claude-opus-5-5.json` | 0.80 | 0.50 |
 | opus-5-5, hybrid window-200-50 top 6 | dev | medium | 7d03975820fd | bfb1666 | `2026-11-06T15-25-57Z-claude-opus-5-5.json` | `run-2026-11-06T15-34-49Z-claude-opus-5-5.json` | 0.84 | 0.53 |
 | opus-5-5, hybrid paragraph top 5 reranked by haiku-5-5-low-c4658c1e8150 from top 20 | dev | medium | 7d03975820fd | bfb1666 | `2026-11-06T15-26-00Z-claude-opus-5-5.json` | `run-2026-11-06T15-34-52Z-claude-opus-5-5.json` | 0.65 | 0.54 |
+| opus-5-5, hybrid paragraph top 5 | test | medium | 7d03975820fd | 4b55862 + changes | `2026-11-09T07-49-38Z-claude-opus-5-5.json` | `run-2026-11-09T07-53-07Z-claude-opus-5-5.json` | 0.40 | 0.26 |
+| opus-5-5, hybrid article top 3 | test | medium | 7d03975820fd | 4b55862 + changes | `2026-11-09T07-49-41Z-claude-opus-5-5.json` | `run-2026-11-09T07-53-10Z-claude-opus-5-5.json` | 0.54 | 0.32 |
+| opus-5-5, hybrid paragraph top 5 reranked by haiku-5-5-low-c4658c1e8150 from top 20 | test | medium | 7d03975820fd | 4b55862 + changes | `2026-11-09T07-49-44Z-claude-opus-5-5.json` | `run-2026-11-09T07-53-13Z-claude-opus-5-5.json` | 0.41 | 0.35 |

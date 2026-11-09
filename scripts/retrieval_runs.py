@@ -1,13 +1,17 @@
 """Run every retrieval configuration on the dev split and write a run log for each.
 
     retrieval_runs.py                 write runs/retrieval/<name>.json (`make retrieval-runs`)
+    retrieval_runs.py --split test    the test split, once, for checkpoint G's finalists only
+                                      (#86): runs/retrieval/test/<name>.json
+                                      (`make retrieval-runs SPLIT=test`)
     retrieval_runs.py --scores        report the reranker scores missing (`make rerank`)
     retrieval_runs.py --scores --run  score them with the local reranker (`make rerank RUN=1`),
                                       logging how long it took to runs/rerank-local/
     retrieval_runs.py --scores --with jev|haiku
                                       what asking a hosted reranker would send and cost
                                       (`make rerank WITH=…`); with --run it pays, within the
-                                      approved cap, and logs the run to runs/rerank/
+                                      approved cap, and logs the run to runs/rerank/; with
+                                      --split test, for the test questions (only haiku)
 
 Configurations are listed by `runs`; later checkpoints add theirs. A log whose rankings haven't
 changed is left as it is, so a rerun doesn't touch the committed logs and tables. Run logs are
@@ -70,7 +74,7 @@ from rag.hosted_rerank import (
     read_typesafe_key,
 )
 from rag.parse import ParseError, Tree, parse_corpus
-from rag.questions import validate
+from rag.questions import SPLITS, validate
 from rag.rerank import (
     CachedScorer,
     LocalReranker,
@@ -124,6 +128,10 @@ HOSTED = ("jev", "haiku")
 # Settings of a reranked run that the retriever it wraps doesn't have.
 RERANK_SETTINGS = ("reranker", "rerank_depth", "rerank_blend", "rerank_instruction",
                    "expansion_after_rerank")  # fmt: skip
+# The test split is run once, for the finalists the owner chose on 2026-11-06 (#86): the base,
+# article chunks, and Haiku 5.5 reranking the base's top 20. The answer runs set k and depth;
+# a retrieval run ranks to DEPTH whatever the k.
+TEST_RUNS = ("hybrid-paragraph", "hybrid-article", "hybrid-paragraph-haiku20")  # see answer.py
 
 
 def configs(model: str) -> list[tuple[str, dict]]:
@@ -378,12 +386,12 @@ def _version(name: str) -> str | None:
         return None
 
 
-def lots_for(made: list, questions: list) -> list[Lot]:
-    """Each dev question with the passages a hosted reranker will be asked about, found as
-    `pairs_to_score` finds them. `made` holds the (config, wrapped retriever) of its runs."""
+def lots_for(made: list, questions: list, split: str = "dev") -> list[Lot]:
+    """Each question of `split` with the passages a hosted reranker will be asked about, found
+    as `pairs_to_score` finds them. `made` holds the (config, wrapped retriever) of its runs."""
     config, retriever = max(made, key=lambda m: m[0]["rerank_depth"])
     lots = []
-    for question in (q for q in questions if q.split == "dev"):
+    for question in (q for q in questions if q.split == split):
         recorder = Recorder()
         Rerank(retriever, recorder, config["rerank_depth"]).search(question.question, DEPTH)
         [(_, texts)] = recorder.lists
@@ -392,7 +400,7 @@ def lots_for(made: list, questions: list) -> list[Lot]:
 
 
 def report_hosted(which: str, lots: list[Lot], hosted: HostedConfig, cache: HostedCache,
-                  run: bool) -> int:  # fmt: skip
+                  run: bool, split: str = "dev") -> int:  # fmt: skip
     """`make rerank WITH=…`: what asking a hosted reranker would send and cost; with `run`,
     ask it, within the cap, logging every paid call to `HOSTED_RUNS`."""
     if which == "jev":
@@ -437,14 +445,15 @@ def report_hosted(which: str, lots: list[Lot], hosted: HostedConfig, cache: Host
     if not run:
         for problem in blocked:
             print(f"A paid run would not start: {problem}")
-        print(f"Nothing was sent. To pay and ask: make rerank WITH={which} RUN=1")
+        again = " SPLIT=test" if split == "test" else ""
+        print(f"Nothing was sent. To pay and ask: make rerank WITH={which}{again} RUN=1")
         return 0
     for problem in blocked:
         print(f"error: {problem}", file=sys.stderr)
     if blocked:
         print("Nothing was sent.", file=sys.stderr)
         return 1
-    settings = dataclasses.asdict(config) | {"price_read_on": read_on.isoformat()}
+    settings = dataclasses.asdict(config) | {"price_read_on": read_on.isoformat(), "split": split}
     settings = {k: str(v) if isinstance(v, dt.date) else v for k, v in settings.items()}
     try:  # before anything is sent, so a run that can't be logged never starts
         header, path = new_run(ROOT, HOSTED_RUNS, config.model)
@@ -518,9 +527,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--scores", action="store_true", help="report missing reranker scores")
     parser.add_argument("--run", action="store_true", help="with --scores, run the reranker")
     parser.add_argument("--with", dest="hosted", choices=HOSTED, help="a hosted reranker")
+    parser.add_argument(
+        "--split", choices=SPLITS, default="dev",
+        help="test: checkpoint G's finalists only, once (#86)",
+    )  # fmt: skip
     args = parser.parse_args(argv)
     if (args.run or args.hosted) and not args.scores:
         parser.error("--run and --with go with --scores")
+    test = args.split == "test"
+    if test and args.scores and args.hosted != "haiku":
+        parser.error("on the test split only Haiku reranks (--with haiku)")
     try:
         tree = parse_corpus(load_manifest(MANIFEST), ROOT)
     except (CorpusError, ParseError) as e:
@@ -556,6 +572,8 @@ def main(argv: list[str] | None = None) -> int:
     ):
         if args.scores and config.get("reranker") != asked:
             continue
+        if test and name not in TEST_RUNS:
+            continue
         if strategy not in chunked:
             chunked[strategy] = STRATEGIES[strategy](tree)
         chunks = chunked[strategy]
@@ -566,17 +584,19 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             retriever = retriever_for(config, chunks, tree, indexes, vectors, scorer_for)
             config = {**config, "strategy": strategy}
-            made.append((name, make_run(name, config, retriever, chunks, questions, ROOT)))
+            made.append((name, make_run(name, config, retriever, chunks, questions, ROOT,
+                                        split=args.split, allow_test=test)))  # fmt: skip
         except (EmbedError, VectorIndexError, RerankError) as e:
             print(f"error: {name}: {e}; no run log was written", file=sys.stderr)
             return 1
     if args.hosted:
         try:
-            lots = lots_for(to_rerank, questions)
+            lots = lots_for(to_rerank, questions, args.split)
         except (EmbedError, VectorIndexError) as e:
             print(f"error: {e}", file=sys.stderr)
             return 1
-        return report_hosted(args.hosted, lots, hosted, caches[args.hosted], args.run)
+        return report_hosted(args.hosted, lots, hosted, caches[args.hosted], args.run,
+                             args.split)  # fmt: skip
     if args.scores:
         try:
             pairs = pairs_to_score(to_rerank, questions)
@@ -584,9 +604,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"error: {e}", file=sys.stderr)
             return 1
         return report_scores(pairs, scores, args.run)
-    OUT.mkdir(parents=True, exist_ok=True)
+    out = OUT / "test" if test else OUT
+    out.mkdir(parents=True, exist_ok=True)
     for name, run in made:
-        path = OUT / f"{name}.json"
+        path = out / f"{name}.json"
         where = path.relative_to(ROOT)
         if path.exists() and same_results(json.loads(path.read_text(encoding="utf-8")), run):
             print(f"{name:25} unchanged, {where} kept")

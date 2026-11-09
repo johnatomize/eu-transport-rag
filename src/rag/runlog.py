@@ -34,7 +34,7 @@ from pathlib import Path
 
 from rag.chunk import STRATEGIES, Chunk
 from rag.parse import Tree
-from rag.questions import Question
+from rag.questions import SPLITS, Question
 from rag.retrieve import Retriever
 
 DEPTH = 50
@@ -95,14 +95,18 @@ def make_run(
     root: Path,
     split: str = "dev",
     depth: int = DEPTH,
+    allow_test: bool = False,
 ) -> dict:
     """Run `retriever` on every question of `split` and return the run log.
 
     `config` describes the retriever (name and parameters); the chunk count, mean chunk length,
-    split and depth are added here. The test split is never run before checkpoint G.
+    split and depth are added here. The test split is run once, for checkpoint G's finalists
+    (#86), so running it needs `allow_test`.
     """
-    if split != "dev":
-        raise ValueError(f"runs are made on the dev split only until checkpoint G, not {split}")
+    if split not in SPLITS:
+        raise ValueError(f"no split {split!r}; the splits are {', '.join(SPLITS)}")
+    if split == "test" and not allow_test:
+        raise ValueError("the test split is run only for checkpoint G's finalists; pass allow_test")
     if not chunks:
         raise ValueError(f"{name}: no chunks")
     commit, dirty = git_state(root)

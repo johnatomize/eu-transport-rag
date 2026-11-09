@@ -27,12 +27,16 @@ Retrieval is the setup E found best unless told otherwise: hybrid search (BM25 a
 fused by RRF) over paragraph chunks, top 5. With `--rerank haiku`, Claude Haiku 5.5's order of
 search's top 20 decides the top k (#99, #85). The order is read from its cache in reranks/ and
 never asked for here: a question without a cached order stops the run before anything is sent,
-and `make rerank WITH=haiku` shows what asking would cost. Only the dev split can be answered;
-the test split waits for G.
+and `make rerank WITH=haiku` shows what asking would cost.
+
+The dev split is answered unless `--split test` asks for the test split, which is answered
+once, by checkpoint G's finalists (#86): any other setup is refused, and so is a finalist that
+already has a test run in runs/generation/, unless that run is a batch still to be picked up.
 """
 
 import argparse
 import datetime as dt
+import json
 import sys
 from pathlib import Path
 
@@ -77,7 +81,7 @@ from rag.generation_config import load_generation_config as load_generation
 from rag.hosted_rerank import LISTWISE_FIELDS, HostedCache, ListwiseScorer, load_hosted_config
 from rag.parse import ParseError, parse_corpus
 from rag.prompt import ANSWER_SCHEMA, build_prompt
-from rag.questions import validate
+from rag.questions import SPLITS, validate
 from rag.rerank import RerankError
 from rag.retrieve import Rerank
 from rag.spend import SpendLogError, spending, spending_report
@@ -94,6 +98,29 @@ HOSTED_CONFIG = ROOT / "config" / "rerank-hosted.yaml"
 RERANKS = ROOT / "reranks"
 # Haiku reorders search's top 20, as in the retrieval run it was chosen from (#99).
 RERANK_DEPTH = 20
+# The only setups that may answer the test split (owner, 2026-11-06, #86): role, retriever,
+# strategy, k and reranker. scripts/retrieval_runs.py's TEST_RUNS are their retrieval runs.
+FINALISTS = (
+    ("scored", "hybrid", "paragraph", 5, None),
+    ("scored", "hybrid", "article", 3, None),
+    ("scored", "hybrid", "paragraph", 5, "haiku"),
+)
+
+
+def test_runs(runs: Path, model: str, retrieval: dict) -> list[Path]:
+    """The answer run logs in `runs` on the test split with this model and retrieval."""
+    found = []
+    for path in sorted(runs.glob("*.json")):
+        config = json.loads(path.read_text(encoding="utf-8")).get("config", {})
+        if (config.get("split"), config.get("model"), config.get("retrieval")) == (
+            "test",
+            model,
+            retrieval,
+        ):
+            found.append(path)
+    return found
+
+
 ENV = ROOT / ".env"
 
 
@@ -106,7 +133,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--retriever", choices=RETRIEVERS, default="hybrid")
     parser.add_argument("--strategy", choices=STRATEGIES, default="paragraph")
     parser.add_argument("-k", type=int, default=5, help="chunks per prompt (default 5)")
-    parser.add_argument("--only", help="answer only these dev questions: q001,q002")
+    parser.add_argument("--only", help="answer only these questions of the split: q001,q002")
+    parser.add_argument(
+        "--split", choices=SPLITS, default="dev",
+        help="test: once, for checkpoint G's finalists (#86)",
+    )  # fmt: skip
     parser.add_argument("--batch", action="store_true", help="send as one batch, at half price")
     parser.add_argument(
         "--rerank",
@@ -127,18 +158,26 @@ def main(argv: list[str] | None = None) -> int:
     if errors:
         print(f"error: {QUESTIONS.name} is not valid; run `make questions`", file=sys.stderr)
         return 1
-    dev = [q for q in questions if q.split == "dev"]
+    dev = [q for q in questions if q.split == args.split]
     if args.only:
         wanted = [i.strip() for i in args.only.split(",") if i.strip()]
         known = {q.id for q in dev}
         if unknown := [i for i in wanted if i not in known]:
-            print(f"error: not dev questions: {', '.join(unknown)}", file=sys.stderr)
+            print(f"error: not {args.split} questions: {', '.join(unknown)}", file=sys.stderr)
             return 1
         dev = [q for q in dev if q.id in wanted]
         if not dev:
             print("error: --only names no question", file=sys.stderr)
             return 1
 
+    setup = (args.role, args.retriever, args.strategy, args.k, args.rerank)
+    if args.split == "test" and (setup not in FINALISTS or args.only):
+        print(
+            "error: the test split is answered only by checkpoint G's finalists, whole (#86): "
+            "ROLE=scored with the defaults, STRATEGY=article K=3, or RERANK=haiku",
+            file=sys.stderr,
+        )
+        return 1
     model = config.model(args.role)
     chunks = STRATEGIES[args.strategy](tree)
     try:
@@ -161,6 +200,13 @@ def main(argv: list[str] | None = None) -> int:
         record = new_batch(calls, config, model, ANSWER_SCHEMA)
         batch = record if args.batch else None
         pending = find_batch(RUNS, record)  # a batch of these calls that may still be paid for
+        if args.split == "test":
+            done = [p for p in test_runs(RUNS, model, retrieval) if not pending or p != pending[0]]
+            if done:
+                raise ValueError(
+                    f"this finalist has answered the test split already ({done[0].name}); the "
+                    "test split is answered once"
+                )
     except (
         ConfigError,
         EmbedError,
@@ -181,7 +227,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(
         f"Retrieval: {args.retriever} over {args.strategy} chunks, top {args.k}{reranked}. "
-        f"Prompt version {prompt_version()}."
+        f"Prompt version {prompt_version()}. The {args.split} split, {len(dev)} questions."
     )
     print(f"{'question':9} {'est. input':>10} {'est. output':>11} {'max output':>10}")
     for c in calls:
@@ -215,6 +261,7 @@ def main(argv: list[str] | None = None) -> int:
         given = {"ROLE": args.role if args.role != "build" else None, "ONLY": args.only,
                  "STRATEGY": args.strategy if args.strategy != "paragraph" else None,
                  "K": args.k if args.k != 5 else None, "RERANK": args.rerank,
+                 "SPLIT": args.split if args.split != "dev" else None,
                  "BATCH": 1 if args.batch else None}  # fmt: skip
         again = "".join(f" {name}={value}" for name, value in given.items() if value)
         print(f"Nothing was sent. To send and pay: make answers{again} RUN=1")
@@ -229,7 +276,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     def save(result: RunResult) -> None:
-        write_run_log(path, run_log(run, config, model, retrieval, "dev", e, result, batch))
+        write_run_log(path, run_log(run, config, model, retrieval, args.split, e, result, batch))
 
     if pending:
         run, path, batch = pick_up(pending)

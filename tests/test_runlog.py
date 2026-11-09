@@ -151,7 +151,9 @@ def test_the_table_scores_each_run_and_lists_what_every_run_misses(root):
     # Both chunks are 9 words long and both are in every top 5: 18 words.
     assert "| good | 9 | 18 | 1.00 (0.34–1.00) |" in table
     assert "| bad | 9 | 18 | 0.00 (0.00–0.66) |" in table
-    assert "| good | bm25 (k1 1.5, b 0.75) | t | 2 | 50 | – | unknown |" in table
+    # No run expands references, so there is no column for it.
+    assert "| good | bm25 (k1 1.5, b 0.75) | t | 2 | 50 | unknown |" in table
+    assert "Placed by references" not in table
     assert "## Questions no run finds in the top 10 (0)" in table
     assert retrieval([good, bad], QUESTIONS, TREE) == table
 

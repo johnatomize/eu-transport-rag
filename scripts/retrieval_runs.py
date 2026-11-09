@@ -74,7 +74,7 @@ from rag.hosted_rerank import (
     read_typesafe_key,
 )
 from rag.parse import ParseError, Tree, parse_corpus
-from rag.questions import validate
+from rag.questions import SPLITS, validate
 from rag.rerank import (
     CachedScorer,
     LocalReranker,
@@ -131,7 +131,7 @@ RERANK_SETTINGS = ("reranker", "rerank_depth", "rerank_blend", "rerank_instructi
 # The test split is run once, for the finalists the owner chose on 2026-11-06 (#86): the base,
 # article chunks, and Haiku 5.5 reranking the base's top 20. The answer runs set k and depth;
 # a retrieval run ranks to DEPTH whatever the k.
-TEST_RUNS = ("hybrid-paragraph", "hybrid-article", "hybrid-paragraph-haiku20")
+TEST_RUNS = ("hybrid-paragraph", "hybrid-article", "hybrid-paragraph-haiku20")  # see answer.py
 
 
 def configs(model: str) -> list[tuple[str, dict]]:
@@ -528,7 +528,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--run", action="store_true", help="with --scores, run the reranker")
     parser.add_argument("--with", dest="hosted", choices=HOSTED, help="a hosted reranker")
     parser.add_argument(
-        "--split", choices=("dev", "test"), default="dev",
+        "--split", choices=SPLITS, default="dev",
         help="test: checkpoint G's finalists only, once (#86)",
     )  # fmt: skip
     args = parser.parse_args(argv)

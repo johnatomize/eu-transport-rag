@@ -34,7 +34,7 @@ from pathlib import Path
 
 from rag.chunk import STRATEGIES, Chunk
 from rag.parse import Tree
-from rag.questions import Question
+from rag.questions import SPLITS, Question
 from rag.retrieve import Retriever
 
 DEPTH = 50
@@ -103,8 +103,8 @@ def make_run(
     split and depth are added here. The test split is run once, for checkpoint G's finalists
     (#86), so running it needs `allow_test`.
     """
-    if split not in ("dev", "test"):
-        raise ValueError(f"no split {split!r}; the splits are dev and test")
+    if split not in SPLITS:
+        raise ValueError(f"no split {split!r}; the splits are {', '.join(SPLITS)}")
     if split == "test" and not allow_test:
         raise ValueError("the test split is run only for checkpoint G's finalists; pass allow_test")
     if not chunks:

@@ -80,9 +80,14 @@ def main(argv: list[str] | None = None) -> int:
             print(f"error: can't read {path.relative_to(ROOT)}: {e}", file=sys.stderr)
             return 1
     try:
-        table = retrieval(runs, questions, tree, reranker_logs)
+        # A reranker's scoring run names its split; runs from before #86 read the dev split.
+        logs_of: dict[str, list] = {"dev": [], "test": []}
+        for name, log in reranker_logs:
+            logs_of[log["config"].get("split", "dev")].append((name, log))
+        table = retrieval(runs, questions, tree, logs_of["dev"])
         if test_runs:  # checkpoint G's final table (#86), a section after the dev split's
-            test = retrieval(test_runs, questions, tree, allow_test=True, title="Test split")
+            test = retrieval(test_runs, questions, tree, logs_of["test"], allow_test=True,
+                             title="Test split")  # fmt: skip
             table += "\n" + demote(test)
         tables = {OUT: table}
     except (ValueError, KeyError) as e:

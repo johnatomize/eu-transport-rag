@@ -16,6 +16,9 @@ import yaml
 PROVIDERS = ("anthropic",)
 ROLES = ("build", "scored")
 PRICE_KINDS = ("input", "output", "batch_input", "batch_output")
+# Prompt caching's prices, optional: no answer run asks for caching, and only the production
+# cost estimate (#102) reads them. A cache write lasts 5 minutes or 1 hour.
+CACHE_PRICE_KINDS = ("cache_write_5m", "cache_write_1h", "cache_read")
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 _SETTINGS = {
     "provider": str,
@@ -42,6 +45,9 @@ class Price:
     output: float
     batch_input: float
     batch_output: float
+    cache_write_5m: float | None = None
+    cache_write_1h: float | None = None
+    cache_read: float | None = None
 
     def for_batch(self) -> "Price":
         """The batch service's prices as the input and output prices, to cost a batch's calls."""
@@ -71,15 +77,16 @@ def _price(model: str, raw: object) -> tuple[Price | None, list[str]]:
     if not isinstance(raw, dict):
         return None, [f"prices of {model} should be a mapping"]
     problems = [f"prices of {model}: missing {k}" for k in PRICE_KINDS if k not in raw]
-    problems += [f"prices of {model}: unknown {k}" for k in raw if k not in PRICE_KINDS]
-    for k in PRICE_KINDS:
+    known = PRICE_KINDS + CACHE_PRICE_KINDS
+    problems += [f"prices of {model}: unknown {k}" for k in raw if k not in known]
+    for k in known:
         # `type`, not isinstance: a YAML `true` must not become 1.0.
         number = k in raw and type(raw[k]) in (int, float) and math.isfinite(raw[k])
         if k in raw and (not number or raw[k] <= 0):
             problems.append(f"prices of {model}: {k} should be a number above 0")
     if problems:
         return None, problems
-    return Price(**{k: float(raw[k]) for k in PRICE_KINDS}), []
+    return Price(**{k: float(raw[k]) for k in known if k in raw}), []
 
 
 def load_generation_config(path: Path) -> GenerationConfig:

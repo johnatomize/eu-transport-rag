@@ -2,6 +2,19 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-09: how the production cost is estimated
+
+**Decision** (for #102): `src/rag/production_cost.py` prices each test-split finalist from its run logs alone, and `make tables` writes `results/production_cost.md`.
+
+- **Prices:** Anthropic's real-time list prices from `config/generation.yaml`, which now also holds prompt caching's prices (a 5-minute write, a 1-hour write and a read); they were read on 2026-11-09. The batch price doesn't apply to a live question.
+- **Tokens:** the mean input and output tokens a question in the finalist's test answer run, plus, for Haiku reranking, the mean tokens of its scoring run on the test questions at Haiku's price.
+- **Time:** Opus's answer time from F's direct dev run, the only Opus run sent one call at a time; the reranker's round trip from its scoring run. Search and the question's embedding run on the service's machine and are left to I.
+- **Haiku answering:** each finalist's own input tokens, and its output tokens times the ratio of Haiku's output to Opus's in F's direct dev runs, which answered the same questions from the same passages. Running Haiku on the test split would have used it a second time.
+- **Caching:** estimated, as no run asked for it. The fixed part is the prompt code's own estimate of the instructions and the answer schema, raised by how far each run's real input tokens exceeded their estimates (about 1,130 tokens, over the 512 that can be cached; Anthropic's documentation doesn't say whether the API's own instructions for the answer schema are cached, and without them about 630 tokens are, still over 512). Questions are assumed to come at random times at an even rate over a 30-day month, so a question finds the cache warm with chance 1 − e^(−rate × lifetime); the cheaper of the two lifetimes, or none, is chosen at each volume. Real traffic bunches in working hours, so this errs low.
+- **Judging** is shown on its own, at real-time and at the batch price paid: a live service doesn't judge its answers.
+
+**Why:** the issue asks for a free estimate from the logs, and measuring caching or Haiku on the test split would have meant paying and using the test split again.
+
 ## 2026-11-09: how the test split is run and tabled
 
 **Decision** (for #86): the test split runs only for the finalists. `make retrieval-runs SPLIT=test` writes the three finalists' retrieval runs to `runs/retrieval/test/`, and `make tables` adds them to `results/retrieval.md` as a section after the dev split's; `make rerank WITH=haiku SPLIT=test` and `make answers SPLIT=test` do the rest. Code still refuses the test split unless it is asked for by name, and `make answers` refuses on it any setup but the three finalists, a partial run (`ONLY`), and a finalist that already has a test run log, so the test split can't be answered twice by mistake. The owner OK'd the paid run without an estimate first (2026-11-09); the tools' dry runs still ran for the cap check, and the issue had a US$20 limit against a stuck or repeating run.

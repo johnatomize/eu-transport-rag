@@ -7,7 +7,8 @@ The tables are results/retrieval.md; results/answers.md, with the share of each 
 the chosen faithfulness judge (judge_model in config/generation.yaml, with the judge's current
 instructions) found supported, from its whole runs in runs/judge/; and
 results/faithfulness_judge.md, which compares each calibration run of the judge with the
-owner's labels.
+owner's labels; and results/production_cost.md, what each finalist would cost as a live service
+(#102), from the test runs' tokens at the real-time prices in config/generation.yaml.
 
 Refuses a retrieval run log made from another version of the questions or the corpus manifest,
 or whose chunks differ from what the parser and chunking code give now; and an answer run log
@@ -23,11 +24,15 @@ import sys
 from pathlib import Path
 
 from rag.corpus import CorpusError, load_manifest
+from rag.embed_estimate import estimate_tokens
 from rag.faithfulness import LABELLED_RUNS, select, validate_labels
 from rag.faithfulness import answers as labelled_answers
+from rag.generate import SCHEMA_TOKENS
 from rag.generation_config import GenerationConfigError, load_generation_config
 from rag.judge import prompt_version
 from rag.parse import ParseError, parse_corpus
+from rag.production_cost import production_cost
+from rag.prompt import SYSTEM
 from rag.questions import validate
 from rag.runlog import StaleRunError, check_chunks, load
 from rag.tables import answers, judge_calibration, retrieval
@@ -45,6 +50,7 @@ JUDGE_RUNS = ROOT / "runs" / "judge"
 LABELS = ROOT / "data" / "faithfulness_labels.v1.jsonl"
 CONFIG = ROOT / "config" / "generation.yaml"
 JUDGE_OUT = ROOT / "results" / "faithfulness_judge.md"
+COST_OUT = ROOT / "results" / "production_cost.md"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -94,11 +100,21 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {e}; run `make retrieval-runs`", file=sys.stderr)
         return 1
     try:
-        judge = (load_generation_config(CONFIG).judge_model, prompt_version())
+        config = load_generation_config(CONFIG)
+        judge = (config.judge_model, prompt_version())
         judge_runs = judge_logs("run")
         tables[ANSWERS_OUT] = answers(answer_logs, questions, tree, None, judge_runs, judge)
     except (OSError, ValueError, KeyError, GenerationConfigError) as e:
         print(f"error: {e}", file=sys.stderr)
+        return 1
+    try:
+        hosted = [(name, log) for name, log in reranker_logs if "answers" in log]
+        tables[COST_OUT] = production_cost(
+            answer_logs, hosted, judge_runs, config.prices, config.prices_read_on.isoformat(),
+            estimate_tokens(SYSTEM) + SCHEMA_TOKENS, judge,
+        )  # fmt: skip
+    except (ValueError, KeyError) as e:
+        print(f"error: the production cost estimate: {e}", file=sys.stderr)
         return 1
     try:
         calibrations = judge_logs("calibration")
@@ -111,6 +127,7 @@ def main(argv: list[str] | None = None) -> int:
         OUT: len(runs) + len(test_runs),
         ANSWERS_OUT: len(answer_logs) + len(judge_runs),
         JUDGE_OUT: len(calibrations),
+        COST_OUT: len(answer_logs) + len(reranker_logs) + len(judge_runs),
     }
     if args.check:
         stale = [p for p, t in tables.items() if not p.exists() or p.read_text("utf-8") != t]

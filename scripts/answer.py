@@ -27,8 +27,10 @@ Retrieval is the setup E found best unless told otherwise: hybrid search (BM25 a
 fused by RRF) over paragraph chunks, top 5. With `--rerank haiku`, Claude Haiku 5.5's order of
 search's top 20 decides the top k (#99, #85). The order is read from its cache in reranks/ and
 never asked for here: a question without a cached order stops the run before anything is sent,
-and `make rerank WITH=haiku` shows what asking would cost. Only the dev split can be answered;
-the test split waits for G.
+and `make rerank WITH=haiku` shows what asking would cost.
+
+The dev split is answered unless `--split test` asks for the test split, which is answered
+once, by checkpoint G's finalists (#86).
 """
 
 import argparse
@@ -106,7 +108,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--retriever", choices=RETRIEVERS, default="hybrid")
     parser.add_argument("--strategy", choices=STRATEGIES, default="paragraph")
     parser.add_argument("-k", type=int, default=5, help="chunks per prompt (default 5)")
-    parser.add_argument("--only", help="answer only these dev questions: q001,q002")
+    parser.add_argument("--only", help="answer only these questions of the split: q001,q002")
+    parser.add_argument(
+        "--split", choices=("dev", "test"), default="dev",
+        help="test: once, for checkpoint G's finalists (#86)",
+    )  # fmt: skip
     parser.add_argument("--batch", action="store_true", help="send as one batch, at half price")
     parser.add_argument(
         "--rerank",
@@ -127,12 +133,12 @@ def main(argv: list[str] | None = None) -> int:
     if errors:
         print(f"error: {QUESTIONS.name} is not valid; run `make questions`", file=sys.stderr)
         return 1
-    dev = [q for q in questions if q.split == "dev"]
+    dev = [q for q in questions if q.split == args.split]
     if args.only:
         wanted = [i.strip() for i in args.only.split(",") if i.strip()]
         known = {q.id for q in dev}
         if unknown := [i for i in wanted if i not in known]:
-            print(f"error: not dev questions: {', '.join(unknown)}", file=sys.stderr)
+            print(f"error: not {args.split} questions: {', '.join(unknown)}", file=sys.stderr)
             return 1
         dev = [q for q in dev if q.id in wanted]
         if not dev:
@@ -181,7 +187,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(
         f"Retrieval: {args.retriever} over {args.strategy} chunks, top {args.k}{reranked}. "
-        f"Prompt version {prompt_version()}."
+        f"Prompt version {prompt_version()}. The {args.split} split, {len(dev)} questions."
     )
     print(f"{'question':9} {'est. input':>10} {'est. output':>11} {'max output':>10}")
     for c in calls:
@@ -215,6 +221,7 @@ def main(argv: list[str] | None = None) -> int:
         given = {"ROLE": args.role if args.role != "build" else None, "ONLY": args.only,
                  "STRATEGY": args.strategy if args.strategy != "paragraph" else None,
                  "K": args.k if args.k != 5 else None, "RERANK": args.rerank,
+                 "SPLIT": args.split if args.split != "dev" else None,
                  "BATCH": 1 if args.batch else None}  # fmt: skip
         again = "".join(f" {name}={value}" for name, value in given.items() if value)
         print(f"Nothing was sent. To send and pay: make answers{again} RUN=1")
@@ -229,7 +236,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     def save(result: RunResult) -> None:
-        write_run_log(path, run_log(run, config, model, retrieval, "dev", e, result, batch))
+        write_run_log(path, run_log(run, config, model, retrieval, args.split, e, result, batch))
 
     if pending:
         run, path, batch = pick_up(pending)

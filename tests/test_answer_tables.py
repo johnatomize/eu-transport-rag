@@ -132,6 +132,28 @@ def test_without_the_base_setup_every_pair_is_compared_and_the_count_noted():
     assert "3 comparisons on this split" in paired and "0.0167 (0.05 / 3, Bonferroni)" in paired
 
 
+def test_on_the_test_split_the_finalists_are_also_compared_with_each_other():
+    one = log([entry("q100")], split="test")
+    base, top3, haiku = settle(one), settle(one, k=3), settle(one, model="claude-haiku-5-5")
+    text = table(("a.json", base), ("b.json", top3), ("c.json", haiku))
+    paired = section(text, "### Paired comparisons")
+    assert "against the base setup (opus-5-5, hybrid paragraph top 5) and each other" in paired
+    against = [(r[0], r[1]) for r in rows(paired, "opus-5-5") + rows(paired, "haiku-5-5")]
+    assert sorted(against) == sorted([
+        ("opus-5-5, hybrid paragraph top 3", "opus-5-5, hybrid paragraph top 5"),
+        ("haiku-5-5, hybrid paragraph top 5", "opus-5-5, hybrid paragraph top 5"),
+        ("opus-5-5, hybrid paragraph top 3", "haiku-5-5, hybrid paragraph top 5"),
+    ])  # fmt: skip
+    assert "3 comparisons on this split" in paired
+    # On the dev split the same three are each compared with the base only.
+    dev = table(
+        ("a.json", BASE),
+        ("b.json", settle(RUN, k=3)),
+        ("c.json", settle(RUN, model="claude-haiku-5-5")),
+    )
+    assert "2 comparisons on this split" in section(dev, "### Paired comparisons")
+
+
 def test_one_run_alone_has_no_comparison():
     assert "### Paired comparisons" not in table(("a.json", BASE))
 

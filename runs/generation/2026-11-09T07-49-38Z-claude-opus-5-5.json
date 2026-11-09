@@ -1,0 +1,1956 @@
+{
+ "run": {
+  "created": "2026-11-09T07:49:38+00:00",
+  "commit": "4b5586278dd93c5a76960cafb9037a8b8d73875b",
+  "dirty": true
+ },
+ "config": {
+  "model": "claude-opus-5-5",
+  "effort": "medium",
+  "max_output_tokens": 4000,
+  "prompt_version": "7d03975820fd",
+  "price_usd_per_million": {
+   "input": 2.0,
+   "output": 10.0
+  },
+  "prices_read_on": "2026-11-03",
+  "retrieval": {
+   "retriever": "hybrid",
+   "strategy": "paragraph",
+   "k": 5
+  },
+  "split": "test"
+ },
+ "estimate": {
+  "calls": 40,
+  "input_tokens": 93136,
+  "padded_input_tokens": 139704,
+  "expected_usd": 0.879408,
+  "most_usd": 1.879408
+ },
+ "paid": {
+  "calls": 40,
+  "input_tokens": 118584,
+  "output_tokens": 16553,
+  "cost_usd": 0.402698
+ },
+ "error": null,
+ "failed": [],
+ "answers": [
+  {
+   "id": "q004",
+   "retrieved": [
+    "paragraph:561/2006:art6(1)",
+    "paragraph:561/2006:art6(3)",
+    "paragraph:561/2006:art6(2)",
+    "paragraph:561/2006:art8(2a)",
+    "paragraph:561/2006:art8(10)"
+   ],
+   "estimated_input_tokens": 1591,
+   "raw": "{\"answerable\": true, \"answer\": \"Yes, but only as an extension. Normal daily driving time is at most 9 hours. You may extend it to at most 10 hours, but no more than twice in the same week. Your driving must also stay within two other limits: no more than 56 hours in the week, and no more than 90 hours in total over any two consecutive weeks. The weekly driving must also not push you over the maximum weekly working time set by Directive 2002/15/EC.\", \"citations\": [{\"node_id\": \"561/2006:art6(1)\", \"quote\": \"The daily driving time shall not exceed nine hours.\"}, {\"node_id\": \"561/2006:art6(1)\", \"quote\": \"However, the daily driving time may be extended to at most 10 hours not more than twice during the week.\"}, {\"node_id\": \"561/2006:art6(2)\", \"quote\": \"The weekly driving time shall not exceed 56 hours and shall not result in the maximum weekly working time laid down in Directive 2002/15/EC being exceeded.\"}, {\"node_id\": \"561/2006:art6(3)\", \"quote\": \"The total accumulated driving time during any two consecutive weeks shall not exceed 90 hours.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Yes, but only as an extension. Normal daily driving time is at most 9 hours. You may extend it to at most 10 hours, but no more than twice in the same week. Your driving must also stay within two other limits: no more than 56 hours in the week, and no more than 90 hours in total over any two consecutive weeks. The weekly driving must also not push you over the maximum weekly working time set by Directive 2002/15/EC.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "561/2006:art6(1)",
+      "quote": "The daily driving time shall not exceed nine hours."
+     },
+     {
+      "node_id": "561/2006:art6(1)",
+      "quote": "However, the daily driving time may be extended to at most 10 hours not more than twice during the week."
+     },
+     {
+      "node_id": "561/2006:art6(2)",
+      "quote": "The weekly driving time shall not exceed 56 hours and shall not result in the maximum weekly working time laid down in Directive 2002/15/EC being exceeded."
+     },
+     {
+      "node_id": "561/2006:art6(3)",
+      "quote": "The total accumulated driving time during any two consecutive weeks shall not exceed 90 hours."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2015,
+    "output_tokens": 389,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.00792,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q009",
+   "retrieved": [
+    "paragraph:561/2006:art8(6)",
+    "paragraph:561/2006:art8(8a)",
+    "paragraph:561/2006:art8(6b)",
+    "paragraph:561/2006:art9(1)",
+    "paragraph:561/2006:art8(9)"
+   ],
+   "estimated_input_tokens": 2080,
+   "raw": "{\"answerable\":true,\"answer\":\"Your next weekly rest must start no later than at the end of six 24-hour periods (144 hours) after the end of your previous weekly rest. Over any two weeks in a row you need either two regular weekly rests, or one regular weekly rest and one reduced weekly rest of at least 24 hours. Exception: if you do international goods transport, you may take two reduced weekly rests in a row outside your Member State of establishment. In that case you must take at least four weekly rests in any four consecutive weeks, and at least two of them must be regular.\",\"citations\":[{\"node_id\":\"561/2006:art8(6)\",\"quote\":\"A weekly rest period shall start no later than at the end of six 24-hour periods from the end of the previous weekly rest period.\"},{\"node_id\":\"561/2006:art8(6)\",\"quote\":\"In any two consecutive weeks a driver shall take at least:\"},{\"node_id\":\"561/2006:art8(6)(a)\",\"quote\":\"two regular weekly rest periods; or\"},{\"node_id\":\"561/2006:art8(6)(b)\",\"quote\":\"one regular weekly rest period and one reduced weekly rest period of at least 24 hours.\"},{\"node_id\":\"561/2006:art8(6)\",\"quote\":\"a driver engaged in international transport of goods may, outside the Member State of establishment, take two consecutive reduced weekly rest periods provided that the driver in any four consecutive weeks takes at least four weekly rest periods, of which at least two shall be regular weekly rest periods.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Your next weekly rest must start no later than at the end of six 24-hour periods (144 hours) after the end of your previous weekly rest. Over any two weeks in a row you need either two regular weekly rests, or one regular weekly rest and one reduced weekly rest of at least 24 hours. Exception: if you do international goods transport, you may take two reduced weekly rests in a row outside your Member State of establishment. In that case you must take at least four weekly rests in any four consecutive weeks, and at least two of them must be regular.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "561/2006:art8(6)",
+      "quote": "A weekly rest period shall start no later than at the end of six 24-hour periods from the end of the previous weekly rest period."
+     },
+     {
+      "node_id": "561/2006:art8(6)",
+      "quote": "In any two consecutive weeks a driver shall take at least:"
+     },
+     {
+      "node_id": "561/2006:art8(6)(a)",
+      "quote": "two regular weekly rest periods; or"
+     },
+     {
+      "node_id": "561/2006:art8(6)(b)",
+      "quote": "one regular weekly rest period and one reduced weekly rest period of at least 24 hours."
+     },
+     {
+      "node_id": "561/2006:art8(6)",
+      "quote": "a driver engaged in international transport of goods may, outside the Member State of establishment, take two consecutive reduced weekly rest periods provided that the driver in any four consecutive weeks takes at least four weekly rest periods, of which at least two shall be regular weekly rest periods."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2645,
+    "output_tokens": 502,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.01031,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q010",
+   "retrieved": [
+    "paragraph:165/2014:art26(6)",
+    "paragraph:165/2014:art27(2)",
+    "paragraph:165/2014:art26(4)",
+    "paragraph:165/2014:art26(5)",
+    "paragraph:165/2014:art26(7)"
+   ],
+   "estimated_input_tokens": 1807,
+   "raw": "{\"answerable\":true,\"answer\":\"A driver card is valid for no more than five years. You must not use a card once it has expired. As an exception, a Member State may issue a temporary card that cannot be renewed and is valid for at most 185 days. This is only possible in duly justified and exceptional cases, for a driver who does not normally live in a Member State or an AETR country and who works for an undertaking established in the issuing Member State.\",\"citations\":[{\"node_id\":\"165/2014:art26(6)\",\"quote\":\"The driver card shall not be valid for more than five years.\"},{\"node_id\":\"165/2014:art27(2)\",\"quote\":\"A driver shall not use a driver card which is defective or which has expired.\"},{\"node_id\":\"165/2014:art26(4)\",\"quote\":\"In duly justified and exceptional cases, Member States may issue a temporary and non-renewable driver card valid for a maximum period of 185 days to a driver who does not have his normal residence in a Member State or in a State which is a Contracting Party to the AETR Agreement\"},{\"node_id\":\"165/2014:art26(4)\",\"quote\":\"provided that such driver is in a labour law relationship with an undertaking established in the issuing Member State\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "A driver card is valid for no more than five years. You must not use a card once it has expired. As an exception, a Member State may issue a temporary card that cannot be renewed and is valid for at most 185 days. This is only possible in duly justified and exceptional cases, for a driver who does not normally live in a Member State or an AETR country and who works for an undertaking established in the issuing Member State.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "165/2014:art26(6)",
+      "quote": "The driver card shall not be valid for more than five years."
+     },
+     {
+      "node_id": "165/2014:art27(2)",
+      "quote": "A driver shall not use a driver card which is defective or which has expired."
+     },
+     {
+      "node_id": "165/2014:art26(4)",
+      "quote": "In duly justified and exceptional cases, Member States may issue a temporary and non-renewable driver card valid for a maximum period of 185 days to a driver who does not have his normal residence in a Member State or in a State which is a Contracting Party to the AETR Agreement"
+     },
+     {
+      "node_id": "165/2014:art26(4)",
+      "quote": "provided that such driver is in a labour law relationship with an undertaking established in the issuing Member State"
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2233,
+    "output_tokens": 389,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.008356,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q013",
+   "retrieved": [
+    "paragraph:165/2014:art33(2)",
+    "paragraph:165/2014:art36(1)",
+    "paragraph:165/2014:art36(2)",
+    "paragraph:165/2014:anxI.IV.a",
+    "paragraph:165/2014:art32(1)"
+   ],
+   "estimated_input_tokens": 1998,
+   "raw": "{\"answerable\": true, \"answer\": \"Your company must keep the record sheets (tachograph discs) and any printouts made under Article 35 in date order and in a readable form for at least one year after they were used. If you ask, it must give you copies of them. If you ask for copies of the data downloaded from your driver card, it must give you those too, with paper printed versions. The company must show or hand over the discs, printouts and downloaded data when an authorised control officer asks for them.\", \"citations\": [{\"node_id\": \"165/2014:art33(2)\", \"quote\": \"Transport undertakings shall keep record sheets and printouts, whenever printouts have been made to comply with Article 35, in chronological order and in a legible form, for at least a year after their use, and shall give copies to the drivers concerned who request them.\"}, {\"node_id\": \"165/2014:art33(2)\", \"quote\": \"Transport undertakings shall also give copies of data downloaded from driver cards to the drivers concerned who request them, together with printed paper versions of those copies.\"}, {\"node_id\": \"165/2014:art33(2)\", \"quote\": \"Record sheets, printouts and downloaded data shall be produced or handed over at the request of any authorised control officer.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Your company must keep the record sheets (tachograph discs) and any printouts made under Article 35 in date order and in a readable form for at least one year after they were used. If you ask, it must give you copies of them. If you ask for copies of the data downloaded from your driver card, it must give you those too, with paper printed versions. The company must show or hand over the discs, printouts and downloaded data when an authorised control officer asks for them.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "165/2014:art33(2)",
+      "quote": "Transport undertakings shall keep record sheets and printouts, whenever printouts have been made to comply with Article 35, in chronological order and in a legible form, for at least a year after their use, and shall give copies to the drivers concerned who request them."
+     },
+     {
+      "node_id": "165/2014:art33(2)",
+      "quote": "Transport undertakings shall also give copies of data downloaded from driver cards to the drivers concerned who request them, together with printed paper versions of those copies."
+     },
+     {
+      "node_id": "165/2014:art33(2)",
+      "quote": "Record sheets, printouts and downloaded data shall be produced or handed over at the request of any authorised control officer."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2541,
+    "output_tokens": 392,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.009002,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q014",
+   "retrieved": [
+    "paragraph:2002/15:art4(a)",
+    "paragraph:561/2006:art6(2)",
+    "paragraph:561/2006:art6(1)",
+    "paragraph:561/2006:art8(8a)",
+    "paragraph:561/2006:art8(6)"
+   ],
+   "estimated_input_tokens": 1975,
+   "raw": "{\"answerable\": true, \"answer\": \"On average your working time must not go over 48 hours a week. In a single week you may work up to 60 hours, but only if your average over four months stays at or below 48 hours a week. Separately, your driving time in any one week must not exceed 56 hours, and that driving must not push you over these working time limits.\", \"citations\": [{\"node_id\": \"2002/15:art4(a)\", \"quote\": \"the average weekly working time may not exceed 48 hours\"}, {\"node_id\": \"2002/15:art4(a)\", \"quote\": \"The maximum weekly working time may be extended to 60 hours only if, over four months, an average of 48 hours a week is not exceeded.\"}, {\"node_id\": \"561/2006:art6(2)\", \"quote\": \"The weekly driving time shall not exceed 56 hours and shall not result in the maximum weekly working time laid down in Directive 2002/15/EC being exceeded.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "On average your working time must not go over 48 hours a week. In a single week you may work up to 60 hours, but only if your average over four months stays at or below 48 hours a week. Separately, your driving time in any one week must not exceed 56 hours, and that driving must not push you over these working time limits.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "2002/15:art4(a)",
+      "quote": "the average weekly working time may not exceed 48 hours"
+     },
+     {
+      "node_id": "2002/15:art4(a)",
+      "quote": "The maximum weekly working time may be extended to 60 hours only if, over four months, an average of 48 hours a week is not exceeded."
+     },
+     {
+      "node_id": "561/2006:art6(2)",
+      "quote": "The weekly driving time shall not exceed 56 hours and shall not result in the maximum weekly working time laid down in Directive 2002/15/EC being exceeded."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2504,
+    "output_tokens": 303,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.008038,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q015",
+   "retrieved": [
+    "paragraph:2002/15:art7(1)",
+    "paragraph:2002/15:art7(3)",
+    "paragraph:2002/15:art3(i)",
+    "paragraph:2002/15:art7(2)",
+    "paragraph:2002/15:art5(1)"
+   ],
+   "estimated_input_tokens": 1558,
+   "raw": "{\"answerable\": true, \"answer\": \"If you do any night work (any work during night time), your daily working time must not exceed 10 hours in each 24-hour period. Compensation for night work is set by national law, collective agreements or national practice, but it must not endanger road safety. You also still need breaks: you may not work more than 6 hours in a row without a break. The break must be at least 30 minutes if you work between 6 and 9 hours in total, and at least 45 minutes if you work more than 9 hours.\", \"citations\": [{\"node_id\": \"2002/15:art7(1)\", \"quote\": \"if night work is performed, the daily working time does not exceed ten hours in each 24 period\"}, {\"node_id\": \"2002/15:art3(i)\", \"quote\": \"\\\"night work\\\" shall mean any work performed during night time.\"}, {\"node_id\": \"2002/15:art7(1)\", \"quote\": \"compensation for night work is given in accordance with national legislative measures, collective agreements, agreements between the two sides of industry and/or national practice, on condition that such compensation is not liable to endanger road safety.\"}, {\"node_id\": \"2002/15:art5(1)\", \"quote\": \"in no circumstances work for more than six consecutive hours without a break\"}, {\"node_id\": \"2002/15:art5(1)\", \"quote\": \"Working time shall be interrupted by a break of at least 30 minutes, if working hours total between six and nine hours, and of at least 45 minutes, if working hours total more than nine hours.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "If you do any night work (any work during night time), your daily working time must not exceed 10 hours in each 24-hour period. Compensation for night work is set by national law, collective agreements or national practice, but it must not endanger road safety. You also still need breaks: you may not work more than 6 hours in a row without a break. The break must be at least 30 minutes if you work between 6 and 9 hours in total, and at least 45 minutes if you work more than 9 hours.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "2002/15:art7(1)",
+      "quote": "if night work is performed, the daily working time does not exceed ten hours in each 24 period"
+     },
+     {
+      "node_id": "2002/15:art3(i)",
+      "quote": "\"night work\" shall mean any work performed during night time."
+     },
+     {
+      "node_id": "2002/15:art7(1)",
+      "quote": "compensation for night work is given in accordance with national legislative measures, collective agreements, agreements between the two sides of industry and/or national practice, on condition that such compensation is not liable to endanger road safety."
+     },
+     {
+      "node_id": "2002/15:art5(1)",
+      "quote": "in no circumstances work for more than six consecutive hours without a break"
+     },
+     {
+      "node_id": "2002/15:art5(1)",
+      "quote": "Working time shall be interrupted by a break of at least 30 minutes, if working hours total between six and nine hours, and of at least 45 minutes, if working hours total more than nine hours."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1900,
+    "output_tokens": 482,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.00862,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q016",
+   "retrieved": [
+    "paragraph:2002/15:art9(b)",
+    "paragraph:561/2006:art6(5)",
+    "paragraph:2002/15:art4(b)",
+    "paragraph:165/2014:art34(5)",
+    "paragraph:561/2006:art16(3)"
+   ],
+   "estimated_input_tokens": 2050,
+   "raw": "{\"answerable\": true, \"answer\": \"Records of a mobile worker's working time must be kept for at least two years after the end of the period they cover. Your employer is responsible for recording your working time, and must give you copies of the records of hours worked if you ask. Separately, if a duty roster is used under Regulation 561/2006, the transport undertaking must keep it for one year after the period it covers ends.\", \"citations\": [{\"node_id\": \"2002/15:art9(b)\", \"quote\": \"Records shall be kept for at least two years after the end of the period covered.\"}, {\"node_id\": \"2002/15:art9(b)\", \"quote\": \"Employers shall be responsible for recording the working time of mobile workers. Employers shall upon request provide mobile workers with copies of the records of hours worked.\"}, {\"node_id\": \"561/2006:art16(3)(c)\", \"quote\": \"be kept by the transport undertaking for one year after expiry of the period covered by it.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Records of a mobile worker's working time must be kept for at least two years after the end of the period they cover. Your employer is responsible for recording your working time, and must give you copies of the records of hours worked if you ask. Separately, if a duty roster is used under Regulation 561/2006, the transport undertaking must keep it for one year after the period it covers ends.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "2002/15:art9(b)",
+      "quote": "Records shall be kept for at least two years after the end of the period covered."
+     },
+     {
+      "node_id": "2002/15:art9(b)",
+      "quote": "Employers shall be responsible for recording the working time of mobile workers. Employers shall upon request provide mobile workers with copies of the records of hours worked."
+     },
+     {
+      "node_id": "561/2006:art16(3)(c)",
+      "quote": "be kept by the transport undertaking for one year after expiry of the period covered by it."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2695,
+    "output_tokens": 307,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.00846,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q020",
+   "retrieved": [
+    "paragraph:guidance-4:p1",
+    "paragraph:165/2014:art6(3)",
+    "paragraph:guidance-1:p1",
+    "paragraph:561/2006:art12",
+    "paragraph:561/2006:art8(6a)"
+   ],
+   "estimated_input_tokens": 3960,
+   "raw": "{\"answerable\":true,\"answer\":\"Possibly, but only in limited cases. Commission guidance note 4 (March 2015, older than the 2020 Mobility Package) says enforcers may allow a tolerance of up to 15 minutes per 4.5-hour block of driving for vehicles on frequent-stop or multi-drop journeys. For example, they might deduct one minute per driving block between stops, up to 15 minutes per block. Conditions:\\n- It is a transitional tolerance. It only covers digital tachographs activated before October 2011 that do not comply with Regulation 1266/2009, which made recording more accurate.\\n- You must be able to back it up with evidence, such as verifiable proof of frequent or multi-drop stops.\\n- It is at the control officer's discretion and must not undermine the drivers' hours rules or road safety.\\n- It applies only where the journey clearly involves frequent or multi-stop operations.\\nWhenever you are behind the wheel on an in-scope operation, you count as driving, even in a traffic jam or at traffic lights.\",\"citations\":[{\"node_id\":\"guidance-4:p1\",\"quote\":\"up to a 15 minutes tolerance over a four and a half (4.5) hour block of driving time for vehicles involved in frequent- or multi-stop drop journeys, provided such claims can be supported by evidence\"},{\"node_id\":\"guidance-4:p1\",\"quote\":\"This tolerance may be applied, for example, as a deduction of one minute per driving time block, between stops, with a maximum of 15 minutes per four and a half (4.5) hour block of driving time\"},{\"node_id\":\"guidance-4:p1\",\"quote\":\"when dealing with vehicles equipped with digital tachographs which were activated before October 2011 and which do not comply with Regulation 1266/2009\"},{\"node_id\":\"guidance-4:p1\",\"quote\":\"This transitional tolerance should apply to those vehicles that are involved in frequent-stop or multi-drop journeys and that are equipped with digital tachographs.\"},{\"node_id\":\"guidance-4:p1\",\"quote\":\"must verify that their interpretation does not detract from the proper application of the Drivers' Hours Rules, and thereby undermine road safety\"},{\"node_id\":\"guidance-4:p1\",\"quote\":\"should only be considered for those operations where the journey clearly involves frequent- or multi-stop operations\"},{\"node_id\":\"guidance-4:p1\",\"quote\":\"whenever a driver is behind the wheel of the vehicle and actively engaged in an in-scope transport operation, he/she will be considered as driving irrespective of his/her circumstances\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Possibly, but only in limited cases. Commission guidance note 4 (March 2015, older than the 2020 Mobility Package) says enforcers may allow a tolerance of up to 15 minutes per 4.5-hour block of driving for vehicles on frequent-stop or multi-drop journeys. For example, they might deduct one minute per driving block between stops, up to 15 minutes per block. Conditions:\n- It is a transitional tolerance. It only covers digital tachographs activated before October 2011 that do not comply with Regulation 1266/2009, which made recording more accurate.\n- You must be able to back it up with evidence, such as verifiable proof of frequent or multi-drop stops.\n- It is at the control officer's discretion and must not undermine the drivers' hours rules or road safety.\n- It applies only where the journey clearly involves frequent or multi-stop operations.\nWhenever you are behind the wheel on an in-scope operation, you count as driving, even in a traffic jam or at traffic lights.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "guidance-4:p1",
+      "quote": "up to a 15 minutes tolerance over a four and a half (4.5) hour block of driving time for vehicles involved in frequent- or multi-stop drop journeys, provided such claims can be supported by evidence"
+     },
+     {
+      "node_id": "guidance-4:p1",
+      "quote": "This tolerance may be applied, for example, as a deduction of one minute per driving time block, between stops, with a maximum of 15 minutes per four and a half (4.5) hour block of driving time"
+     },
+     {
+      "node_id": "guidance-4:p1",
+      "quote": "when dealing with vehicles equipped with digital tachographs which were activated before October 2011 and which do not comply with Regulation 1266/2009"
+     },
+     {
+      "node_id": "guidance-4:p1",
+      "quote": "This transitional tolerance should apply to those vehicles that are involved in frequent-stop or multi-drop journeys and that are equipped with digital tachographs."
+     },
+     {
+      "node_id": "guidance-4:p1",
+      "quote": "must verify that their interpretation does not detract from the proper application of the Drivers' Hours Rules, and thereby undermine road safety"
+     },
+     {
+      "node_id": "guidance-4:p1",
+      "quote": "should only be considered for those operations where the journey clearly involves frequent- or multi-stop operations"
+     },
+     {
+      "node_id": "guidance-4:p1",
+      "quote": "whenever a driver is behind the wheel of the vehicle and actively engaged in an in-scope transport operation, he/she will be considered as driving irrespective of his/her circumstances"
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 5047,
+    "output_tokens": 978,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.019874,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q026",
+   "retrieved": [
+    "paragraph:561/2006:art4(o)",
+    "paragraph:561/2006:art8(5)",
+    "paragraph:561/2006:art7",
+    "paragraph:guidance-7:p6",
+    "paragraph:2002/15:art3(f)"
+   ],
+   "estimated_input_tokens": 1764,
+   "raw": "{\"answerable\":true,\"answer\":\"Multi-manning means that during each driving period between two consecutive daily rest periods, or between a daily rest period and a weekly rest period, there are at least two drivers in the vehicle to do the driving. During the first hour a second driver is optional; for the rest of the period the second driver must be present.\",\"citations\":[{\"node_id\":\"561/2006:art4(o)\",\"quote\":\"‘multi-manning’ means the situation where, during each period of driving between any two consecutive daily rest periods, or between a daily rest period and a weekly rest period, there are at least two drivers in the vehicle to do the driving\"},{\"node_id\":\"561/2006:art4(o)\",\"quote\":\"For the first hour of multi-manning the presence of another driver or drivers is optional but for the remainder of the period it is compulsory\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Multi-manning means that during each driving period between two consecutive daily rest periods, or between a daily rest period and a weekly rest period, there are at least two drivers in the vehicle to do the driving. During the first hour a second driver is optional; for the rest of the period the second driver must be present.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "561/2006:art4(o)",
+      "quote": "‘multi-manning’ means the situation where, during each period of driving between any two consecutive daily rest periods, or between a daily rest period and a weekly rest period, there are at least two drivers in the vehicle to do the driving"
+     },
+     {
+      "node_id": "561/2006:art4(o)",
+      "quote": "For the first hour of multi-manning the presence of another driver or drivers is optional but for the remainder of the period it is compulsory"
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2260,
+    "output_tokens": 272,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.00724,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q027",
+   "retrieved": [
+    "paragraph:2002/15:art3(b)",
+    "paragraph:2002/15:art5(2)",
+    "paragraph:2002/15:art3(g)",
+    "paragraph:2002/15:art6",
+    "paragraph:2002/15:art8(2)"
+   ],
+   "estimated_input_tokens": 1578,
+   "raw": "{\"answerable\":true,\"answer\":\"Periods of availability are periods that are neither breaks nor rest, when you don't have to stay at your workstation but must be ready to answer calls to start or resume driving or to do other work. They include time spent accompanying a vehicle carried by ferry or train, waiting at frontiers, and waiting because of traffic bans. You must know these periods and how long they are likely to last in advance: either before departure or just before the period starts, or under general conditions agreed between the social partners and/or national law. For team drivers, time spent sitting next to the driver or on the couchette while the vehicle is moving also counts as availability.\",\"citations\":[{\"node_id\":\"2002/15:art3(b)\",\"quote\":\"periods other than those relating to break times and rest times during which the mobile worker is not required to remain at his workstation, but must be available to answer any calls to start or resume driving or to carry out other work\"},{\"node_id\":\"2002/15:art3(b)\",\"quote\":\"In particular such periods of availability shall include periods during which the mobile worker is accompanying a vehicle being transported by ferryboat or by train as well as periods of waiting at frontiers and those due to traffic prohibitions.\"},{\"node_id\":\"2002/15:art3(b)\",\"quote\":\"These periods and their foreseeable duration shall be known in advance by the mobile worker, that is to say either before departure or just before the actual start of the period in question, or under the general conditions negotiated between the social partners and/or under the terms of the legislation of the Member States\"},{\"node_id\":\"2002/15:art3(b)\",\"quote\":\"for mobile workers driving in a team, the time spent sitting next to the driver or on the couchette while the vehicle is in motion\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Periods of availability are periods that are neither breaks nor rest, when you don't have to stay at your workstation but must be ready to answer calls to start or resume driving or to do other work. They include time spent accompanying a vehicle carried by ferry or train, waiting at frontiers, and waiting because of traffic bans. You must know these periods and how long they are likely to last in advance: either before departure or just before the period starts, or under general conditions agreed between the social partners and/or national law. For team drivers, time spent sitting next to the driver or on the couchette while the vehicle is moving also counts as availability.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "2002/15:art3(b)",
+      "quote": "periods other than those relating to break times and rest times during which the mobile worker is not required to remain at his workstation, but must be available to answer any calls to start or resume driving or to carry out other work"
+     },
+     {
+      "node_id": "2002/15:art3(b)",
+      "quote": "In particular such periods of availability shall include periods during which the mobile worker is accompanying a vehicle being transported by ferryboat or by train as well as periods of waiting at frontiers and those due to traffic prohibitions."
+     },
+     {
+      "node_id": "2002/15:art3(b)",
+      "quote": "These periods and their foreseeable duration shall be known in advance by the mobile worker, that is to say either before departure or just before the actual start of the period in question, or under the general conditions negotiated between the social partners and/or under the terms of the legislation of the Member States"
+     },
+     {
+      "node_id": "2002/15:art3(b)",
+      "quote": "for mobile workers driving in a team, the time spent sitting next to the driver or on the couchette while the vehicle is in motion"
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 1948,
+    "output_tokens": 558,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.009476,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q028",
+   "retrieved": [
+    "paragraph:2002/15:art3(e)",
+    "paragraph:2002/15:art3(a)",
+    "paragraph:2002/15:art2(1)",
+    "paragraph:561/2006:art9(3)",
+    "paragraph:2002/15:art3(f)"
+   ],
+   "estimated_input_tokens": 2540,
+   "raw": "{\"answerable\": true, \"answer\": \"Under Directive 2002/15/EC you are a \\\"self-employed driver\\\" only if you meet all of these conditions:\\n- your main occupation is carrying passengers or goods by road for hire or reward, under a Community licence or other professional authorisation;\\n- you are entitled to work for yourself;\\n- you are not tied to an employer by an employment contract or any other working hierarchical relationship;\\n- you are free to organise your own work;\\n- your income depends directly on the profits made;\\n- you are free to have business with several customers, alone or through a cooperation with other self-employed drivers.\\n\\nIf you do not meet these criteria, you are treated like a mobile worker: same obligations, same rights. The Directive applies to self-employed drivers from 23 March 2009.\", \"citations\": [{\"node_id\": \"2002/15:art3(e)\", \"quote\": \"\\\"self-employed driver\\\" shall mean anyone whose main occupation is to transport passengers or goods by road for hire or reward within the meaning of Community legislation under cover of a Community licence or any other professional authorisation to carry out the aforementioned transport\"}, {\"node_id\": \"2002/15:art3(e)\", \"quote\": \"who is entitled to work for himself and who is not tied to an employer by an employment contract or by any other type of working hierarchical relationship, who is free to organise the relevant working activities, whose income depends directly on the profits made and who has the freedom to, individually or through a cooperation between self-employed drivers, have commercial relations with several customers.\"}, {\"node_id\": \"2002/15:art3(e)\", \"quote\": \"those drivers who do not satisfy these criteria shall be subject to the same obligations and benefit from the same rights as those provided for mobile workers by this Directive\"}, {\"node_id\": \"2002/15:art2(1)\", \"quote\": \"this Directive shall apply to self-employed drivers from 23 March 2009.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Under Directive 2002/15/EC you are a \"self-employed driver\" only if you meet all of these conditions:\n- your main occupation is carrying passengers or goods by road for hire or reward, under a Community licence or other professional authorisation;\n- you are entitled to work for yourself;\n- you are not tied to an employer by an employment contract or any other working hierarchical relationship;\n- you are free to organise your own work;\n- your income depends directly on the profits made;\n- you are free to have business with several customers, alone or through a cooperation with other self-employed drivers.\n\nIf you do not meet these criteria, you are treated like a mobile worker: same obligations, same rights. The Directive applies to self-employed drivers from 23 March 2009.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "2002/15:art3(e)",
+      "quote": "\"self-employed driver\" shall mean anyone whose main occupation is to transport passengers or goods by road for hire or reward within the meaning of Community legislation under cover of a Community licence or any other professional authorisation to carry out the aforementioned transport"
+     },
+     {
+      "node_id": "2002/15:art3(e)",
+      "quote": "who is entitled to work for himself and who is not tied to an employer by an employment contract or by any other type of working hierarchical relationship, who is free to organise the relevant working activities, whose income depends directly on the profits made and who has the freedom to, individually or through a cooperation between self-employed drivers, have commercial relations with several customers."
+     },
+     {
+      "node_id": "2002/15:art3(e)",
+      "quote": "those drivers who do not satisfy these criteria shall be subject to the same obligations and benefit from the same rights as those provided for mobile workers by this Directive"
+     },
+     {
+      "node_id": "2002/15:art2(1)",
+      "quote": "this Directive shall apply to self-employed drivers from 23 March 2009."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 3128,
+    "output_tokens": 634,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.012596,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q030",
+   "retrieved": [
+    "paragraph:561/2006:art9(3)",
+    "paragraph:guidance-2:p1",
+    "paragraph:guidance-3:p1",
+    "paragraph:561/2006:art9(2)",
+    "paragraph:guidance-6:p1"
+   ],
+   "estimated_input_tokens": 3249,
+   "raw": "{\"answerable\":false,\"answer\":\"The passages do not include the Regulation's definition of 'driver', so they do not say whether a colleague riding along to relieve you counts as a driver; they only cover how part of his waiting time as a second crew member may be treated as a break.\",\"citations\":[]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": false,
+    "answer": "The passages do not include the Regulation's definition of 'driver', so they do not say whether a colleague riding along to relieve you counts as a driver; they only cover how part of his waiting time as a second crew member may be treated as a break.",
+    "problems": [],
+    "citations": []
+   },
+   "usage": {
+    "input_tokens": 4198,
+    "output_tokens": 433,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.012726,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q034",
+   "retrieved": [
+    "paragraph:guidance-6:p1",
+    "paragraph:561/2006:art4(g)",
+    "paragraph:561/2006:art8(2)",
+    "paragraph:561/2006:art8(4)",
+    "paragraph:561/2006:art8(3)"
+   ],
+   "estimated_input_tokens": 2125,
+   "raw": "{\"answerable\": true, \"answer\": \"Yes. You can take a regular daily rest in two parts: the first must be an uninterrupted period of at least 3 hours and the second an uninterrupted period of at least 9 hours. Within 24 hours after the end of your previous daily or weekly rest, you must have taken a new daily rest. If the part of your daily rest that falls within that 24-hour period is at least 9 but less than 11 hours, it counts as a reduced daily rest. You may have at most three reduced daily rests between any two weekly rests. Ferry or train with a bunk or couchette: according to the Commission's guidance note from 2017 (older than the current Regulation), a regular daily rest taken on board may be interrupted at most twice. This limit of two applies to the whole daily rest, not to each of the two parts.\", \"citations\": [{\"node_id\": \"561/2006:art4(g)\", \"quote\": \"this regular daily rest period may be taken in two periods, the first of which must be an uninterrupted period of at least 3 hours and the second an uninterrupted period of at least nine hours\"}, {\"node_id\": \"561/2006:art8(2)\", \"quote\": \"Within each period of 24 hours after the end of the previous daily rest period or weekly rest period a driver shall have taken a new daily rest period.\"}, {\"node_id\": \"561/2006:art8(2)\", \"quote\": \"If the portion of the daily rest period which falls within that 24 hour period is at least nine hours but less than 11 hours, then the daily rest period in question shall be regarded as a reduced daily rest period.\"}, {\"node_id\": \"561/2006:art8(4)\", \"quote\": \"A driver may have at most three reduced daily rest periods between any two weekly rest periods.\"}, {\"node_id\": \"guidance-6:p1\", \"quote\": \"the number of interruptions (maximum two) concerns the whole period of daily rest and not each part of a regular daily rest taken in two periods.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Yes. You can take a regular daily rest in two parts: the first must be an uninterrupted period of at least 3 hours and the second an uninterrupted period of at least 9 hours. Within 24 hours after the end of your previous daily or weekly rest, you must have taken a new daily rest. If the part of your daily rest that falls within that 24-hour period is at least 9 but less than 11 hours, it counts as a reduced daily rest. You may have at most three reduced daily rests between any two weekly rests. Ferry or train with a bunk or couchette: according to the Commission's guidance note from 2017 (older than the current Regulation), a regular daily rest taken on board may be interrupted at most twice. This limit of two applies to the whole daily rest, not to each of the two parts.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "561/2006:art4(g)",
+      "quote": "this regular daily rest period may be taken in two periods, the first of which must be an uninterrupted period of at least 3 hours and the second an uninterrupted period of at least nine hours"
+     },
+     {
+      "node_id": "561/2006:art8(2)",
+      "quote": "Within each period of 24 hours after the end of the previous daily rest period or weekly rest period a driver shall have taken a new daily rest period."
+     },
+     {
+      "node_id": "561/2006:art8(2)",
+      "quote": "If the portion of the daily rest period which falls within that 24 hour period is at least nine hours but less than 11 hours, then the daily rest period in question shall be regarded as a reduced daily rest period."
+     },
+     {
+      "node_id": "561/2006:art8(4)",
+      "quote": "A driver may have at most three reduced daily rest periods between any two weekly rest periods."
+     },
+     {
+      "node_id": "guidance-6:p1",
+      "quote": "the number of interruptions (maximum two) concerns the whole period of daily rest and not each part of a regular daily rest taken in two periods."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2730,
+    "output_tokens": 637,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.01183,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q041",
+   "retrieved": [
+    "paragraph:561/2006:art7",
+    "paragraph:561/2006:art4(o)",
+    "paragraph:561/2006:art8(5)",
+    "paragraph:561/2006:art8(2a)",
+    "paragraph:561/2006:art11"
+   ],
+   "estimated_input_tokens": 1914,
+   "raw": "{\"answerable\": true, \"answer\": \"Yes. When you drive in a multi-manning crew, you may take your 45-minute break in the vehicle while the other driver is driving. The condition is that you do not help the driver who is driving during that time. Multi-manning means that, between two consecutive daily rest periods (or between a daily and a weekly rest), there are at least two drivers in the vehicle to do the driving. The second driver only has to be on board after the first hour.\", \"citations\": [{\"node_id\": \"561/2006:art7\", \"quote\": \"A driver engaged in multi-manning may take a break of 45 minutes in a vehicle driven by another driver provided that the driver taking the break is not involved in assisting the driver driving the vehicle.\"}, {\"node_id\": \"561/2006:art4(o)\", \"quote\": \"‘multi-manning’ means the situation where, during each period of driving between any two consecutive daily rest periods, or between a daily rest period and a weekly rest period, there are at least two drivers in the vehicle to do the driving.\"}, {\"node_id\": \"561/2006:art4(o)\", \"quote\": \"For the first hour of multi-manning the presence of another driver or drivers is optional but for the remainder of the period it is compulsory\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Yes. When you drive in a multi-manning crew, you may take your 45-minute break in the vehicle while the other driver is driving. The condition is that you do not help the driver who is driving during that time. Multi-manning means that, between two consecutive daily rest periods (or between a daily and a weekly rest), there are at least two drivers in the vehicle to do the driving. The second driver only has to be on board after the first hour.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "561/2006:art7",
+      "quote": "A driver engaged in multi-manning may take a break of 45 minutes in a vehicle driven by another driver provided that the driver taking the break is not involved in assisting the driver driving the vehicle."
+     },
+     {
+      "node_id": "561/2006:art4(o)",
+      "quote": "‘multi-manning’ means the situation where, during each period of driving between any two consecutive daily rest periods, or between a daily rest period and a weekly rest period, there are at least two drivers in the vehicle to do the driving."
+     },
+     {
+      "node_id": "561/2006:art4(o)",
+      "quote": "For the first hour of multi-manning the presence of another driver or drivers is optional but for the remainder of the period it is compulsory"
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2376,
+    "output_tokens": 405,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.008802,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q042",
+   "retrieved": [
+    "paragraph:561/2006:art13(1)",
+    "paragraph:165/2014:art3(3)",
+    "paragraph:561/2006:art13(3)",
+    "paragraph:clarification-3:p1",
+    "paragraph:165/2014:art3(2)"
+   ],
+   "estimated_input_tokens": 3374,
+   "raw": "{\"answerable\":true,\"answer\":\"A Member State may exempt these vehicles from the rules on driving times, breaks and rest periods (Articles 5 to 9 of Regulation 561/2006). It may do so only if the objectives of Article 1 are not prejudiced, and the exemption applies on its own territory, or on another Member State's territory if that State agrees. The Member State may attach individual conditions. The exemption covers a vehicle or combination only if all of these apply:\\n- its maximum permissible mass does not exceed 7,5 tonnes;\\n- it is used by a universal service provider (as defined in the Postal Directive 97/67/EC) to deliver items as part of the universal service;\\n- it is used only within a 100 km radius of the undertaking's base;\\n- driving is not the driver's main activity.\\nMember States may also exempt these vehicles from the tachograph rules of Regulation 165/2014. Note that Clarification note 3 (2007) predates the 2020 changes and describes a different, older wording of Article 13(1)(d) (50 km radius, carrying material or equipment), so follow the current Regulation.\",\"citations\":[{\"node_id\":\"561/2006:art13(1)\",\"quote\":\"Provided the objectives set out in Article 1 are not prejudiced, each Member State may grant exceptions from Articles 5 to 9 and make such exceptions subject to individual conditions on its own territory or, with the agreement of the States concerned, on the territory of another Member State\"},{\"node_id\":\"561/2006:art13(1)(d)\",\"quote\":\"vehicles or combinations of vehicles with a maximum permissible mass not exceeding 7,5 tonnes used by universal service providers as defined in Article 2(13) of Directive 97/67/EC\"},{\"node_id\":\"561/2006:art13(1)(d)\",\"quote\":\"to deliver items as part of the universal service\"},{\"node_id\":\"561/2006:art13(1)(d)\",\"quote\":\"These vehicles shall be used only within a 100 km radius from the base of the undertaking, and on condition that driving the vehicles does not constitute the driver's main activity;\"},{\"node_id\":\"165/2014:art3(2)\",\"quote\":\"Member States may exempt from the application of this Regulation the vehicles mentioned in Article 13(1) and (3) of Regulation (EC) No 561/2006.\"},{\"node_id\":\"clarification-3:p1\",\"quote\":\"These vehicles shall be used only within 50 km radius from the base of the undertaking and on condition that driving the vehicle does not constitute the driver's main activity.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "A Member State may exempt these vehicles from the rules on driving times, breaks and rest periods (Articles 5 to 9 of Regulation 561/2006). It may do so only if the objectives of Article 1 are not prejudiced, and the exemption applies on its own territory, or on another Member State's territory if that State agrees. The Member State may attach individual conditions. The exemption covers a vehicle or combination only if all of these apply:\n- its maximum permissible mass does not exceed 7,5 tonnes;\n- it is used by a universal service provider (as defined in the Postal Directive 97/67/EC) to deliver items as part of the universal service;\n- it is used only within a 100 km radius of the undertaking's base;\n- driving is not the driver's main activity.\nMember States may also exempt these vehicles from the tachograph rules of Regulation 165/2014. Note that Clarification note 3 (2007) predates the 2020 changes and describes a different, older wording of Article 13(1)(d) (50 km radius, carrying material or equipment), so follow the current Regulation.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "561/2006:art13(1)",
+      "quote": "Provided the objectives set out in Article 1 are not prejudiced, each Member State may grant exceptions from Articles 5 to 9 and make such exceptions subject to individual conditions on its own territory or, with the agreement of the States concerned, on the territory of another Member State"
+     },
+     {
+      "node_id": "561/2006:art13(1)(d)",
+      "quote": "vehicles or combinations of vehicles with a maximum permissible mass not exceeding 7,5 tonnes used by universal service providers as defined in Article 2(13) of Directive 97/67/EC"
+     },
+     {
+      "node_id": "561/2006:art13(1)(d)",
+      "quote": "to deliver items as part of the universal service"
+     },
+     {
+      "node_id": "561/2006:art13(1)(d)",
+      "quote": "These vehicles shall be used only within a 100 km radius from the base of the undertaking, and on condition that driving the vehicles does not constitute the driver's main activity;"
+     },
+     {
+      "node_id": "165/2014:art3(2)",
+      "quote": "Member States may exempt from the application of this Regulation the vehicles mentioned in Article 13(1) and (3) of Regulation (EC) No 561/2006."
+     },
+     {
+      "node_id": "clarification-3:p1",
+      "quote": "These vehicles shall be used only within 50 km radius from the base of the undertaking and on condition that driving the vehicle does not constitute the driver's main activity."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 4418,
+    "output_tokens": 1070,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.019536,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q043",
+   "retrieved": [
+    "paragraph:165/2014:art34(1)",
+    "paragraph:guidance-8:p1",
+    "paragraph:165/2014:art29(5)",
+    "paragraph:165/2014:art28(1)",
+    "paragraph:561/2006:art8(2a)"
+   ],
+   "estimated_input_tokens": 2502,
+   "raw": "{\"answerable\":true,\"answer\":\"As a rule you must keep your driver card in from the moment you take over the vehicle until the end of your daily working period. You may take it out earlier only in two cases: when the withdrawal is otherwise authorised, or when it is necessary to enter the symbol of the country after crossing a border. Also, one card or record sheet may not be used to cover a period longer than the one it is intended for.\",\"citations\":[{\"node_id\":\"165/2014:art34(1)\",\"quote\":\"Drivers shall use record sheets or driver cards every day on which they drive, starting from the moment they take over the vehicle.\"},{\"node_id\":\"165/2014:art34(1)\",\"quote\":\"The record sheet or driver card shall not be withdrawn before the end of the daily working period unless its withdrawal is otherwise authorised or is necessary in order to enter the symbol of the country after having crossed a border.\"},{\"node_id\":\"165/2014:art34(1)\",\"quote\":\"No record sheet or driver card may be used to cover a period longer than that for which it is intended.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "As a rule you must keep your driver card in from the moment you take over the vehicle until the end of your daily working period. You may take it out earlier only in two cases: when the withdrawal is otherwise authorised, or when it is necessary to enter the symbol of the country after crossing a border. Also, one card or record sheet may not be used to cover a period longer than the one it is intended for.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "165/2014:art34(1)",
+      "quote": "Drivers shall use record sheets or driver cards every day on which they drive, starting from the moment they take over the vehicle."
+     },
+     {
+      "node_id": "165/2014:art34(1)",
+      "quote": "The record sheet or driver card shall not be withdrawn before the end of the daily working period unless its withdrawal is otherwise authorised or is necessary in order to enter the symbol of the country after having crossed a border."
+     },
+     {
+      "node_id": "165/2014:art34(1)",
+      "quote": "No record sheet or driver card may be used to cover a period longer than that for which it is intended."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 3108,
+    "output_tokens": 345,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.009666,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q044",
+   "retrieved": [
+    "paragraph:561/2006:art14(2)",
+    "paragraph:clarification-6:p1",
+    "paragraph:561/2006:art15",
+    "paragraph:guidance-3:p1",
+    "paragraph:561/2006:art14(1)"
+   ],
+   "estimated_input_tokens": 2279,
+   "raw": "{\"answerable\":true,\"answer\":\"Not just by renewing the urgent exception on its own. A Member State can grant an urgent temporary exception for at most 30 days, and it must notify the Commission straight away. If the crisis continues beyond 30 days, the Member State can ask the Commission for authorisation under Article 14(1) to extend the relaxation of certain rules. That longer exception can only cover Articles 6 to 9 (driving times, breaks and rest periods), and only if the Regulation's objectives are not harmed. The clarification note dates from 2012, before the 2020 Mobility Package, but this point matches the current text of the Regulation.\",\"citations\":[{\"node_id\":\"561/2006:art14(2)\",\"quote\":\"In urgent cases Member States may grant, under exceptional circumstances, a temporary exception for a period not exceeding 30 days, which shall be duly reasoned and notified immediately to the Commission.\"},{\"node_id\":\"clarification-6:p1\",\"quote\":\"Should the consequences of such exceptional circumstances persist, making the compliance with the Regulation's provisions impossible for a longer period than 30 days, a Member State may request, in accordance with Article 14 (1) for an authorisation from the Commission for further extension of the temporary relaxation from the application of certain provisions of the Regulation.\"},{\"node_id\":\"561/2006:art14(1)\",\"quote\":\"Provided that the objectives set out in Article 1 are not prejudiced, Member States may, after authorisation by the Commission, grant exceptions from the application of Articles 6 to 9 to transport operations carried out in exceptional circumstances.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Not just by renewing the urgent exception on its own. A Member State can grant an urgent temporary exception for at most 30 days, and it must notify the Commission straight away. If the crisis continues beyond 30 days, the Member State can ask the Commission for authorisation under Article 14(1) to extend the relaxation of certain rules. That longer exception can only cover Articles 6 to 9 (driving times, breaks and rest periods), and only if the Regulation's objectives are not harmed. The clarification note dates from 2012, before the 2020 Mobility Package, but this point matches the current text of the Regulation.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "561/2006:art14(2)",
+      "quote": "In urgent cases Member States may grant, under exceptional circumstances, a temporary exception for a period not exceeding 30 days, which shall be duly reasoned and notified immediately to the Commission."
+     },
+     {
+      "node_id": "clarification-6:p1",
+      "quote": "Should the consequences of such exceptional circumstances persist, making the compliance with the Regulation's provisions impossible for a longer period than 30 days, a Member State may request, in accordance with Article 14 (1) for an authorisation from the Commission for further extension of the temporary relaxation from the application of certain provisions of the Regulation."
+     },
+     {
+      "node_id": "561/2006:art14(1)",
+      "quote": "Provided that the objectives set out in Article 1 are not prejudiced, Member States may, after authorisation by the Commission, grant exceptions from the application of Articles 6 to 9 to transport operations carried out in exceptional circumstances."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2881,
+    "output_tokens": 537,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.011132,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q047",
+   "retrieved": [
+    "paragraph:561/2006:art16(3)",
+    "paragraph:561/2006:art16(4)",
+    "paragraph:guidance-5:p1",
+    "paragraph:clarification-7:p2",
+    "paragraph:clarification-7:p1"
+   ],
+   "estimated_input_tokens": 4187,
+   "raw": "{\"answerable\":true,\"answer\":\"No, you cannot be required to carry one. According to Commission clarification note 7, Article 34(3) of Regulation (EU) No 165/2014 forbids Member States from imposing the form that attests a driver's activities while away from the vehicle. Enforcement authorities should not penalise drivers for not having such a form. Instead, you should record your time away from the vehicle, including annual leave, as manual entries on the tachograph on the day you next use it. Your records must cover every day of the checked period. If manual entry is technically impossible, for example with a 1st generation digital tachograph, or is excessively burdensome, you may choose to use the standard attestation form. Authorities are recommended to accept it in such cases. Guidance note 5 (2013) is older and said only that Member States were not obliged to require the form, while still forbidding any form for ordinary daily or weekly rest. Both notes were published before the 2020 Mobility Package changed the rules, and the text of Article 34 itself is not among these passages.\",\"citations\":[{\"node_id\":\"clarification-7:p1\",\"quote\":\"Second paragraph of Article 34(3) prohibits Member States from imposing the use of the form attesting for driver's activities while away from the vehicle.\"},{\"node_id\":\"clarification-7:p2\",\"quote\":\"Member States should not impose the use of this form (or any other form attesting for driver's activities when away from the vehicle) and should not penalize the drivers for a lack of such a form.\"},{\"node_id\":\"clarification-7:p2\",\"quote\":\"These records should cover all periods of activity (driving, availability, out of scope driving, other work, etc.) and inactivity (breaks, rest periods, annual leave, sick leave, etc.) for each and every day.\"},{\"node_id\":\"clarification-7:p2\",\"quote\":\"these should be recorded retroactively by using manual entries on the day when a driver activates tachograph following the period of being away from the vehicle.\"},{\"node_id\":\"clarification-7:p2\",\"quote\":\"If, for technical reasons, such retroactive recording is not possible (e.g. in case of 1st generation of digital tachographs) or appears excessively burdensome\"},{\"node_id\":\"clarification-7:p2\",\"quote\":\"Member States' enforcement authorities are recommended to accept that standard attestation form in such justified situations\"},{\"node_id\":\"guidance-5:p1\",\"quote\":\"Member States are not obliged to require the use of the form in the cases of lack of records\"},{\"node_id\":\"guidance-5:p1\",\"quote\":\"However, no form of any type shall be requested concerning ordinary daily or weekly rest periods.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "No, you cannot be required to carry one. According to Commission clarification note 7, Article 34(3) of Regulation (EU) No 165/2014 forbids Member States from imposing the form that attests a driver's activities while away from the vehicle. Enforcement authorities should not penalise drivers for not having such a form. Instead, you should record your time away from the vehicle, including annual leave, as manual entries on the tachograph on the day you next use it. Your records must cover every day of the checked period. If manual entry is technically impossible, for example with a 1st generation digital tachograph, or is excessively burdensome, you may choose to use the standard attestation form. Authorities are recommended to accept it in such cases. Guidance note 5 (2013) is older and said only that Member States were not obliged to require the form, while still forbidding any form for ordinary daily or weekly rest. Both notes were published before the 2020 Mobility Package changed the rules, and the text of Article 34 itself is not among these passages.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "clarification-7:p1",
+      "quote": "Second paragraph of Article 34(3) prohibits Member States from imposing the use of the form attesting for driver's activities while away from the vehicle."
+     },
+     {
+      "node_id": "clarification-7:p2",
+      "quote": "Member States should not impose the use of this form (or any other form attesting for driver's activities when away from the vehicle) and should not penalize the drivers for a lack of such a form."
+     },
+     {
+      "node_id": "clarification-7:p2",
+      "quote": "These records should cover all periods of activity (driving, availability, out of scope driving, other work, etc.) and inactivity (breaks, rest periods, annual leave, sick leave, etc.) for each and every day."
+     },
+     {
+      "node_id": "clarification-7:p2",
+      "quote": "these should be recorded retroactively by using manual entries on the day when a driver activates tachograph following the period of being away from the vehicle."
+     },
+     {
+      "node_id": "clarification-7:p2",
+      "quote": "If, for technical reasons, such retroactive recording is not possible (e.g. in case of 1st generation of digital tachographs) or appears excessively burdensome"
+     },
+     {
+      "node_id": "clarification-7:p2",
+      "quote": "Member States' enforcement authorities are recommended to accept that standard attestation form in such justified situations"
+     },
+     {
+      "node_id": "guidance-5:p1",
+      "quote": "Member States are not obliged to require the use of the form in the cases of lack of records"
+     },
+     {
+      "node_id": "guidance-5:p1",
+      "quote": "However, no form of any type shall be requested concerning ordinary daily or weekly rest periods."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 5231,
+    "output_tokens": 1208,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.022542,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q049",
+   "retrieved": [
+    "paragraph:561/2006:art8(5)",
+    "paragraph:561/2006:art8(7)",
+    "paragraph:561/2006:art8(8a)",
+    "paragraph:561/2006:art8(2)",
+    "paragraph:561/2006:art4(h)"
+   ],
+   "estimated_input_tokens": 1795,
+   "raw": "{\"answerable\":false,\"answer\":\"The passages say your 30-hour rest counts as a reduced weekly rest and that compensation must be attached to another rest of at least nine hours, but they do not include Article 8(6), which sets the deadline for making up the missing hours.\",\"citations\":[]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": false,
+    "answer": "The passages say your 30-hour rest counts as a reduced weekly rest and that compensation must be attached to another rest of at least nine hours, but they do not include Article 8(6), which sets the deadline for making up the missing hours.",
+    "problems": [],
+    "citations": []
+   },
+   "usage": {
+    "input_tokens": 2268,
+    "output_tokens": 226,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.006796,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q052",
+   "retrieved": [
+    "paragraph:561/2006:art6(2)",
+    "paragraph:561/2006:art6(3)",
+    "paragraph:561/2006:art6(1)",
+    "paragraph:561/2006:art8(6)",
+    "paragraph:561/2006:art8(9)"
+   ],
+   "estimated_input_tokens": 1633,
+   "raw": "{\"answerable\":false,\"answer\":\"The passages give the 56-hour weekly and 90-hour fortnightly driving limits, but none of them says whether driving done in non-EU countries such as Norway or Serbia counts towards those limits.\",\"citations\":[]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": false,
+    "answer": "The passages give the 56-hour weekly and 90-hour fortnightly driving limits, but none of them says whether driving done in non-EU countries such as Norway or Serbia counts towards those limits.",
+    "problems": [],
+    "citations": []
+   },
+   "usage": {
+    "input_tokens": 2094,
+    "output_tokens": 172,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.005908,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q053",
+   "retrieved": [
+    "paragraph:561/2006:art8(9)",
+    "paragraph:561/2006:art8(6)",
+    "paragraph:561/2006:art8(6b)",
+    "paragraph:561/2006:art4(h)",
+    "paragraph:561/2006:art8(8a)"
+   ],
+   "estimated_input_tokens": 2021,
+   "raw": "{\"answerable\":true,\"answer\":\"No. If a weekly rest period falls across two weeks, you can count it in either week, but not in both.\",\"citations\":[{\"node_id\":\"561/2006:art8(9)\",\"quote\":\"A weekly rest period that falls in two weeks may be counted in either week, but not in both.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "No. If a weekly rest period falls across two weeks, you can count it in either week, but not in both.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "561/2006:art8(9)",
+      "quote": "A weekly rest period that falls in two weeks may be counted in either week, but not in both."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2571,
+    "output_tokens": 104,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.006182,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q055",
+   "retrieved": [
+    "paragraph:165/2014:art36(1)",
+    "paragraph:165/2014:art33(1)",
+    "paragraph:clarification-5:p1",
+    "paragraph:165/2014:art34(4)",
+    "paragraph:guidance-4:p1"
+   ],
+   "estimated_input_tokens": 3205,
+   "raw": "{\"answerable\":true,\"answer\":\"Yes. According to Commission clarification note 5, a bus driver who mixes regular services must keep tachograph records whichever type of driving is predominant. Regular passenger services on routes of 50 km or less fall outside Regulation 561/2006. When you drive those short routes, record the time as \\\"other work\\\" on the tachograph, not as driving time. On journeys over 50 km, record \\\"driving time\\\" as normal. The out-of-scope driving does not count as rest and must be taken into account when the rules are applied to you. Note that this guidance dates from July 2007, before the 2020 Mobility Package changed the rules, and the passages do not show whether the current acts say anything different on this point.\",\"citations\":[{\"node_id\":\"clarification-5:p1\",\"quote\":\"should a bus driver be engaged in a mix of regular services, he/she must use tachograph records regardless which driving activity, i.e. out of scope or within the scope of the Regulation, is predominant\"},{\"node_id\":\"clarification-5:p1\",\"quote\":\"For those journeys exceeding 50 km a driver should record \\\"driving time\\\" and for shorter trips he/she should register 'out of scope driving' under \\\"other work\\\" sign on tachograph.\"},{\"node_id\":\"clarification-5:p1\",\"quote\":\"vehicles used for the carriage of passengers on regular services where the route covered by the services in question does not exceed 50 kilometers\"},{\"node_id\":\"clarification-5:p1\",\"quote\":\"driving activities which do not fall within the definition of \\\"driving time\\\" for the purposes of the Regulation cannot count as \\\"rest\\\" as defined in Article 4(f)\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Yes. According to Commission clarification note 5, a bus driver who mixes regular services must keep tachograph records whichever type of driving is predominant. Regular passenger services on routes of 50 km or less fall outside Regulation 561/2006. When you drive those short routes, record the time as \"other work\" on the tachograph, not as driving time. On journeys over 50 km, record \"driving time\" as normal. The out-of-scope driving does not count as rest and must be taken into account when the rules are applied to you. Note that this guidance dates from July 2007, before the 2020 Mobility Package changed the rules, and the passages do not show whether the current acts say anything different on this point.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "clarification-5:p1",
+      "quote": "should a bus driver be engaged in a mix of regular services, he/she must use tachograph records regardless which driving activity, i.e. out of scope or within the scope of the Regulation, is predominant"
+     },
+     {
+      "node_id": "clarification-5:p1",
+      "quote": "For those journeys exceeding 50 km a driver should record \"driving time\" and for shorter trips he/she should register 'out of scope driving' under \"other work\" sign on tachograph."
+     },
+     {
+      "node_id": "clarification-5:p1",
+      "quote": "vehicles used for the carriage of passengers on regular services where the route covered by the services in question does not exceed 50 kilometers"
+     },
+     {
+      "node_id": "clarification-5:p1",
+      "quote": "driving activities which do not fall within the definition of \"driving time\" for the purposes of the Regulation cannot count as \"rest\" as defined in Article 4(f)"
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 4045,
+    "output_tokens": 666,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.01475,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q056",
+   "retrieved": [
+    "paragraph:561/2006:art9(3)",
+    "paragraph:clarification-5:p1",
+    "paragraph:guidance-2:p1",
+    "paragraph:561/2006:art6(5)",
+    "paragraph:561/2006:art9(2)"
+   ],
+   "estimated_input_tokens": 2853,
+   "raw": "{\"answerable\": true, \"answer\": \"If you drive a vehicle that falls outside Regulation 561/2006 to or from a vehicle that falls within it, and that in-scope vehicle is not at your home or at the employer's operational centre where you are normally based, the time counts as other work, not as rest or a break. You must record it as other work. More generally, any time spent driving a vehicle used for commercial operations outside the Regulation's scope is recorded as other work. You enter this record either manually on a record sheet or printout, or by using the manual input facilities on the recording equipment (tachograph).\", \"citations\": [{\"node_id\": \"561/2006:art9(3)\", \"quote\": \"Any time spent by a driver driving a vehicle which falls outside the scope of this Regulation to or from a vehicle which falls within the scope of this Regulation, which is not at the driver's home or at the employer's operational centre where the driver is normally based, shall count as other work.\"}, {\"node_id\": \"561/2006:art6(5)\", \"quote\": \"any time spent driving a vehicle used for commercial operations that do not fall within the scope of this Regulation\"}, {\"node_id\": \"561/2006:art6(5)\", \"quote\": \"This record shall be entered either manually on a record sheet or printout or by use of manual input facilities on recording equipment.\"}, {\"node_id\": \"561/2006:art6(5)\", \"quote\": \"A driver shall record as other work\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "If you drive a vehicle that falls outside Regulation 561/2006 to or from a vehicle that falls within it, and that in-scope vehicle is not at your home or at the employer's operational centre where you are normally based, the time counts as other work, not as rest or a break. You must record it as other work. More generally, any time spent driving a vehicle used for commercial operations outside the Regulation's scope is recorded as other work. You enter this record either manually on a record sheet or printout, or by using the manual input facilities on the recording equipment (tachograph).",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "561/2006:art9(3)",
+      "quote": "Any time spent by a driver driving a vehicle which falls outside the scope of this Regulation to or from a vehicle which falls within the scope of this Regulation, which is not at the driver's home or at the employer's operational centre where the driver is normally based, shall count as other work."
+     },
+     {
+      "node_id": "561/2006:art6(5)",
+      "quote": "any time spent driving a vehicle used for commercial operations that do not fall within the scope of this Regulation"
+     },
+     {
+      "node_id": "561/2006:art6(5)",
+      "quote": "This record shall be entered either manually on a record sheet or printout or by use of manual input facilities on recording equipment."
+     },
+     {
+      "node_id": "561/2006:art6(5)",
+      "quote": "A driver shall record as other work"
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 3611,
+    "output_tokens": 464,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.011862,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q057",
+   "retrieved": [
+    "paragraph:561/2006:art8(3)",
+    "paragraph:561/2006:art8(2)",
+    "paragraph:561/2006:art9(1)",
+    "paragraph:guidance-6:p1",
+    "paragraph:561/2006:art8(8)"
+   ],
+   "estimated_input_tokens": 2232,
+   "raw": "{\"answerable\": true, \"answer\": \"Yes. Under Regulation 561/2006, a daily rest period may be extended so that it becomes a regular weekly rest period or a reduced weekly rest period. Keep in mind that a regular weekly rest (and any weekly rest over 45 hours taken as compensation for earlier reduced weekly rests) must not be taken in the vehicle. It must be taken in suitable gender-friendly accommodation with adequate sleeping and sanitary facilities, paid for by the employer.\", \"citations\": [{\"node_id\": \"561/2006:art8(3)\", \"quote\": \"A daily rest period may be extended to make a regular weekly rest period or a reduced weekly rest period.\"}, {\"node_id\": \"561/2006:art8(8)\", \"quote\": \"The regular weekly rest periods and any weekly rest period of more than 45 hours taken in compensation for previous reduced weekly rest periods shall not be taken in a vehicle.\"}, {\"node_id\": \"561/2006:art8(8)\", \"quote\": \"They shall be taken in suitable gender-friendly accommodation with adequate sleeping and sanitary facilities.\"}, {\"node_id\": \"561/2006:art8(8)\", \"quote\": \"Any costs for accommodation outside the vehicle shall be covered by the employer.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Yes. Under Regulation 561/2006, a daily rest period may be extended so that it becomes a regular weekly rest period or a reduced weekly rest period. Keep in mind that a regular weekly rest (and any weekly rest over 45 hours taken as compensation for earlier reduced weekly rests) must not be taken in the vehicle. It must be taken in suitable gender-friendly accommodation with adequate sleeping and sanitary facilities, paid for by the employer.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "561/2006:art8(3)",
+      "quote": "A daily rest period may be extended to make a regular weekly rest period or a reduced weekly rest period."
+     },
+     {
+      "node_id": "561/2006:art8(8)",
+      "quote": "The regular weekly rest periods and any weekly rest period of more than 45 hours taken in compensation for previous reduced weekly rest periods shall not be taken in a vehicle."
+     },
+     {
+      "node_id": "561/2006:art8(8)",
+      "quote": "They shall be taken in suitable gender-friendly accommodation with adequate sleeping and sanitary facilities."
+     },
+     {
+      "node_id": "561/2006:art8(8)",
+      "quote": "Any costs for accommodation outside the vehicle shall be covered by the employer."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2890,
+    "output_tokens": 433,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.01011,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q065",
+   "retrieved": [
+    "paragraph:165/2014:art3(2)",
+    "paragraph:165/2014:art3(3)",
+    "paragraph:165/2014:art3(1)",
+    "paragraph:clarification-4:p1",
+    "paragraph:561/2006:art13(3)"
+   ],
+   "estimated_input_tokens": 2328,
+   "raw": "{\"answerable\": true, \"answer\": \"Yes. Under Regulation (EU) No 165/2014, Member States may exempt from the tachograph rules the vehicles listed in Article 13(1) of Regulation (EC) No 561/2006. The same option covers the vehicles in Article 13(3), which are vehicles used in predefined areas with fewer than five persons per square kilometre.\", \"citations\": [{\"node_id\": \"165/2014:art3(2)\", \"quote\": \"Member States may exempt from the application of this Regulation the vehicles mentioned in Article 13(1) and (3) of Regulation (EC) No 561/2006.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Yes. Under Regulation (EU) No 165/2014, Member States may exempt from the tachograph rules the vehicles listed in Article 13(1) of Regulation (EC) No 561/2006. The same option covers the vehicles in Article 13(3), which are vehicles used in predefined areas with fewer than five persons per square kilometre.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "165/2014:art3(2)",
+      "quote": "Member States may exempt from the application of this Regulation the vehicles mentioned in Article 13(1) and (3) of Regulation (EC) No 561/2006."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2971,
+    "output_tokens": 213,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.008072,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q067",
+   "retrieved": [
+    "paragraph:561/2006:art7",
+    "paragraph:561/2006:art6(4)",
+    "paragraph:561/2006:art8(8)",
+    "paragraph:guidance-2:p1",
+    "paragraph:561/2006:art9(2)"
+   ],
+   "estimated_input_tokens": 2438,
+   "raw": "{\"answerable\":true,\"answer\":\"When two or more drivers crew the vehicle, you can take your 45-minute break while sitting in the vehicle as your colleague drives. The condition is that you are not helping the driver drive (for example, not navigating or assisting). The Commission's 2007 guidance note, which predates the 2020 Mobility Package, describes the time you sit next to the driver, ready to drive when needed, as your 'period of availability'. Of that time, 45 minutes can be treated as a break. The current Regulation also allows the 45-minute break in a vehicle driven by another driver.\",\"citations\":[{\"node_id\":\"561/2006:art7\",\"quote\":\"A driver engaged in multi-manning may take a break of 45 minutes in a vehicle driven by another driver provided that the driver taking the break is not involved in assisting the driver driving the vehicle.\"},{\"node_id\":\"guidance-2:p1\",\"quote\":\"When a second crew member is available for driving when necessary, is sitting next to the driver of the vehicle and is not actively involved in assisting the driver driving the vehicle, a period of 45 minutes of that crew member's 'period of availability' can be regarded as 'break'.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "When two or more drivers crew the vehicle, you can take your 45-minute break while sitting in the vehicle as your colleague drives. The condition is that you are not helping the driver drive (for example, not navigating or assisting). The Commission's 2007 guidance note, which predates the 2020 Mobility Package, describes the time you sit next to the driver, ready to drive when needed, as your 'period of availability'. Of that time, 45 minutes can be treated as a break. The current Regulation also allows the 45-minute break in a vehicle driven by another driver.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "561/2006:art7",
+      "quote": "A driver engaged in multi-manning may take a break of 45 minutes in a vehicle driven by another driver provided that the driver taking the break is not involved in assisting the driver driving the vehicle."
+     },
+     {
+      "node_id": "guidance-2:p1",
+      "quote": "When a second crew member is available for driving when necessary, is sitting next to the driver of the vehicle and is not actively involved in assisting the driver driving the vehicle, a period of 45 minutes of that crew member's 'period of availability' can be regarded as 'break'."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 3093,
+    "output_tokens": 561,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.011796,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q069",
+   "retrieved": [
+    "paragraph:561/2006:art8(8a)",
+    "paragraph:561/2006:art6(2)",
+    "paragraph:2002/15:art5(1)",
+    "paragraph:561/2006:art7",
+    "paragraph:561/2006:art9(3)"
+   ],
+   "estimated_input_tokens": 1949,
+   "raw": "{\"answerable\":true,\"answer\":\"Working: under the working time rules for mobile workers you must never work more than 6 hours in a row without a break. If your working hours total between 6 and 9 hours, you need a break of at least 30 minutes. If they total more than 9 hours, you need at least 45 minutes.\\n\\nDriving: after 4½ hours of driving you must take an uninterrupted break of at least 45 minutes, unless you take a rest period instead. You can split this break into at least 15 minutes followed by at least 30 minutes, spread over the driving period.\\n\\nExceptions:\\n- On an occasional passenger service, you can instead take two breaks of at least 15 minutes each.\\n- In multi-manning, you can take your 45-minute break in the moving vehicle, as long as you are not helping the person driving.\",\"citations\":[{\"node_id\":\"2002/15:art5(1)\",\"quote\":\"in no circumstances work for more than six consecutive hours without a break\"},{\"node_id\":\"2002/15:art5(1)\",\"quote\":\"Working time shall be interrupted by a break of at least 30 minutes, if working hours total between six and nine hours, and of at least 45 minutes, if working hours total more than nine hours.\"},{\"node_id\":\"561/2006:art7\",\"quote\":\"After a driving period of four and a half hours a driver shall take an uninterrupted break of not less than 45 minutes, unless he takes a rest period.\"},{\"node_id\":\"561/2006:art7\",\"quote\":\"This break may be replaced by a break of at least 15 minutes followed by a break of at least 30 minutes\"},{\"node_id\":\"561/2006:art7\",\"quote\":\"For a driver engaged in an occasional passenger service, the break referred to in the first paragraph may also be replaced by two breaks, of at least 15 minutes each\"},{\"node_id\":\"561/2006:art7\",\"quote\":\"A driver engaged in multi-manning may take a break of 45 minutes in a vehicle driven by another driver provided that the driver taking the break is not involved in assisting the driver driving the vehicle.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Working: under the working time rules for mobile workers you must never work more than 6 hours in a row without a break. If your working hours total between 6 and 9 hours, you need a break of at least 30 minutes. If they total more than 9 hours, you need at least 45 minutes.\n\nDriving: after 4½ hours of driving you must take an uninterrupted break of at least 45 minutes, unless you take a rest period instead. You can split this break into at least 15 minutes followed by at least 30 minutes, spread over the driving period.\n\nExceptions:\n- On an occasional passenger service, you can instead take two breaks of at least 15 minutes each.\n- In multi-manning, you can take your 45-minute break in the moving vehicle, as long as you are not helping the person driving.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "2002/15:art5(1)",
+      "quote": "in no circumstances work for more than six consecutive hours without a break"
+     },
+     {
+      "node_id": "2002/15:art5(1)",
+      "quote": "Working time shall be interrupted by a break of at least 30 minutes, if working hours total between six and nine hours, and of at least 45 minutes, if working hours total more than nine hours."
+     },
+     {
+      "node_id": "561/2006:art7",
+      "quote": "After a driving period of four and a half hours a driver shall take an uninterrupted break of not less than 45 minutes, unless he takes a rest period."
+     },
+     {
+      "node_id": "561/2006:art7",
+      "quote": "This break may be replaced by a break of at least 15 minutes followed by a break of at least 30 minutes"
+     },
+     {
+      "node_id": "561/2006:art7",
+      "quote": "For a driver engaged in an occasional passenger service, the break referred to in the first paragraph may also be replaced by two breaks, of at least 15 minutes each"
+     },
+     {
+      "node_id": "561/2006:art7",
+      "quote": "A driver engaged in multi-manning may take a break of 45 minutes in a vehicle driven by another driver provided that the driver taking the break is not involved in assisting the driver driving the vehicle."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2413,
+    "output_tokens": 679,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.011616,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q070",
+   "retrieved": [
+    "paragraph:561/2006:art6(2)",
+    "paragraph:561/2006:art1",
+    "paragraph:561/2006:art6(4)",
+    "paragraph:561/2006:art15",
+    "paragraph:561/2006:art6(3)"
+   ],
+   "estimated_input_tokens": 1515,
+   "raw": "{\"answerable\":false,\"answer\":\"The passages set out driving time limits and say national rules apply to certain drivers, but none of them says who sets the penalties or fines for breaking the driving time or working time rules.\",\"citations\":[]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": false,
+    "answer": "The passages set out driving time limits and say national rules apply to certain drivers, but none of them says who sets the penalties or fines for breaking the driving time or working time rules.",
+    "problems": [],
+    "citations": []
+   },
+   "usage": {
+    "input_tokens": 1881,
+    "output_tokens": 75,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.004512,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q073",
+   "retrieved": [
+    "paragraph:561/2006:art3(ha)",
+    "paragraph:561/2006:art2(1)",
+    "paragraph:561/2006:art3(aa)",
+    "paragraph:561/2006:art3(h)",
+    "paragraph:561/2006:art13(1)"
+   ],
+   "estimated_input_tokens": 2871,
+   "raw": "{\"answerable\": false, \"answer\": \"The passages cover when the driving and rest time rules apply to vehicles by weight, but they say nothing about which driving licence category you need for a 12-tonne truck.\", \"citations\": []}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": false,
+    "answer": "The passages cover when the driving and rest time rules apply to vehicles by weight, but they say nothing about which driving licence category you need for a 12-tonne truck.",
+    "problems": [],
+    "citations": []
+   },
+   "usage": {
+    "input_tokens": 3920,
+    "output_tokens": 74,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.00858,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q075",
+   "retrieved": [
+    "paragraph:561/2006:art5(2)",
+    "paragraph:guidance-1:p1",
+    "paragraph:561/2006:art13(3)",
+    "paragraph:561/2006:art8(8a)",
+    "paragraph:561/2006:art2(1)"
+   ],
+   "estimated_input_tokens": 2959,
+   "raw": "{\"answerable\": false, \"answer\": \"The passages don't give any alcohol limit for truck drivers; they cover driver age, rest, exemptions and the scope of the driving-time rules, not drink-driving limits.\", \"citations\": []}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": false,
+    "answer": "The passages don't give any alcohol limit for truck drivers; they cover driver age, rest, exemptions and the scope of the driving-time rules, not drink-driving limits.",
+    "problems": [],
+    "citations": []
+   },
+   "usage": {
+    "input_tokens": 3739,
+    "output_tokens": 78,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.008258,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q077",
+   "retrieved": [
+    "paragraph:165/2014:art26(6)",
+    "paragraph:165/2014:art27(1)",
+    "paragraph:165/2014:art27(2)",
+    "paragraph:165/2014:art26(5)",
+    "paragraph:165/2014:art31(1)"
+   ],
+   "estimated_input_tokens": 1501,
+   "raw": "{\"answerable\": false, \"answer\": \"The passages do not say what a driver card costs; they only cover its validity, personal use and how it is issued and registered.\", \"citations\": []}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": false,
+    "answer": "The passages do not say what a driver card costs; they only cover its validity, personal use and how it is issued and registered.",
+    "problems": [],
+    "citations": []
+   },
+   "usage": {
+    "input_tokens": 1863,
+    "output_tokens": 57,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.004296,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q082",
+   "retrieved": [
+    "paragraph:2002/15:art7(1)",
+    "paragraph:2002/15:art7(3)",
+    "paragraph:2002/15:art3(i)",
+    "paragraph:2002/15:art3(h)",
+    "paragraph:561/2006:art6(1)"
+   ],
+   "estimated_input_tokens": 1446,
+   "raw": "{\"answerable\":false,\"answer\":\"The passages don't set any amount of extra pay for night work: they only say compensation for night work is given under national law, collective agreements or national practice, so the actual amount isn't stated here.\",\"citations\":[]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": false,
+    "answer": "The passages don't set any amount of extra pay for night work: they only say compensation for night work is given under national law, collective agreements or national practice, so the actual amount isn't stated here.",
+    "problems": [],
+    "citations": []
+   },
+   "usage": {
+    "input_tokens": 1771,
+    "output_tokens": 78,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.004322,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q083",
+   "retrieved": [
+    "paragraph:561/2006:art8(6)",
+    "paragraph:561/2006:art8(8a)",
+    "paragraph:561/2006:art4(h)",
+    "paragraph:561/2006:art9(1)",
+    "paragraph:561/2006:art8(1)"
+   ],
+   "estimated_input_tokens": 2090,
+   "raw": "{\"answerable\": false, \"answer\": \"The passages cover daily and weekly rest periods under Regulation (EC) No 561/2006, but they say nothing about how many weeks of paid annual holiday a driver is entitled to.\", \"citations\": []}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": false,
+    "answer": "The passages cover daily and weekly rest periods under Regulation (EC) No 561/2006, but they say nothing about how many weeks of paid annual holiday a driver is entitled to.",
+    "problems": [],
+    "citations": []
+   },
+   "usage": {
+    "input_tokens": 2691,
+    "output_tokens": 82,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.006202,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q086",
+   "retrieved": [
+    "paragraph:561/2006:art5(2)",
+    "paragraph:561/2006:art5(1)",
+    "paragraph:561/2006:art11",
+    "paragraph:2002/15:art1",
+    "paragraph:165/2014:art26(7a)"
+   ],
+   "estimated_input_tokens": 1609,
+   "raw": "{\"answerable\":false,\"answer\":\"The passages give the minimum age only for conductors and drivers' mates, not for drivers themselves.\",\"citations\":[]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": false,
+    "answer": "The passages give the minimum age only for conductors and drivers' mates, not for drivers themselves.",
+    "problems": [],
+    "citations": []
+   },
+   "usage": {
+    "input_tokens": 2016,
+    "output_tokens": 87,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.004902,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q089",
+   "retrieved": [
+    "paragraph:561/2006:art9(1)",
+    "paragraph:guidance-6:p1",
+    "paragraph:561/2006:art8(6a)",
+    "paragraph:561/2006:art8(2a)",
+    "paragraph:561/2006:art8(3)"
+   ],
+   "estimated_input_tokens": 2724,
+   "raw": "{\"answerable\":true,\"answer\":\"While you accompany your vehicle on a ferry or train, a regular weekly rest can be interrupted (as for daily rests: at most twice by other activities, totalling no more than one hour) only if two conditions are both met: the journey is scheduled for 8 hours or more, and you have access to a sleeper cabin on the ferry or train. Guidance note 6 says the derogation does not apply to any weekly rest period. That note dates from January 2017, before the 2020 Mobility Package, and is outdated: follow the current Regulation.\",\"citations\":[{\"node_id\":\"561/2006:art9(1)\",\"quote\":\"that period may be interrupted not more than twice by other activities not exceeding one hour in total\"},{\"node_id\":\"561/2006:art9(1)\",\"quote\":\"With regard to regular weekly rest periods, that derogation shall only apply to ferry or train journeys where:\"},{\"node_id\":\"561/2006:art9(1)(a)\",\"quote\":\"the journey is scheduled for 8 hours or more; and\"},{\"node_id\":\"561/2006:art9(1)(b)\",\"quote\":\"the driver has access to a sleeper cabin in the ferry or on the train.\"},{\"node_id\":\"guidance-6:p1\",\"quote\":\"The derogation under Article 9(1) does not apply to a weekly rest period, whether reduced or regular.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "While you accompany your vehicle on a ferry or train, a regular weekly rest can be interrupted (as for daily rests: at most twice by other activities, totalling no more than one hour) only if two conditions are both met: the journey is scheduled for 8 hours or more, and you have access to a sleeper cabin on the ferry or train. Guidance note 6 says the derogation does not apply to any weekly rest period. That note dates from January 2017, before the 2020 Mobility Package, and is outdated: follow the current Regulation.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "561/2006:art9(1)",
+      "quote": "that period may be interrupted not more than twice by other activities not exceeding one hour in total"
+     },
+     {
+      "node_id": "561/2006:art9(1)",
+      "quote": "With regard to regular weekly rest periods, that derogation shall only apply to ferry or train journeys where:"
+     },
+     {
+      "node_id": "561/2006:art9(1)(a)",
+      "quote": "the journey is scheduled for 8 hours or more; and"
+     },
+     {
+      "node_id": "561/2006:art9(1)(b)",
+      "quote": "the driver has access to a sleeper cabin in the ferry or on the train."
+     },
+     {
+      "node_id": "guidance-6:p1",
+      "quote": "The derogation under Article 9(1) does not apply to a weekly rest period, whether reduced or regular."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 3561,
+    "output_tokens": 452,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.011642,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q090",
+   "retrieved": [
+    "paragraph:561/2006:art8(8)",
+    "paragraph:561/2006:art4(h)",
+    "paragraph:561/2006:art9(1)",
+    "paragraph:561/2006:art8(8a)",
+    "paragraph:561/2006:art6(3)"
+   ],
+   "estimated_input_tokens": 1921,
+   "raw": "{\"answerable\":true,\"answer\":\"No. A rest of at least 45 hours counts as a regular weekly rest, and a regular weekly rest may not be taken in the vehicle. The same applies to any weekly rest of more than 45 hours taken as compensation for earlier reduced weekly rests. You must take it in suitable, gender-friendly accommodation with proper sleeping and sanitary facilities, and your employer must pay for that accommodation. There is one exception: if you travel with your vehicle on a ferry or train, a regular weekly rest may be taken during that crossing. The journey must be scheduled for 8 hours or more, and you must have access to a sleeper cabin on the ferry or train. That means a sleeper cabin on board, not your truck cab.\",\"citations\":[{\"node_id\":\"561/2006:art4(h)\",\"quote\":\"‘regular weekly rest period’ means any period of rest of at least 45 hours\"},{\"node_id\":\"561/2006:art8(8)\",\"quote\":\"The regular weekly rest periods and any weekly rest period of more than 45 hours taken in compensation for previous reduced weekly rest periods shall not be taken in a vehicle.\"},{\"node_id\":\"561/2006:art8(8)\",\"quote\":\"They shall be taken in suitable gender-friendly accommodation with adequate sleeping and sanitary facilities.\"},{\"node_id\":\"561/2006:art8(8)\",\"quote\":\"Any costs for accommodation outside the vehicle shall be covered by the employer.\"},{\"node_id\":\"561/2006:art9(1)\",\"quote\":\"With regard to regular weekly rest periods, that derogation shall only apply to ferry or train journeys where:\"},{\"node_id\":\"561/2006:art9(1)(a)\",\"quote\":\"the journey is scheduled for 8 hours or more; and\"},{\"node_id\":\"561/2006:art9(1)(b)\",\"quote\":\"the driver has access to a sleeper cabin in the ferry or on the train.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "No. A rest of at least 45 hours counts as a regular weekly rest, and a regular weekly rest may not be taken in the vehicle. The same applies to any weekly rest of more than 45 hours taken as compensation for earlier reduced weekly rests. You must take it in suitable, gender-friendly accommodation with proper sleeping and sanitary facilities, and your employer must pay for that accommodation. There is one exception: if you travel with your vehicle on a ferry or train, a regular weekly rest may be taken during that crossing. The journey must be scheduled for 8 hours or more, and you must have access to a sleeper cabin on the ferry or train. That means a sleeper cabin on board, not your truck cab.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "561/2006:art4(h)",
+      "quote": "‘regular weekly rest period’ means any period of rest of at least 45 hours"
+     },
+     {
+      "node_id": "561/2006:art8(8)",
+      "quote": "The regular weekly rest periods and any weekly rest period of more than 45 hours taken in compensation for previous reduced weekly rest periods shall not be taken in a vehicle."
+     },
+     {
+      "node_id": "561/2006:art8(8)",
+      "quote": "They shall be taken in suitable gender-friendly accommodation with adequate sleeping and sanitary facilities."
+     },
+     {
+      "node_id": "561/2006:art8(8)",
+      "quote": "Any costs for accommodation outside the vehicle shall be covered by the employer."
+     },
+     {
+      "node_id": "561/2006:art9(1)",
+      "quote": "With regard to regular weekly rest periods, that derogation shall only apply to ferry or train journeys where:"
+     },
+     {
+      "node_id": "561/2006:art9(1)(a)",
+      "quote": "the journey is scheduled for 8 hours or more; and"
+     },
+     {
+      "node_id": "561/2006:art9(1)(b)",
+      "quote": "the driver has access to a sleeper cabin in the ferry or on the train."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 2467,
+    "output_tokens": 799,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.012924,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q092",
+   "retrieved": [
+    "paragraph:561/2006:art9(2)",
+    "paragraph:guidance-2:p1",
+    "paragraph:561/2006:art9(3)",
+    "paragraph:clarification-2:p1",
+    "paragraph:guidance-1:p1"
+   ],
+   "estimated_input_tokens": 3564,
+   "raw": "{\"answerable\":false,\"answer\":\"The passages only cover how travel time to and from a vehicle is counted (Article 9 and guidance note 2); they say nothing about how often the company must organise your return home.\",\"citations\":[]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": false,
+    "answer": "The passages only cover how travel time to and from a vehicle is counted (Article 9 and guidance note 2); they say nothing about how often the company must organise your return home.",
+    "problems": [],
+    "citations": []
+   },
+   "usage": {
+    "input_tokens": 4488,
+    "output_tokens": 74,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.009716,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q093",
+   "retrieved": [
+    "paragraph:561/2006:art15",
+    "paragraph:clarification-1:p1",
+    "paragraph:561/2006:art3(aa)",
+    "paragraph:561/2006:art4(l)",
+    "paragraph:561/2006:art3(ha)"
+   ],
+   "estimated_input_tokens": 1967,
+   "raw": "{\"answerable\":false,\"answer\":\"The passages only show that 2,5–3,5 tonne vans used on own account, where driving is not the driver's main activity, are excluded (Article 3(ha)); they do not include the scope rule in Article 2 that says when such vans used in cross-border transport for hire or reward are covered, and the only note mentioning a 3.5-tonne threshold predates the 2020 Mobility Package changes.\",\"citations\":[]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": false,
+    "answer": "The passages only show that 2,5–3,5 tonne vans used on own account, where driving is not the driver's main activity, are excluded (Article 3(ha)); they do not include the scope rule in Article 2 that says when such vans used in cross-border transport for hire or reward are covered, and the only note mentioning a 3.5-tonne threshold predates the 2020 Mobility Package changes.",
+    "problems": [],
+    "citations": []
+   },
+   "usage": {
+    "input_tokens": 2526,
+    "output_tokens": 475,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.009802,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q096",
+   "retrieved": [
+    "paragraph:165/2014:art34(7)",
+    "paragraph:guidance-10:p1",
+    "paragraph:165/2014:art34(6)",
+    "paragraph:165/2014:art11(c)",
+    "paragraph:guidance-10:p5"
+   ],
+   "estimated_input_tokens": 3524,
+   "raw": "{\"answerable\": true, \"answer\": \"Yes. Since 2 February 2022, when you cross a border of a Member State, you must enter the symbol of the country you are entering at the start of your first stop in that Member State. That first stop must be at the nearest possible stopping place at or after the border. If you cross on a ferry or train, enter the country symbol at the port or station of arrival. You must also enter the country symbols where your daily working period started and where it finished.\", \"citations\": [{\"node_id\": \"165/2014:art34(7)\", \"quote\": \"From 2 February 2022 the driver shall also enter the symbol of the country that the driver enters after crossing a border of a Member State at the beginning of the driver’s first stop in that Member State.\"}, {\"node_id\": \"165/2014:art34(7)\", \"quote\": \"That first stop shall be made at the nearest possible stopping place at or after the border.\"}, {\"node_id\": \"165/2014:art34(7)\", \"quote\": \"Where the crossing of the border of a Member State takes place on a ferry or train, the driver shall enter the symbol of the country at the port or station of arrival.\"}, {\"node_id\": \"165/2014:art34(7)\", \"quote\": \"The driver shall enter in the digital tachograph the symbols of the countries in which the daily working period started and finished.\"}]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": true,
+    "answer": "Yes. Since 2 February 2022, when you cross a border of a Member State, you must enter the symbol of the country you are entering at the start of your first stop in that Member State. That first stop must be at the nearest possible stopping place at or after the border. If you cross on a ferry or train, enter the country symbol at the port or station of arrival. You must also enter the country symbols where your daily working period started and where it finished.",
+    "problems": [],
+    "citations": [
+     {
+      "node_id": "165/2014:art34(7)",
+      "quote": "From 2 February 2022 the driver shall also enter the symbol of the country that the driver enters after crossing a border of a Member State at the beginning of the driver’s first stop in that Member State."
+     },
+     {
+      "node_id": "165/2014:art34(7)",
+      "quote": "That first stop shall be made at the nearest possible stopping place at or after the border."
+     },
+     {
+      "node_id": "165/2014:art34(7)",
+      "quote": "Where the crossing of the border of a Member State takes place on a ferry or train, the driver shall enter the symbol of the country at the port or station of arrival."
+     },
+     {
+      "node_id": "165/2014:art34(7)",
+      "quote": "The driver shall enter in the digital tachograph the symbols of the countries in which the daily working period started and finished."
+     }
+    ]
+   },
+   "usage": {
+    "input_tokens": 4649,
+    "output_tokens": 422,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.013518,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  },
+  {
+   "id": "q100",
+   "retrieved": [
+    "paragraph:561/2006:art8(6)",
+    "paragraph:561/2006:art9(1)",
+    "paragraph:561/2006:art8(8a)",
+    "paragraph:561/2006:art8(6a)",
+    "paragraph:561/2006:art6(4)"
+   ],
+   "estimated_input_tokens": 2460,
+   "raw": "{\"answerable\":false,\"answer\":\"The passages show that a driver on a single occasional passenger service may postpone weekly rest for up to 12 consecutive 24-hour periods, but condition (a) of that derogation is missing, so they don't say whether a tour that stays inside one country qualifies.\",\"citations\":[]}",
+   "stop_reason": "end_turn",
+   "verdict": {
+    "ok": true,
+    "answerable": false,
+    "answer": "The passages show that a driver on a single occasional passenger service may postpone weekly rest for up to 12 consecutive 24-hour periods, but condition (a) of that derogation is missing, so they don't say whether a tour that stays inside one country qualifies.",
+    "problems": [],
+    "citations": []
+   },
+   "usage": {
+    "input_tokens": 3198,
+    "output_tokens": 441,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0
+   },
+   "cost_usd": 0.010806,
+   "seconds": null,
+   "attempts": 1,
+   "model": "claude-opus-5-5",
+   "request_id": null
+  }
+ ],
+ "batch": {
+  "id": "msgbatch_01PG7N6bfYED5MSpy1kuec7x",
+  "status": "collected",
+  "submitted": "2026-11-09T07:49:40+00:00",
+  "ended": "2026-11-09T07:52:43+00:00",
+  "requests": [
+   {
+    "custom_id": "000-q004",
+    "id": "q004",
+    "fingerprint": "cf84ca08054861ac"
+   },
+   {
+    "custom_id": "001-q009",
+    "id": "q009",
+    "fingerprint": "d53136af87f85515"
+   },
+   {
+    "custom_id": "002-q010",
+    "id": "q010",
+    "fingerprint": "c251a36a547a30e9"
+   },
+   {
+    "custom_id": "003-q013",
+    "id": "q013",
+    "fingerprint": "ee35e52a9c559b17"
+   },
+   {
+    "custom_id": "004-q014",
+    "id": "q014",
+    "fingerprint": "429bccfc3c824e2b"
+   },
+   {
+    "custom_id": "005-q015",
+    "id": "q015",
+    "fingerprint": "426437c1f1bc15bc"
+   },
+   {
+    "custom_id": "006-q016",
+    "id": "q016",
+    "fingerprint": "1dadc8ce1d6d1689"
+   },
+   {
+    "custom_id": "007-q020",
+    "id": "q020",
+    "fingerprint": "4bce5dd07eb93089"
+   },
+   {
+    "custom_id": "008-q026",
+    "id": "q026",
+    "fingerprint": "6a50f07d1b95c046"
+   },
+   {
+    "custom_id": "009-q027",
+    "id": "q027",
+    "fingerprint": "881300478586576d"
+   },
+   {
+    "custom_id": "010-q028",
+    "id": "q028",
+    "fingerprint": "6d688895c60c76ec"
+   },
+   {
+    "custom_id": "011-q030",
+    "id": "q030",
+    "fingerprint": "fff3d15d23ca93fe"
+   },
+   {
+    "custom_id": "012-q034",
+    "id": "q034",
+    "fingerprint": "492714543a6d718c"
+   },
+   {
+    "custom_id": "013-q041",
+    "id": "q041",
+    "fingerprint": "e5a0045981388b71"
+   },
+   {
+    "custom_id": "014-q042",
+    "id": "q042",
+    "fingerprint": "7f58349da2a36dba"
+   },
+   {
+    "custom_id": "015-q043",
+    "id": "q043",
+    "fingerprint": "ab08d2c3da9e12c8"
+   },
+   {
+    "custom_id": "016-q044",
+    "id": "q044",
+    "fingerprint": "771b1f0ded18ad88"
+   },
+   {
+    "custom_id": "017-q047",
+    "id": "q047",
+    "fingerprint": "330e7c8dceb9145d"
+   },
+   {
+    "custom_id": "018-q049",
+    "id": "q049",
+    "fingerprint": "11964191a854bbb2"
+   },
+   {
+    "custom_id": "019-q052",
+    "id": "q052",
+    "fingerprint": "065be6d8181736c9"
+   },
+   {
+    "custom_id": "020-q053",
+    "id": "q053",
+    "fingerprint": "2584902777df3597"
+   },
+   {
+    "custom_id": "021-q055",
+    "id": "q055",
+    "fingerprint": "90c375043c297648"
+   },
+   {
+    "custom_id": "022-q056",
+    "id": "q056",
+    "fingerprint": "49127b3f6cfa07b2"
+   },
+   {
+    "custom_id": "023-q057",
+    "id": "q057",
+    "fingerprint": "2cefb3bdbd8b49aa"
+   },
+   {
+    "custom_id": "024-q065",
+    "id": "q065",
+    "fingerprint": "9db6c7ca1eb03bf8"
+   },
+   {
+    "custom_id": "025-q067",
+    "id": "q067",
+    "fingerprint": "b1fc783d2e7455f4"
+   },
+   {
+    "custom_id": "026-q069",
+    "id": "q069",
+    "fingerprint": "b845875057026feb"
+   },
+   {
+    "custom_id": "027-q070",
+    "id": "q070",
+    "fingerprint": "719e73df9ef63e41"
+   },
+   {
+    "custom_id": "028-q073",
+    "id": "q073",
+    "fingerprint": "e268c84ca1e60d37"
+   },
+   {
+    "custom_id": "029-q075",
+    "id": "q075",
+    "fingerprint": "c0965583a9a1078b"
+   },
+   {
+    "custom_id": "030-q077",
+    "id": "q077",
+    "fingerprint": "2b209a1f7a72c663"
+   },
+   {
+    "custom_id": "031-q082",
+    "id": "q082",
+    "fingerprint": "2f41a490d770bb6e"
+   },
+   {
+    "custom_id": "032-q083",
+    "id": "q083",
+    "fingerprint": "04536f6257ef4a61"
+   },
+   {
+    "custom_id": "033-q086",
+    "id": "q086",
+    "fingerprint": "9f08209aaf58e3bd"
+   },
+   {
+    "custom_id": "034-q089",
+    "id": "q089",
+    "fingerprint": "d6313bebf65f99e7"
+   },
+   {
+    "custom_id": "035-q090",
+    "id": "q090",
+    "fingerprint": "d1cf7d0b53fb1b1a"
+   },
+   {
+    "custom_id": "036-q092",
+    "id": "q092",
+    "fingerprint": "d2a201258a8f3986"
+   },
+   {
+    "custom_id": "037-q093",
+    "id": "q093",
+    "fingerprint": "f355a3847f124f0e"
+   },
+   {
+    "custom_id": "038-q096",
+    "id": "q096",
+    "fingerprint": "fd27be3a56718352"
+   },
+   {
+    "custom_id": "039-q100",
+    "id": "q100",
+    "fingerprint": "3f196c0c563f6952"
+   }
+  ]
+ }
+}

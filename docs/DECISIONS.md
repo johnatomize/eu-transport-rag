@@ -2,6 +2,14 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-09: how the test split is run and tabled
+
+**Decision** (for #86): the test split runs only for the finalists. `make retrieval-runs SPLIT=test` writes the three finalists' retrieval runs to `runs/retrieval/test/`, and `make tables` adds them to `results/retrieval.md` as a section after the dev split's; `make rerank WITH=haiku SPLIT=test` and `make answers SPLIT=test` do the rest. Code still refuses the test split unless it is asked for by name. The owner OK'd the paid run without an estimate first (2026-11-09); the tools' dry runs still ran for the cap check, and the issue had a US$20 limit against a stuck or repeating run.
+
+**Paired comparisons on the test split** cover every pair of finalists, not only each against the base: with three finalists that is three comparisons, and the Bonferroni note counts all three. The dev split keeps comparing each version with the base only, as before.
+
+**Why:** the issue asks for comparisons between the finalists, and whether Haiku reranking beats article chunks is a question the test split should answer too. Running all the dev configurations on the test split would have used it for choices already made.
+
 ## 2026-11-06: the finalists for the test split
 
 **Decision** (owner, 2026-11-06, on #85's proposal; for #86): three versions answer the 40 test questions once, each with Opus 5.5 through the batch service and judged as on dev: Haiku 5.5 reranking hybrid search's top 20 paragraph chunks, top 5; hybrid search over article chunks, top 3; and the base, hybrid search over paragraph chunks, top 5.

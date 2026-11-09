@@ -6,6 +6,7 @@ import pytest
 from rag.chunk import Chunk
 from rag.parse import Node, Tree
 from rag.questions import Question
+from rag.retrieval_eval import UnseenSplitError
 from rag.retrieve import BM25, Hit
 from rag.runlog import (
     INPUTS,
@@ -112,10 +113,16 @@ def test_a_run_without_chunks_is_an_error(root):
         make_run("x", {}, BM25(CHUNKS), [], QUESTIONS, root)
 
 
-def test_runs_are_on_the_dev_split_only(root):
+def test_the_test_split_is_run_only_when_asked_for(root):
     config = {"retriever": "bm25", "strategy": "t"}
-    with pytest.raises(ValueError, match="dev split only"):
+    with pytest.raises(ValueError, match="only for checkpoint G's finalists"):
         make_run("x", config, BM25(CHUNKS), CHUNKS, QUESTIONS, root, split="test")
+    with pytest.raises(ValueError, match="no split 'train'"):
+        make_run("x", config, BM25(CHUNKS), CHUNKS, QUESTIONS, root, split="train")
+    log = make_run("x", config, BM25(CHUNKS), CHUNKS, QUESTIONS, root, split="test",
+                   allow_test=True)  # fmt: skip
+    assert log["config"]["split"] == "test"
+    assert [r["id"] for r in log["questions"]] == ["q004"]
 
 
 def test_a_log_reads_back_as_written_one_line_per_question(root):
@@ -217,3 +224,14 @@ def test_the_cost_of_reranking_comes_from_the_scoring_logs(root):
     topped = {**local, "result": {"questions": 30, "pairs": 40, "seconds": 5.0}}
     table = retrieval([run(root)], QUESTIONS, TREE, [("c.json", topped)])
     assert "| qwen | needed | `c.json` | 30 | 20 | 2.50 | 0.00000 | 0.00 |" in table
+
+
+def test_a_test_split_table_is_made_only_when_asked_for(root):
+    config = {"retriever": "bm25", "k1": 1.5, "b": 0.75, "strategy": "t"}
+    test = make_run("bm25-t", config, BM25(CHUNKS), CHUNKS, QUESTIONS, root, split="test",
+                    allow_test=True)  # fmt: skip
+    with pytest.raises(UnseenSplitError, match="scored only once"):
+        retrieval([test], QUESTIONS, TREE)
+    table = retrieval([test], QUESTIONS, TREE, allow_test=True, title="Test split")
+    assert table.startswith("# Test split\n")
+    assert "The test split: 1 questions with gold nodes" in table

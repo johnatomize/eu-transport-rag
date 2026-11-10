@@ -15,7 +15,9 @@ or whose chunks differ from what the parser and chunking code give now; and an a
 that shows a chunk the corpus no longer gives. That check cuts the corpus again, but nothing is
 retrieved. The answer table scores the test split too, once its run exists: it is checkpoint
 G's final table (design §C), as does the retrieval table, from the finalists' retrieval runs
-in runs/retrieval/test/ (#86).
+in runs/retrieval/test/ (#86). Once the owner has graded the finalists' test answers to the
+questions without key facts (#88), runs/grades/hand-grades.v1.jsonl, those count in the test
+split's correctness too.
 """
 
 import argparse
@@ -29,6 +31,7 @@ from rag.faithfulness import LABELLED_RUNS, select, validate_labels
 from rag.faithfulness import answers as labelled_answers
 from rag.generate import SCHEMA_TOKENS
 from rag.generation_config import GenerationConfigError, load_generation_config
+from rag.hand_grades import load_grades
 from rag.judge import prompt_version
 from rag.parse import ParseError, parse_corpus
 from rag.production_cost import production_cost
@@ -51,6 +54,7 @@ LABELS = ROOT / "data" / "faithfulness_labels.v1.jsonl"
 CONFIG = ROOT / "config" / "generation.yaml"
 JUDGE_OUT = ROOT / "results" / "faithfulness_judge.md"
 COST_OUT = ROOT / "results" / "production_cost.md"
+GRADES = ROOT / "runs" / "grades" / "hand-grades.v1.jsonl"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -103,7 +107,8 @@ def main(argv: list[str] | None = None) -> int:
         config = load_generation_config(CONFIG)
         judge = (config.judge_model, prompt_version())
         judge_runs = judge_logs("run")
-        tables[ANSWERS_OUT] = answers(answer_logs, questions, tree, None, judge_runs, judge)
+        grades = hand_grades(dict(answer_logs), questions)
+        tables[ANSWERS_OUT] = answers(answer_logs, questions, tree, None, judge_runs, judge, grades)
     except (OSError, ValueError, KeyError, GenerationConfigError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
@@ -149,6 +154,19 @@ def main(argv: list[str] | None = None) -> int:
 def demote(markdown: str) -> str:
     """Every heading one level down, so a document becomes a section of another."""
     return "\n".join("#" + line if line.startswith("#") else line for line in markdown.split("\n"))
+
+
+def hand_grades(answer_logs: dict[str, dict], questions: list) -> dict[str, dict[str, str]]:
+    """The owner's grades by run file and question ID, or none before grading (#88).
+
+    The grades must grade exactly the answers chosen for grading, as `make check` requires.
+    """
+    if not GRADES.exists():
+        return {}
+    try:
+        return load_grades(GRADES.read_text(encoding="utf-8"), questions, answer_logs)
+    except ValueError as e:
+        raise ValueError(f"{GRADES.relative_to(ROOT)}: {e}") from None
 
 
 def judge_logs(kind: str) -> list[tuple[str, dict]]:

@@ -11,6 +11,7 @@ from rag.hand_grades import (
     build_id,
     expected,
     graded_questions,
+    load_grades,
     select,
     validate_grades,
 )
@@ -133,6 +134,26 @@ def test_a_complete_grades_file_passes():
 def test_grades_file_problems_are_named(text, message):
     _, errors = validate_grades(text, WANTED)
     assert any(message.replace("no note", "says nothing") in e for e in errors), errors
+
+
+def test_load_grades_gives_each_graded_run_its_grades_or_names_every_problem():
+    one, two, three = GRADED_RUNS
+    logs = {
+        one: log(entry("q1")),
+        two: log(entry("q1", answerable=False)),
+        three: log(entry("q1")),
+        "other.json": log(entry("q1")),
+    }
+    text = row(one) + "\n" + row(three, "wrong", "Says no.") + "\n"
+    assert load_grades(text, [question("q1")], logs) == {
+        one: {"q1": "correct"},
+        two: {},  # refused, so nothing to grade, but still a graded run
+        three: {"q1": "wrong"},
+    }
+    with pytest.raises(ValueError, match=r"not valid: 1 of 2 answers not graded"):
+        load_grades(row(one), [question("q1")], logs)
+    with pytest.raises(ValueError, match=f"graded runs {two} aren't among"):
+        load_grades(text, [question("q1")], {n: v for n, v in logs.items() if n != two})
 
 
 # --- applying the page's export ----------------------------------------------------------------

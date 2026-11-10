@@ -156,3 +156,25 @@ def validate_grades(text: str, wanted: set[tuple[str, str]]) -> tuple[list[Grade
     if missing and not errors:
         errors.append(f"{len(missing)} of {len(wanted)} answers not graded")
     return grades, errors
+
+
+def load_grades(
+    text: str, questions: Sequence[Question], logs: Mapping[str, Mapping]
+) -> dict[str, dict[str, str]]:
+    """The grades file's grades by run and question ID, {run: {question_id: grade}}.
+
+    `logs` are the answer run logs by file name; each of GRADED_RUNS must be among them, and
+    gets an entry even if none of its answers needed a grade. Raises ValueError naming every
+    problem when the file doesn't grade exactly the answers chosen for grading.
+    """
+    absent = [name for name in GRADED_RUNS if name not in logs]
+    if absent:
+        raise ValueError(f"the graded runs {', '.join(absent)} aren't among the answer run logs")
+    graded_logs = {name: logs[name] for name in GRADED_RUNS}
+    grades, errors = validate_grades(text, expected(select(questions, graded_logs)))
+    if errors:
+        raise ValueError("the hand grades are not valid: " + "; ".join(errors))
+    out: dict[str, dict[str, str]] = {name: {} for name in GRADED_RUNS}
+    for g in grades:
+        out[g.run][g.question_id] = g.grade
+    return out

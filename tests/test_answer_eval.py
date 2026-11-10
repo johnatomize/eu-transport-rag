@@ -6,7 +6,9 @@ import pytest
 from rag.answer_eval import (
     ANSWERED,
     GENERATION,
+    KEY_FACTS,
     NO_REPLY,
+    OWNER,
     REFUSED,
     RETRIEVAL,
     UNRELIABLE,
@@ -138,6 +140,38 @@ def test_questions_without_key_facts_get_no_correctness():
     # Refused, it is still traced: something went wrong whatever the gold answer says.
     s = score(question(key_facts=()), entry(answerable=False), TREE, NODES_OF)
     assert s.correct is None and s.trace == GENERATION
+
+
+def test_the_owners_grade_scores_a_question_without_key_facts():
+    q = question(key_facts=())
+    for grade, correct in (("correct", True), ("partly_correct", False), ("wrong", False)):
+        s = score(q, entry(answer="Anything."), TREE, NODES_OF, {"q001": grade})
+        assert s.correct is correct and s.correct_by == OWNER and s.right is correct
+    # Graded wrong, it is traced like an answer missing a key fact.
+    assert score(q, entry(), TREE, NODES_OF, {"q001": "wrong"}).trace == GENERATION
+    # A refusal isn't shown to the owner and isn't correct.
+    refused = score(q, entry(answerable=False), TREE, NODES_OF, {})
+    assert refused.correct is False and refused.correct_by == OWNER
+    # Key facts still decide a question that has them, whatever the grades say.
+    keyed = score(question(), entry(answer="Nine hours."), TREE, NODES_OF, {})
+    assert keyed.correct is True and keyed.correct_by == KEY_FACTS
+
+
+def test_an_answer_without_a_grade_or_a_grade_without_an_answer_is_refused():
+    q = question(key_facts=())
+    with pytest.raises(ValueError, match="don't grade it"):
+        score(q, entry(), TREE, NODES_OF, {})
+    with pytest.raises(ValueError, match="not answered"):
+        score(q, entry(answerable=False), TREE, NODES_OF, {"q001": "correct"})
+
+
+def test_a_graded_run_scores_its_questions_without_key_facts():
+    ev = evaluate(RUN, QUESTIONS, TREE, NODES_OF, hand_grades={"q003": "correct"})
+    q003 = next(s for s in ev.scores if s.question_id == "q003")
+    assert q003.correct is True
+    assert ev.groups[0].over["correct"] == 6  # the five with key facts, and q003
+    with pytest.raises(ValueError, match="q001"):  # q001 has key facts
+        evaluate(RUN, QUESTIONS, TREE, NODES_OF, hand_grades={"q003": "correct", "q001": "wrong"})
 
 
 def test_unanswerable_questions_are_never_scored_for_correctness_or_citations():

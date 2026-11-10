@@ -3,7 +3,7 @@
 import copy
 
 import pytest
-from test_answer_eval import NODES_OF, QUESTIONS, RUN, TREE, entry, log
+from test_answer_eval import NODES_OF, QUESTIONS, RUN, TREE, entry, log, question
 
 from rag.chunk import Chunk
 from rag.tables import answers, is_base, run_label
@@ -152,6 +152,33 @@ def test_on_the_test_split_the_finalists_are_also_compared_with_each_other():
         ("c.json", settle(RUN, model="claude-haiku-5-5")),
     )
     assert "2 comparisons on this split" in section(dev, "### Paired comparisons")
+
+
+def test_the_owners_grades_count_in_the_correct_column():
+    # q103 has no key facts; the base answers it and the other refuses it.
+    questions = [*QUESTIONS, question(qid="q103", key_facts=(), split="test")]
+    one = log([entry("q100"), entry("q103")], split="test")
+    refused = log([entry("q100"), entry("q103", answerable=False)], split="test")
+    logs = [("a.json", settle(one)), ("b.json", settle(refused, k=3))]
+    plain = answers(logs, questions, TREE, CHUNKS)
+    assert "2 questions: 1 with key facts, 1 answerable without, and 0" in plain
+    assert "answerable questions without key facts are left out" in plain
+    assert "hand grades" not in plain
+    grades = {"a.json": {"q103": "correct"}, "b.json": {}}
+    text = answers(logs, questions, TREE, CHUNKS, hand_grades=grades)
+    assert "1 answerable without, graded by the owner, and 0" in text
+    assert "the owner's hand grades add the answerable questions without key facts" in text
+    quality = section(text, "### Quality")  # the only split here is test
+    assert rows(quality, "opus-5-5, hybrid paragraph top 5")[0][1].startswith("1.00")
+    assert rows(quality, "opus-5-5, hybrid paragraph top 3")[0][1].startswith("0.50")
+    paired = section(text, "### Paired comparisons")
+    assert "by its key facts or the owner's grade" in paired
+    assert rows(paired, "opus-5-5, hybrid paragraph top 3")[0][2:6] == ["0", "1", "1", "0"]
+    with pytest.raises(ValueError, match="c.json, which isn't a scored run"):
+        answers(logs, questions, TREE, CHUNKS, hand_grades={**grades, "c.json": {}})
+    # Grades for only some runs of a split would mix two kinds of Correct in one column.
+    with pytest.raises(ValueError, match="only some runs on the test split; not graded: b.json"):
+        answers(logs, questions, TREE, CHUNKS, hand_grades={"a.json": {"q103": "correct"}})
 
 
 def test_one_run_alone_has_no_comparison():

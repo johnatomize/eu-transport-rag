@@ -19,11 +19,13 @@ from pathlib import Path
 from rag.corpus import CorpusError, load_manifest
 from rag.faithfulness import by_id
 from rag.hand_grades import (
+    CORRECT,
     GRADED_RUNS,
     GRADES,
     assign,
     build_id,
     expected,
+    load_grades,
     select,
     validate_grades,
 )
@@ -163,14 +165,13 @@ def check() -> int:
         print(f"{path}: not graded yet (#88)")
         return 0
     _, _, questions, logs = load()
-    grades, errors = validate_grades(
-        GRADES_FILE.read_text(encoding="utf-8"), expected(select(questions, logs))
-    )
-    for error in errors:
-        print(f"{path}: {error}", file=sys.stderr)
-    if errors:
+    try:
+        by_run = load_grades(GRADES_FILE.read_text(encoding="utf-8"), questions, logs)
+    except ValueError as e:
+        print(f"{path}: {e}", file=sys.stderr)
         return 1
-    correct = sum(g.grade == "correct" for g in grades)
+    grades = [grade for run in by_run.values() for grade in run.values()]
+    correct = sum(grade == CORRECT for grade in grades)
     print(f"{path}: {len(grades)} answers graded, {correct} correct")
     return 0
 

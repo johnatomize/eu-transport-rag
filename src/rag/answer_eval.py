@@ -9,8 +9,10 @@ all scoring needs. The rules, recorded in docs/DECISIONS.md ("how an answer run 
   reply failed the check; or no reply at all, when the call failed.
 - **Correctness** is scored on answerable questions with key facts: correct when the answer
   passed the check and states every key fact (`rag.keyfacts`). A refusal, an unreliable answer
-  or a missing reply is not correct. Questions without key facts get no correctness score here;
-  on the test split the owner grades them by hand (#75, #88).
+  or a missing reply is not correct. Questions without key facts get no correctness score,
+  unless the owner graded the run's answers to them by hand (#75, #88; done on the test split):
+  then an answer graded correct is correct, and one graded partly correct or wrong is not, nor
+  is a refusal, an unreliable answer or a missing reply.
 - **Citations.** A citation finds gold node G when it cites G or a node inside G. The check has
   already made sure the quote is word for word in the cited node's own text, so the quoted words
   lie inside G. A citation of a node above G, such as the paragraph whose point is gold, quotes
@@ -34,8 +36,9 @@ all scoring needs. The rules, recorded in docs/DECISIONS.md ("how an answer run 
 - **Intervals** are 95%: Wilson for shares of questions, a seeded percentile bootstrap over
   questions for means. Each measure is given overall, by phrasing and by type.
 - **Paired comparison** of two runs on the same questions (#81): a question is *right* when it
-  has key facts and is correct, or is unanswerable and refused. Answerable questions without
-  key facts, and questions whose call got no reply in either run, are left out. The questions
+  is correct (by key facts, or by the owner's grade), or is unanswerable and refused. Answerable
+  questions without key facts the owner hasn't graded, and questions whose call got no reply
+  in either run, are left out. The questions
   one run gets right and the other doesn't are counted both ways, and an exact two-sided sign
   test says how likely a split at least that lopsided would be if neither run were better.
 
@@ -47,6 +50,8 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from rag.chunk import STRATEGIES
+from rag.hand_grades import CORRECT as GRADED_CORRECT
+from rag.hand_grades import GRADES
 from rag.keyfacts import missing_facts
 from rag.parse import Tree
 from rag.questions import PHRASINGS, SPLITS, TYPES, Question
@@ -55,6 +60,8 @@ from rag.retrieval_eval import RESAMPLES, SEED, Metric, UnseenSplitError, _boots
 ANSWERED, REFUSED, UNRELIABLE, NO_REPLY = "answered", "refused", "unreliable", "no_reply"
 OUTCOMES = (ANSWERED, REFUSED, UNRELIABLE, NO_REPLY)
 RETRIEVAL, GENERATION = "retrieval", "generation"
+# Who decided whether an answer is correct: code matching key facts, or the owner by hand (#88).
+KEY_FACTS, OWNER = "key_facts", "owner"
 
 # The measures, by name. Shares of questions get Wilson intervals; the rest are means.
 SHARES = ("correct", "refusal_accuracy", "false_refusals", "unreliable", "no_reply")
@@ -68,7 +75,7 @@ class AnswerScore:
     question_id: str
     answerable: bool  # by the question set: it has gold nodes
     outcome: str  # one of OUTCOMES
-    # None when not scored: an unanswerable question, or one without key facts.
+    # None when not scored: an unanswerable question, or one without key facts not graded.
     correct: bool | None
     missing_facts: tuple[str, ...]  # the key facts the answer doesn't state, or all if no answer
     cited: tuple[str, ...]  # distinct cited node IDs, in the order first cited
@@ -80,6 +87,9 @@ class AnswerScore:
     input_tokens: int | None
     output_tokens: int | None
     seconds: float | None  # None too for a reply from a batch, which has no time of its own
+    # How `correct` was decided: KEY_FACTS, or OWNER for a question without key facts in a run
+    # the owner graded (where an answer not shown for grading is simply not correct); else None.
+    correct_by: str | None = None
 
     @property
     def right(self) -> bool | None:
@@ -139,10 +149,14 @@ def score(
     entry: Mapping | None,
     tree: Tree,
     nodes_of: Mapping[str, Sequence[str]],
+    hand_grades: Mapping[str, str] | None = None,
 ) -> AnswerScore:
     """Score one question's entry in a run log; `entry` is None when its call got no reply.
 
-    `nodes_of` maps a chunk ID to the node IDs it holds (`chunk_nodes`).
+    `nodes_of` maps a chunk ID to the node IDs it holds (`chunk_nodes`). `hand_grades` are the
+    owner's grades of this run's answers by question ID, when the run was graded (#88): an
+    answerable question without key facts is then scored by its grade, and an answer to one
+    must have a grade.
     """
     gold = question.gold_node_ids
     outcome = _outcome(entry)
@@ -179,7 +193,7 @@ def score(
         if outcome == ANSWERED:  # the check fails an answer that cites nothing
             precision = sum(any(n in s for s in subtrees.values()) for n in cited) / len(cited)
 
-    correct = None
+    correct = correct_by = None
     missing: tuple[str, ...] = ()
     if gold and question.key_facts:
         if outcome == ANSWERED:
@@ -187,7 +201,14 @@ def score(
             missing = tuple(missing_facts(entry["verdict"]["answer"], question.key_facts))
         else:
             missing = question.key_facts
-        correct = outcome == ANSWERED and not missing
+        correct, correct_by = outcome == ANSWERED and not missing, KEY_FACTS
+    elif gold and hand_grades is not None:
+        grade = hand_grades.get(question.id)
+        if outcome == ANSWERED and grade not in GRADES:
+            raise ValueError(f"{question.id}: answered, but the owner's grades don't grade it")
+        if outcome != ANSWERED and grade is not None:
+            raise ValueError(f"{question.id}: graded by the owner, but not answered")
+        correct, correct_by = grade == GRADED_CORRECT, OWNER
 
     if outcome == NO_REPLY:
         trace = None
@@ -213,6 +234,7 @@ def score(
         input_tokens=usage["input_tokens"] if usage else None,
         output_tokens=usage["output_tokens"] if usage else None,
         seconds=entry["seconds"] if entry is not None else None,
+        correct_by=correct_by,
     )
 
 
@@ -273,11 +295,14 @@ def evaluate(
     nodes_of: Mapping[str, Sequence[str]] | None = None,
     allow_test: bool = False,
     seed: int | str = SEED,
+    hand_grades: Mapping[str, str] | None = None,
 ) -> AnswerEvaluation:
     """Score every question of the run's split, overall, by phrasing and by type.
 
     `nodes_of` maps chunk IDs to node IDs; by default the run's chunking strategy is cut from
-    `tree`. A run must hold a reply, or a failed call, for every question of its split and for
+    `tree`. `hand_grades`, the owner's grades of the run's answers by question ID (#88), score
+    its answerable questions without key facts (`score`); a grade of any other question is
+    refused. A run must hold a reply, or a failed call, for every question of its split and for
     nothing else. The test split is used once, for checkpoint G's final table, so scoring a
     test run needs `allow_test`.
     """
@@ -313,7 +338,15 @@ def evaluate(
     if extra:
         raise ValueError(f"the run log has questions not in the {split} split: {', '.join(extra)}")
 
-    scores = [score(q, entries[q.id], tree, nodes_of) for q in chosen]
+    if hand_grades is not None:
+        gradable = {q.id for q in chosen if q.gold_node_ids and not q.key_facts}
+        stray = sorted(set(hand_grades) - gradable)
+        if stray:
+            raise ValueError(
+                f"the owner's grades grade {', '.join(stray)}, which aren't answerable "
+                f"{split} questions without key facts"
+            )
+    scores = [score(q, entries[q.id], tree, nodes_of, hand_grades) for q in chosen]
     by_id = {q.id: q for q in chosen}
     groups = [("all", scores)]
     for attribute, values in (("phrasing", PHRASINGS), ("type", TYPES)):

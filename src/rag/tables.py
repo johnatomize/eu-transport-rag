@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from rag.answer_eval import (
     ANSWERED,
     GENERATION,
+    KEY_FACTS,
     NO_REPLY,
     REFUSED,
     RETRIEVAL,
@@ -427,18 +428,24 @@ def _split_section(
     runs: Sequence[tuple[str, Mapping, AnswerEvaluation]],
     words: Mapping[str, Mapping[str, int]],
     faithful: Mapping[str, str],
+    graded: bool = False,
 ) -> list[str]:
+    """One split's tables; `graded` says the owner graded every run's answers to the
+    questions without key facts, so the Correct column counts them."""
     names = [name for name, _, _ in runs]
     groups = {name: {g.group: g for g in ev.groups} for name, _, ev in runs}
     first = groups[names[0]]
     everyone = first["all"]
-    answerable = sum(s.answerable for s in runs[0][2].scores)
+    scores = runs[0][2].scores
+    answerable = sum(s.answerable for s in scores)
+    with_facts = sum(s.correct_by == KEY_FACTS for s in scores)
     lines = [
         "",
         f"## {SPLIT_NAMES[split]}",
         "",
-        f"{everyone.n} questions: {everyone.over.get('correct', 0)} with key facts, "
-        f"{answerable - everyone.over.get('correct', 0)} answerable without, and "
+        f"{everyone.n} questions: {with_facts} with key facts, "
+        f"{answerable - with_facts} answerable without"
+        f"{', graded by the owner' if graded else ''}, and "
         f"{everyone.n - answerable} unanswerable.",
         "",
         "### Quality",
@@ -484,15 +491,18 @@ def _split_section(
                 lines.append(_row([kind, first[kind].over[metric], *cells]))
 
     # The test split holds only the finalists, compared with each other too (#86).
-    lines += _paired(runs, every_pair=split == "test")
+    lines += _paired(runs, every_pair=split == "test", graded=graded)
     return lines
 
 
 def _paired(
-    runs: Sequence[tuple[str, Mapping, AnswerEvaluation]], every_pair: bool = False
+    runs: Sequence[tuple[str, Mapping, AnswerEvaluation]],
+    every_pair: bool = False,
+    graded: bool = False,
 ) -> list[str]:
     """Each run against the base setup, if there is one; with `every_pair`, the other runs
-    against each other as well."""
+    against each other as well. `graded` says the owner graded every run's answers to the
+    questions without key facts, so they count too."""
     if len(runs) < 2:
         return []
     bases = [i for i, (_, log, _) in enumerate(runs) if is_base(log["config"])]
@@ -512,9 +522,14 @@ def _paired(
         "### Paired comparisons",
         "",
         f"Each run against {against}, question by question. A question counts as right when "
-        "it has key facts and is answered correctly, or is unanswerable and refused; "
-        "answerable questions without key facts are left out. p is the exact two-sided sign "
-        "test on the questions only one run gets right.",
+        + (
+            "it is answered correctly, by its key facts or the owner's grade, or is "
+            "unanswerable and refused."
+            if graded
+            else "it has key facts and is answered correctly, or is unanswerable and refused; "
+            "answerable questions without key facts are left out."
+        )
+        + " p is the exact two-sided sign test on the questions only one run gets right.",
         "",
     ]
     titles = ["Run", "Against", "Only this right", "Only that right", "Both right",
@@ -687,6 +702,7 @@ def answers(
     chunks: Mapping[str, Sequence[Chunk]] | None = None,
     judge_logs: Sequence[tuple[str, Mapping]] = (),
     judge: tuple[str, str] | None = None,
+    hand_grades: Mapping[str, Mapping[str, str]] | None = None,
 ) -> str:
     """The answer results of the run logs `(file name, log)`, as one Markdown document.
 
@@ -701,7 +717,12 @@ def answers(
     `judge_logs` are the faithfulness judge's whole runs `(file name, log)`, and `judge` the
     chosen judge, `(model, instructions version)`: each scored run judged by it gets its share
     of supported answers (`match_judges`, `judged`). Judge runs not counted are listed.
+
+    `hand_grades` are the owner's grades by run file and question ID (#88): a graded run's
+    answerable questions without key facts count in its correctness. A graded run must be
+    scored.
     """
+    hand_grades = dict(hand_grades or {})
     for file, log in logs:
         _check_shape(file, log)
     chunks = dict(chunks or {})  # strategy -> chunks, cut once each
@@ -757,8 +778,24 @@ def answers(
             name = label if short.count(label) == 1 else _full_label(config)
             files[(split, name)] = file
             nodes_of = nodes(config["retrieval"]["strategy"])
-            ev = evaluate_answers(log, questions, tree, nodes_of, allow_test=True)
+            ev = evaluate_answers(
+                log, questions, tree, nodes_of, allow_test=True, hand_grades=hand_grades.get(file)
+            )
             done[split].append((name, log, ev))
+    unscored = sorted(set(hand_grades) - set(files.values()))
+    if unscored:
+        raise ValueError(f"the owner graded {', '.join(unscored)}, which isn't a scored run")
+    graded: dict[str, bool] = {}
+    for split in SPLITS:
+        split_files = [files[(split, name)] for name, _, _ in done[split]]
+        ungraded = [f for f in split_files if f not in hand_grades]
+        if ungraded and len(ungraded) < len(split_files):
+            # One Correct column would mix runs scored over different questions.
+            raise ValueError(
+                f"the owner graded only some runs on the {split} split; not graded: "
+                + ", ".join(ungraded)
+            )
+        graded[split] = bool(split_files) and not ungraded
     words = {s: {c.id: len(c.text.split()) for c in cs} for s, cs in chunks.items()}
 
     by_file = dict(logs)
@@ -789,7 +826,16 @@ def answers(
         "Each cell is the mean with its 95% interval: Wilson for shares of questions, a "
         'bootstrap over questions for the others. Rules in `docs/DECISIONS.md` ("how an answer '
         'run is scored"). **Correct**: the answer passed the check and states every key fact, '
-        "over the answerable questions with key facts. **Citation precision**: the share of "
+        "over the answerable questions with key facts. "
+        + (
+            "On the test split, the owner's hand grades add the answerable questions without "
+            "key facts (`runs/grades/hand-grades.v1.jsonl`, #88): an answer graded correct is "
+            "correct, one graded partly correct or wrong is not, nor is a refusal, an answer "
+            "that failed the check or a missing reply. "
+            if hand_grades
+            else ""
+        )
+        + "**Citation precision**: the share of "
         "an answer's cited passages that are, or lie inside, a gold passage, over the "
         "answerable questions answered. **Citation recall**: the share of gold passages cited, "
         "over every answerable question. **Refusal accuracy**: unanswerable questions refused. "
@@ -810,7 +856,7 @@ def answers(
         lines += ["", "No answer runs yet."]
     for split in SPLITS:
         if done[split]:
-            lines += _split_section(split, done[split], words, faithful[split])
+            lines += _split_section(split, done[split], words, faithful[split], graded[split])
 
     if any(done.values()):
         lines += ["", "## Runs", ""]

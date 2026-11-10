@@ -1,0 +1,437 @@
+<title>Hand Grades</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: the same reviewer's desk as the faithfulness labels. Answer list on the left, one answer
+   at a time on the right: the gold answer, then the answer and the quotes it cites, the grade pinned under. */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --ink: #18202d;
+  --muted: #5a6474;
+  --rule: #dce1e9;
+  --accent: #2440a8;
+  --accent-soft: #e5e9f9;
+  --ok: #1d7549;
+  --ok-soft: #e1f1e8;
+  --mid: #8a5a00;
+  --mid-soft: #fbefd5;
+  --bad: #a8361f;
+  --bad-soft: #f9e4de;
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-law: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-id: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --top-h: 0px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1218; --surface: #161b24; --ink: #e5e8ee; --muted: #98a1b0; --rule: #283040;
+    --accent: #8fa3ff; --accent-soft: #1d2645; --ok: #5ccc8f; --ok-soft: #13301f;
+    --mid: #e8b54a; --mid-soft: #35290e; --bad: #f08a70; --bad-soft: #3a1a12;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1218; --surface: #161b24; --ink: #e5e8ee; --muted: #98a1b0; --rule: #283040;
+  --accent: #8fa3ff; --accent-soft: #1d2645; --ok: #5ccc8f; --ok-soft: #13301f;
+  --mid: #e8b54a; --mid-soft: #35290e; --bad: #f08a70; --bad-soft: #3a1a12;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.5; }
+button, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+
+.top { position: sticky; top: 0; z-index: 5; background: var(--surface); border-bottom: 1px solid var(--rule); padding: 12px 16px; }
+.top-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; max-width: 1400px; margin: 0 auto; }
+.brand { display: flex; flex-direction: column; min-width: 0; }
+.brand h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.brand small { color: var(--muted); font-size: 12.5px; }
+.progress { flex: 1 1 320px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--rule); }
+.bar span { display: block; height: 100%; transition: width .3s ease; }
+.bar .b-correct { background: var(--ok); }
+.bar .b-partly_correct { background: var(--mid); }
+.bar .b-wrong { background: var(--bad); }
+.counts { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.counts b { color: var(--ink); font-weight: 600; }
+.sync { font-size: 12.5px; color: var(--muted); flex-basis: 100%; }
+.sync.warn { color: var(--bad); }
+.tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.tool, .list-toggle { border: 1px solid var(--rule); background: var(--surface); border-radius: 6px; padding: 4px 10px; font-size: 13px; }
+.tool.primary { border-color: var(--accent); color: var(--accent); font-weight: 500; }
+.list-toggle { display: none; }
+
+.layout { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: 24px; max-width: 1400px; margin: 0 auto; padding: 20px 16px 40px; }
+.list { position: sticky; top: calc(var(--top-h) + 20px); align-self: start; max-height: calc(100vh - var(--top-h) - 40px); display: flex; flex-direction: column; min-width: 0; }
+.rows { list-style: none; margin: 0; padding: 0; overflow-y: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
+.rows li + li { border-top: 1px solid var(--rule); }
+.rows li.more { border-top-color: transparent; }
+.rows button { display: grid; grid-template-columns: 14px 64px minmax(0, 1fr); gap: 8px; align-items: baseline; width: 100%; text-align: left; border: 0; background: none; padding: 7px 10px; }
+.rows button:hover { background: var(--bg); }
+.rows button[aria-current="true"] { background: var(--accent-soft); }
+.rows .qid { font-family: var(--font-id); font-size: 12.5px; color: var(--muted); }
+.rows .qt { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rows .more .qt { color: var(--muted); }
+.dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--muted); display: inline-block; transform: translateY(1px); }
+.dot.correct { background: var(--ok); border-color: var(--ok); }
+.dot.partly_correct { background: var(--mid); border-color: var(--mid); }
+.dot.wrong { background: var(--bad); border-color: var(--bad); }
+.dot.unsure { background: linear-gradient(90deg, var(--muted) 50%, transparent 50%); }
+
+.detail { min-width: 0; display: flex; flex-direction: column; gap: 18px; }
+.head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.head .qid { font-family: var(--font-id); font-size: 14px; font-weight: 500; }
+.chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; color: var(--accent); background: var(--accent-soft); font-weight: 500; white-space: nowrap; }
+.nav { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.nav button { border: 1px solid var(--rule); background: var(--surface); border-radius: 6px; padding: 4px 10px; }
+.question { margin: 0; font-size: 22px; line-height: 1.35; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; max-width: 48ch; }
+.rule { margin: 0; font-size: 13.5px; color: var(--muted); max-width: 80ch; }
+.rule summary { cursor: pointer; color: var(--ink); font-weight: 500; }
+.rule ul { margin: 6px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.rule b { color: var(--ink); font-weight: 600; }
+
+.section { display: flex; flex-direction: column; gap: 8px; max-width: 82ch; }
+.label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.box { border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); padding: 12px 14px; font-size: 16px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.box.gold { background: var(--accent-soft); border-color: transparent; }
+.sources { font-size: 13.5px; }
+.sources summary { cursor: pointer; color: var(--muted); }
+.sources[open] summary { margin-bottom: 8px; }
+
+.node { border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.node + .node { margin-top: 8px; }
+.node-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; padding: 8px 14px; border-bottom: 1px solid var(--rule); }
+.node-id { font-family: var(--font-id); font-size: 13px; font-weight: 500; }
+.node-path { font-size: 12.5px; color: var(--muted); flex: 1 1 240px; min-width: 0; }
+.node-head a { font-size: 12.5px; white-space: nowrap; }
+.law { margin: 0; padding: 10px 14px; font-family: var(--font-law); font-size: 15.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.law.lead-in { padding-bottom: 0; color: var(--muted); font-size: 14.5px; }
+.law + .law:not(.lead-in) { border-top: 1px dashed var(--rule); }
+blockquote.law { border-left: 3px solid var(--rule); margin: 0; }
+
+.verdict {
+  position: sticky; bottom: 0; z-index: 3; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px;
+  padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 14px; align-items: start;
+  box-shadow: 0 -6px 18px -12px rgba(10, 20, 40, .35);
+}
+.verdict-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.vbtn { border: 1.5px solid var(--rule); background: var(--surface); border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.vbtn kbd { font-family: var(--font-id); font-size: 11px; font-weight: 400; color: var(--muted); border: 1px solid var(--rule); border-radius: 3px; padding: 0 4px; }
+.vbtn.correct[aria-pressed="true"] { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+.vbtn.partly_correct[aria-pressed="true"] { background: var(--mid-soft); border-color: var(--mid); color: var(--mid); }
+.vbtn.wrong[aria-pressed="true"] { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
+.note-wrap { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.note-wrap textarea { width: 100%; min-height: 44px; resize: vertical; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); font-size: 14px; line-height: 1.45; }
+.note-wrap textarea.need { border-color: var(--mid); }
+.note-meta { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--muted); }
+.note-meta .err { color: var(--bad); }
+.keys kbd { font-family: var(--font-id); font-size: 11px; border: 1px solid var(--rule); border-radius: 3px; padding: 0 4px; }
+
+@media (max-width: 899px) {
+  .top { position: static; }
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .list { position: static; max-height: none; }
+  .list:not(.open) { display: none; }
+  .rows { max-height: 55vh; }
+  .list-toggle { display: inline-block; }
+  .question { font-size: 19px; }
+  .verdict { grid-template-columns: minmax(0, 1fr); }
+  .keys { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .bar span { transition: none; } }
+</style>
+
+<header class="top" id="top">
+  <div class="top-inner">
+    <div class="brand">
+      <h1>Hand grades</h1>
+      <small>Issue #88 · the finalists' test answers, shown blind as A, B and C</small>
+    </div>
+    <div class="progress">
+      <div class="bar" aria-hidden="true"><span class="b-correct" id="bar-correct"></span><span class="b-partly_correct" id="bar-partly_correct"></span><span class="b-wrong" id="bar-wrong"></span></div>
+      <div class="counts" id="counts"></div>
+    </div>
+    <div class="tools">
+      <button class="tool primary" id="save-file" type="button" title="Download every grade as a file, to hand to Claude">Save grades file</button>
+      <button class="tool" id="load-file" type="button" title="Bring back grades from a file saved earlier">Load grades file</button>
+      <button class="list-toggle" id="list-toggle" type="button" aria-expanded="false" aria-controls="list">All answers</button>
+    </div>
+    <input type="file" id="load-input" accept="application/json,.json" hidden>
+    <span class="sync" id="sync"></span>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="list" id="list" aria-label="Answers"><ul class="rows" id="rows"></ul></nav>
+  <main class="detail" id="detail"></main>
+</div>
+
+<script id="review-data" type="application/json">/*__DATA__*/</script>
+<script>
+(() => {
+  "use strict";
+  const DATA = JSON.parse(document.getElementById("review-data").textContent);
+  const ITEMS = DATA.items;
+  const GRADES = [["correct", "Correct"], ["partly_correct", "Partly correct"], ["wrong", "Wrong"]];
+  const GRADE_NAME = Object.fromEntries(GRADES);
+  const TYPE_NAMES = {
+    single_fact: "Single fact", definition: "Definition", exception: "Exception",
+    multi_article: "Multi-article", cross_act: "Cross-act", version_trap: "Version trap",
+  };
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  // Grades are kept in this browser under the build's fingerprint, so a page built from other
+  // answers never picks up grades made on this one.
+  const PREFIX = "hg:" + DATA.build + ":";
+  let storageOk = true;
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(PREFIX + k)); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(PREFIX + k, JSON.stringify(v)); } catch { storageOk = false; } },
+  };
+  const ui = Object.assign({ current: ITEMS[0].key }, store.get("ui") || {});
+  if (!ITEMS.some(i => i.key === ui.current)) ui.current = ITEMS[0].key;
+
+  const grades = new Map();   // key -> {grade, note, at}
+  for (const [k, g] of Object.entries(store.get("grades") || {})) if (ITEMS.some(i => i.key === k)) grades.set(k, g);
+  const noteTimers = new Map();
+  const gradeOf = k => grades.get(k) || {};
+  const needsNote = g => !!g.grade && g.grade !== "correct" && !String(g.note || "").trim();
+  const done = k => { const g = gradeOf(k); return !!g.grade && !needsNote(g); };
+  const setSync = (text, warn) => { const el = $("sync"); el.textContent = text; el.classList.toggle("warn", !!warn); };
+
+  function renderCounts() {
+    const n = ITEMS.length, count = Object.fromEntries(GRADES.map(([g]) => [g, 0]));
+    let graded = 0, noNote = 0;
+    for (const i of ITEMS) {
+      const g = gradeOf(i.key);
+      if (!g.grade) continue;
+      count[g.grade]++; graded++;
+      if (needsNote(g)) noNote++;
+    }
+    for (const [g] of GRADES) $("bar-" + g).style.width = (100 * count[g] / n) + "%";
+    $("counts").innerHTML = `<span><b>${graded}</b> of ${n} graded</span>` +
+      GRADES.map(([g, name]) => `<span><b>${count[g]}</b> ${name.toLowerCase()}</span>`).join("") +
+      (noNote ? `<span><b>${noNote}</b> need a note</span>` : "");
+  }
+
+  function renderList() {
+    $("rows").innerHTML = ITEMS.map(i => {
+      const g = gradeOf(i.key), first = i.letter === "A";
+      const cls = done(i.key) ? g.grade : g.grade ? "unsure" : "";
+      const name = done(i.key) ? GRADE_NAME[g.grade] : g.grade ? "needs a note" : "to grade";
+      return `<li class="${first ? "" : "more"}"><button type="button" data-k="${i.key}" aria-current="${i.key === ui.current}" title="${esc(i.question)}">` +
+        `<span class="dot ${cls}" role="img" aria-label="${name}"></span><span class="qid">${i.question_id} · ${i.letter}</span>` +
+        `<span class="qt">${first ? esc(i.question) : "Answer " + i.letter}</span></button></li>`;
+    }).join("");
+    const cur = $("rows").querySelector('[aria-current="true"]');
+    if (cur) cur.scrollIntoView({ block: "nearest" });
+  }
+
+  function nodeHead(id) {
+    const n = DATA.nodes[id];
+    return `<div class="node-head"><span class="node-id">${esc(id)}</span><span class="node-path">${esc(n.path.join(" › "))}</span>
+      <a href="${esc(n.link)}" target="_blank" rel="noopener">${n.is_note ? "Open the PDF" : "Open on EUR-Lex"} ↗</a></div>`;
+  }
+  const goldCard = id => {
+    const n = DATA.nodes[id];
+    return `<article class="node">${nodeHead(id)}${n.lead_in ? `<p class="law lead-in">${esc(n.lead_in)}</p>` : ""}<p class="law">${esc(n.text)}</p></article>`;
+  };
+  const citedCard = c => `<article class="node">${nodeHead(c.node_id)}${c.quotes.map(q => `<blockquote class="law">${esc(q)}</blockquote>`).join("")}</article>`;
+
+  function renderDetail() {
+    const item = ITEMS.find(i => i.key === ui.current);
+    const pos = ITEMS.indexOf(item);
+    const others = item.answers > 1 ? ` of ${item.answers}` : "";
+    $("detail").innerHTML = `
+      <div class="head">
+        <span class="qid">${item.question_id} · answer ${item.letter}${others}</span>
+        <span class="chip">${TYPE_NAMES[item.type] || item.type}</span>
+        <div class="nav"><span>${pos + 1} of ${ITEMS.length}</span>
+          <button type="button" id="prev" aria-label="Previous answer">←</button>
+          <button type="button" id="next" aria-label="Next answer">→</button></div>
+      </div>
+      <h2 class="question">${esc(item.question)}</h2>
+      <details class="rule" id="rule"${store.get("rule-closed") ? "" : " open"}>
+        <summary>How to grade</summary>
+        <ul>
+          <li>Grade the answer against the gold answer: does a driver who reads it come away with what the gold answer says?</li>
+          <li><b>Correct</b>: it says what the gold answer says, in substance. Wording doesn't matter, and extra detail is fine when it is true.</li>
+          <li><b>Partly correct</b>: it gets the main point but leaves out part of the gold answer, or adds something wrong that doesn't change the main point.</li>
+          <li><b>Wrong</b>: it misses or contradicts the main point.</li>
+          <li>Whether its quotes back it doesn't matter here: faithfulness is measured separately. The quotes are there to help you read it.</li>
+          <li>For partly correct and wrong, write a short note on what is missing or wrong.</li>
+        </ul>
+      </details>
+      <section class="section">
+        <div class="label">Gold answer</div>
+        <div class="box gold">${esc(item.gold)}</div>
+        <details class="sources" id="gold-sources"${store.get("gold-open") ? " open" : ""}>
+          <summary>Its passage${item.gold_nodes.length > 1 ? "s" : ""} in full · ${item.gold_nodes.map(esc).join(", ")}</summary>
+          ${item.gold_nodes.map(goldCard).join("")}
+        </details>
+      </section>
+      <section class="section">
+        <div class="label">Answer ${item.letter}</div>
+        <div class="box">${esc(item.answer)}</div>
+      </section>
+      <section class="section">
+        <div class="label">Quotes it cites · ${item.cited.length} passage${item.cited.length === 1 ? "" : "s"}</div>
+        <div>${item.cited.map(citedCard).join("")}</div>
+      </section>
+      <section class="verdict" aria-label="Your grade">
+        <div class="verdict-buttons">${GRADES.map(([g, name], i) =>
+          `<button type="button" class="vbtn ${g}" data-g="${g}" aria-pressed="false">${name} <kbd>${i + 1}</kbd></button>`).join("")}</div>
+        <div class="note-wrap">
+          <textarea id="note" rows="2" placeholder="What is missing or wrong (needed unless correct)" aria-label="Note on ${item.key}"></textarea>
+          <div class="note-meta"><span id="note-state"></span><span class="keys"><kbd>←</kbd> <kbd>→</kbd> move · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> grade</span></div>
+        </div>
+      </section>`;
+    renderVerdict(true);
+  }
+
+  function renderVerdict(fillNote) {
+    const g = gradeOf(ui.current), note = $("note");
+    if (!note) return;
+    $("detail").querySelectorAll(".vbtn").forEach(b => b.setAttribute("aria-pressed", String(g.grade === b.dataset.g)));
+    if ((fillNote || document.activeElement !== note) && !noteTimers.has(ui.current)) note.value = g.note || "";
+    const pending = noteTimers.has(ui.current);
+    const missing = !pending && needsNote(g);
+    note.classList.toggle("need", missing);
+    const state = $("note-state");
+    state.classList.toggle("err", !storageOk);
+    if (!storageOk) state.textContent = "This browser isn't keeping grades. Save a grades file before closing the page.";
+    else if (pending) state.textContent = "Saving…";
+    else if (missing) state.textContent = "Add a note: what is missing or wrong";
+    else if (g.at) state.textContent = "Saved " + new Date(g.at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+    else state.textContent = "Not graded yet";
+  }
+
+  const renderAll = () => { renderCounts(); renderList(); renderDetail(); };
+
+  function write(key, patch) {
+    const prev = gradeOf(key);
+    grades.set(key, { grade: prev.grade || null, note: prev.note || "", ...patch, at: new Date().toISOString() });
+    store.set("grades", Object.fromEntries(grades));
+  }
+  function flushNote(key) {
+    const t = noteTimers.get(key);
+    if (!t) return;
+    clearTimeout(t.timer); noteTimers.delete(key);
+    write(key, { note: t.value });
+    renderCounts(); renderList();
+    if (ui.current === key) renderVerdict(false);
+  }
+  function setGrade(g) {
+    const key = ui.current;
+    flushNote(key);
+    const next = gradeOf(key).grade === g ? null : g;   // pressing the active grade clears it
+    write(key, { grade: next });
+    renderCounts(); renderList(); renderVerdict(false);
+    if (next === "correct") setTimeout(() => { if (ui.current === key) goNextOpen(); }, 280);
+    else if (next) $("note").focus();
+  }
+
+  function go(key) {
+    if (!key || key === ui.current) return;
+    flushNote(ui.current);
+    ui.current = key; store.set("ui", ui);
+    renderList(); renderDetail();
+    window.scrollTo({ top: 0 });
+    $("list").classList.remove("open"); $("list-toggle").setAttribute("aria-expanded", "false");
+  }
+  const step = d => { const i = ITEMS.findIndex(x => x.key === ui.current); go((ITEMS[i + d] || {}).key); };
+  function goNextOpen() {
+    const i = ITEMS.findIndex(x => x.key === ui.current);
+    const next = ITEMS.slice(i + 1).concat(ITEMS.slice(0, i)).find(x => !done(x.key));
+    if (next) go(next.key);
+  }
+  const flushAll = () => { for (const k of [...noteTimers.keys()]) flushNote(k); };
+
+  $("rows").addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (b) go(b.dataset.k); });
+  $("list-toggle").addEventListener("click", () => {
+    const open = $("list").classList.toggle("open");
+    $("list-toggle").setAttribute("aria-expanded", String(open));
+  });
+  $("detail").addEventListener("click", e => {
+    const t = e.target.closest("button"); if (!t) return;
+    if (t.id === "prev") step(-1);
+    else if (t.id === "next") step(1);
+    else if (t.dataset.g) setGrade(t.dataset.g);
+  });
+  $("detail").addEventListener("toggle", e => {
+    if (e.target.id === "rule") store.set("rule-closed", !e.target.open);
+    if (e.target.id === "gold-sources") store.set("gold-open", e.target.open);
+  }, true);
+  $("detail").addEventListener("input", e => {
+    if (e.target.id !== "note") return;
+    const key = ui.current, value = e.target.value, t = noteTimers.get(key);
+    if (t) clearTimeout(t.timer);
+    noteTimers.set(key, { value, timer: setTimeout(() => flushNote(key), 900) });
+    renderVerdict(false);
+  });
+  $("detail").addEventListener("focusout", e => { if (e.target.id === "note") flushNote(ui.current); });
+  document.addEventListener("keydown", e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "textarea") { if (e.key === "Escape") e.target.blur(); return; }
+    if (e.key === "ArrowRight" || e.key === "j") { e.preventDefault(); step(1); }
+    else if (e.key === "ArrowLeft" || e.key === "k") { e.preventDefault(); step(-1); }
+    else if (["1", "2", "3"].includes(e.key)) { e.preventDefault(); setGrade(GRADES[Number(e.key) - 1][0]); }
+  });
+  // A note typed just before the page closes is kept, not lost with its timer.
+  window.addEventListener("pagehide", flushAll);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushAll(); });
+  const measure = () => document.documentElement.style.setProperty("--top-h", $("top").offsetHeight + "px");
+  window.addEventListener("resize", measure);
+
+  function exportJson() {
+    const out = {};
+    for (const i of ITEMS) {
+      const g = grades.get(i.key);
+      if (g && (g.grade || g.note)) out[i.key] = { grade: g.grade || null, note: g.note || "", at: g.at || null };
+    }
+    return JSON.stringify({ exported_at: new Date().toISOString(), build: DATA.build, reviews: out }, null, 2);
+  }
+  $("save-file").addEventListener("click", () => {
+    flushAll();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([exportJson()], { type: "application/json" }));
+    a.download = `hand-grades-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    const left = ITEMS.filter(i => !done(i.key)).length;
+    setSync(`Saved ${a.download} to your downloads` + (left ? `; ${left} answer${left === 1 ? "" : "s"} still to grade` : ". Every answer is graded: tell Claude where the file is."));
+  });
+  $("load-file").addEventListener("click", () => $("load-input").click());
+  $("load-input").addEventListener("change", async e => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    let parsed;
+    try { parsed = JSON.parse(await file.text()); } catch { parsed = null; }
+    if (!parsed || typeof parsed.reviews !== "object" || !parsed.reviews) { setSync(`${file.name} isn't a grades file. Pick a file saved from this page.`, true); return; }
+    if (parsed.build !== DATA.build) { setSync(`${file.name} was saved from a page built from other answers, so it wasn't loaded.`, true); return; }
+    let taken = 0, kept = 0;
+    for (const [k, g] of Object.entries(parsed.reviews)) {
+      if (!ITEMS.some(i => i.key === k) || !g || typeof g !== "object") continue;
+      const mine = grades.get(k);
+      // Keep whichever grade is newer, so loading an old file never undoes later work.
+      if (mine && mine.at && (!g.at || g.at <= mine.at)) { kept++; continue; }
+      grades.set(k, { grade: GRADE_NAME[g.grade] ? g.grade : null, note: String(g.note || ""), at: g.at || null });
+      taken++;
+    }
+    store.set("grades", Object.fromEntries(grades));
+    setSync(`Loaded ${taken} grade${taken === 1 ? "" : "s"} from ${file.name}` + (kept ? `; kept ${kept} newer here` : ""));
+    renderAll();
+  });
+
+  setSync("Grades are kept in this browser as you go. When you're done, or as a backup, press Save grades file.");
+  renderAll(); measure();
+})();
+</script>

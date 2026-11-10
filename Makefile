@@ -2,7 +2,7 @@
 # The db-* targets also need Docker with Compose and a running Colima VM (see CLAUDE.md).
 # Later checkpoints add targets (tables, deploy, destroy) and extend check.
 
-.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs rerank embed-dry-run embed answers ask judge tables tables-check faithfulness-labels faithfulness-review db-up db-check db-down test-db vector-index gitleaks-present docker-present
+.PHONY: help install lint format test secrets check corpus parse chunks search questions retrieval-runs rerank embed-dry-run embed answers ask judge tables tables-check faithfulness-labels faithfulness-review hand-grades hand-grades-review db-up db-check db-down test-db vector-index gitleaks-present docker-present
 
 help: ## List the targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-20s %s\n", $$1, $$2}'
@@ -25,7 +25,7 @@ test: ## Run the test suite, without the tests that need the database
 secrets: gitleaks-present ## Scan the full git history for secrets
 	gitleaks git --redact --no-banner .
 
-check: lint test questions tables-check faithfulness-labels secrets ## Everything that must pass before a pull request
+check: lint test questions tables-check faithfulness-labels hand-grades secrets ## Everything that must pass before a pull request
 
 corpus: ## Check corpus/raw against the manifest, downloading missing files
 	uv run --locked python scripts/fetch_corpus.py
@@ -83,6 +83,12 @@ faithfulness-labels: ## Check data/faithfulness_labels.v1.jsonl against the answ
 
 faithfulness-review: ## Build the page for labelling answers' faithfulness: build/faithfulness-review/
 	uv run --locked python scripts/faithfulness_labels.py --page $(if $(ARTIFACT),--artifact,)
+
+hand-grades: ## Check runs/grades/hand-grades.v1.jsonl against the test answers to grade (passes before grading); APPLY=<file> writes it from the page's export
+	uv run --locked python scripts/hand_grades.py $(if $(APPLY),--apply $(APPLY),)
+
+hand-grades-review: ## Build the page for grading the finalists' test answers by hand: build/hand-grades/
+	uv run --locked python scripts/hand_grades.py --page
 
 questions: ## Validate data/questions.v1.jsonl against its schema and the parsed corpus, and count it
 	uv run --locked python scripts/validate_questions.py

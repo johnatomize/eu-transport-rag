@@ -2,6 +2,19 @@
 
 Choices made along the way, with the reason and the alternatives considered. Newest first. Open questions are `decision-needed` issues; the answer is recorded here or in the design once the owner decides.
 
+## 2026-11-10: the owner's hand grades of test answers
+
+**Decision** (for #88, carrying out the owner's choice in #75): the owner grades the finalists' test answers to the answerable test questions without key facts on a page opened as a file in the browser, `make hand-grades-review` (`scripts/hand_grades.py`, `src/rag/hand_grades.py`).
+
+- **Which answers:** each of the three finalists' answers to the 10 questions, when the answer passed the check. A refusal, "could not answer reliably" or a missing reply is not correct without a grade, as for questions with key facts, so it isn't shown. That leaves 25 answers to 9 questions: every finalist refused q070, and only Haiku's reordering answered q030.
+- **Blind:** a question's answers are A, B and C in an order drawn with a fixed seed per question, and the page holds no run file, model or retrieval setup.
+- **What the page shows:** the question, the gold answer with its passages in full, the answer, and the quotes it cites with links to the documents.
+- **Grades:** correct (says what the gold answer says, in substance; true extra detail is fine), partly correct (the main point, but part of the gold answer missing or a minor error added) or wrong (misses or contradicts the main point), with a note whenever it isn't correct. Whether the quotes back the answer is left to faithfulness. The owner may change these rules while grading; the page states them.
+- **Where they're kept:** in the browser while grading, with a file to save and load. `make hand-grades APPLY=<file>` turns the saved file into `runs/grades/hand-grades.v1.jsonl`, beside the run logs, refusing one that is unfinished, has a grade without a note, or was saved from a page built from other answers. `make check` checks the file once it exists.
+- **Not yet decided:** how the table counts *partly correct*. That is settled with the table change in #88, once the grades are in.
+
+**Alternatives:** a claude.ai page with shared storage, as for the faithfulness labels, which the owner can't open on this account; a spreadsheet, which can't show the passages beside the answer or hide which finalist wrote it as reliably.
+
 ## 2026-11-09: how the production cost is estimated
 
 **Decision** (for #102): `src/rag/production_cost.py` prices each test-split finalist from its run logs alone, and `make tables` writes `results/production_cost.md`.

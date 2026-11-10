@@ -37,9 +37,9 @@ def test_committed_config_names_haiku_for_building_and_opus_for_scoring():
     assert config.model("build") == "claude-haiku-5-5"
     assert config.model("scored") == "claude-opus-5-5"
     assert config.judge_model == "claude-opus-5-5"
-    assert config.prices["claude-opus-5-5"] == Price(4.0, 20.0, 2.0, 10.0)
-    assert config.prices["claude-haiku-5-5"] == Price(0.10, 0.50, 0.05, 0.25)
-    assert config.prices_read_on == dt.date(2026, 11, 3)
+    assert config.prices["claude-opus-5-5"] == Price(4.0, 20.0, 2.0, 10.0, 5.0, 8.0, 0.20)
+    assert config.prices["claude-haiku-5-5"] == Price(0.10, 0.50, 0.05, 0.25, 0.125, 0.20, 0.01)
+    assert config.prices_read_on == dt.date(2026, 11, 9)
     assert config.effort == "medium"
     assert config.max_output_tokens == 4000
 
@@ -87,3 +87,18 @@ def test_unreadable_or_malformed_file_is_refused(tmp_path):
         load_generation_config(tmp_path / "missing.yaml")
     with pytest.raises(GenerationConfigError, match="not valid YAML"):
         load_generation_config(write(tmp_path, "provider: [anthropic"))
+
+
+def test_cache_prices_are_optional_and_checked(tmp_path):
+    text = GOOD.replace(
+        "batch_output: 10}",
+        "batch_output: 10, cache_write_5m: 5, cache_write_1h: 8, cache_read: 0.2}",
+    )
+    path = tmp_path / "generation.yaml"
+    path.write_text(text, encoding="utf-8")
+    opus = load_generation_config(path).prices["claude-opus-5-5"]
+    assert (opus.cache_write_5m, opus.cache_write_1h, opus.cache_read) == (5.0, 8.0, 0.2)
+    assert load_generation_config(path).prices["claude-haiku-5-5"].cache_read is None
+    path.write_text(text.replace("cache_read: 0.2", "cache_read: 0"), encoding="utf-8")
+    with pytest.raises(GenerationConfigError, match="cache_read should be a number above 0"):
+        load_generation_config(path)
